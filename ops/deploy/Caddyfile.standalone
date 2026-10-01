@@ -1,0 +1,8 @@
+# Optional TLS front for a bare-metal install (the binary serves the app).
+#   sudo apt install caddy   # or download the single binary
+#   cp deploy/Caddyfile.standalone /etc/caddy/Caddyfile
+#   # replace huuk.teenueng.com with your domain, then: systemctl reload caddy
+huuk.teenueng.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:8787
+}

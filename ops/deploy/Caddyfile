@@ -1,0 +1,14 @@
+# TLS front for the compose stack (profile "tls").
+# SITE_ADDRESS=huuk.teenueng.com  -> automatic HTTPS (Let's Encrypt)
+# SITE_ADDRESS unset/empty      -> HTTP only on :80
+{$SITE_ADDRESS::80} {
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy api:8787
+	}
+
+	handle {
+		reverse_proxy web:8080
+	}
+}

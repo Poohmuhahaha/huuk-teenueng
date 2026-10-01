@@ -1,0 +1,117 @@
+# Production stack: API + static web host. Optional Caddy TLS front (profile "tls").
+#
+#   ./deploy.sh init      # create ops/deploy/.env.production (generated secrets)
+#   ./deploy.sh up        # build + start on http://host:${WEB_PORT:-8080}
+#   ./deploy.sh up --tls  # also start Caddy (80/443, auto-HTTPS for SITE_ADDRESS)
+#
+# All settings live in deploy/.env.production (passed with --env-file by deploy.sh).
+name: content-planner
+
+services:
+  api:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    image: content-planner-api:latest
+    env_file:
+      - path: ./deploy/.env.production
+        required: false
+    environment:
+      # Container-internal overrides (keep the data path stable for backups).
+      BIND_ADDR: 0.0.0.0
+      PORT: "8787"
+      DATA_FILE: /app/data/content-planner.json
+    volumes:
+      - cp-data:/app/data
+    expose:
+      - "8787"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 512m
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8787/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+  web:
+    build:
+      context: ../app
+      dockerfile: Dockerfile
+      args:
+        # Empty => same-origin /api (recommended behind the proxy).
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_USE_MOCK: ${VITE_USE_MOCK:-}
+    image: content-planner-web:latest
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      # Localhost-only by default. Set WEB_BIND=0.0.0.0 to expose on the LAN,
+      # or WEB_BIND=<host-ip> for a specific interface.
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:8080"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    mem_limit: 256m
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 5
+
+  # Optional TLS termination (docker compose --profile tls up -d).
+  # Set SITE_ADDRESS=app.example.com in the env file for automatic HTTPS,
+  # or leave empty for HTTP-only on port 80.
+  proxy:
+    image: caddy:2-alpine
+    profiles: ["tls"]
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  cp-data:
+  caddy-data:
+  caddy-config:

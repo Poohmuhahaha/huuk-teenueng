@@ -1,0 +1,28 @@
+# Installed by scripts/install.sh (placeholders are substituted).
+[Unit]
+Description=Content Planner (API + web)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__RUN_USER__
+WorkingDirectory=__APP_DIR__
+EnvironmentFile=__ENV_FILE__
+ExecStart=__APP_DIR__/bin/content-planner-server
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+# The store holds password hashes; never create it group/world readable.
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__DATA_DIR__
+# Keep the listening socket for restarts so requests are not refused while
+# the process swaps (optional; safe to remove on older systemd).
+# RuntimeDirectory=content-planner
+
+[Install]
+WantedBy=multi-user.target
