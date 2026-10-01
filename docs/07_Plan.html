@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Huuk — Delivery Plan v3</title>
+<style>
+  :root{
+    --ink:#000; --ink-body:#1a1a1a; --muted:#6b6b6b; --faint:#a3a3a3;
+    --line:#e4e4e4; --paper:#fff;
+    --sans:"Inter Variable",Inter,ui-sans-serif,system-ui,-apple-system,"Noto Sans Thai",sans-serif;
+    --serif:Tinos,"Times New Roman",Times,Georgia,"Noto Serif Thai",serif;
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+  *{box-sizing:border-box;border-radius:0}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font:16px/1.55 var(--sans);letter-spacing:-.011em;-webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--ink);text-underline-offset:2px}
+  .wrap{padding-inline:clamp(20px,5vw,80px);width:100%}
+  code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.84em;
+    background:rgba(0,0,0,.045);border:1px solid var(--line);padding:.5px 4px;
+  }
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-family:var(--serif);font-weight:700;text-wrap:balance}
+  h1{font-size:clamp(38px,6vw,68px);line-height:1.02;letter-spacing:-.02em;margin:.15em 0 .1em}
+  h2{font-size:clamp(26px,3.2vw,38px);line-height:1.04;letter-spacing:-.015em;margin:0}
+  h3{font-size:clamp(19px,2.1vw,25px);line-height:1.1;letter-spacing:-.01em;margin:0}
+  p{margin:.5em 0}
+  ul.plain{margin:.5em 0;padding-left:1.1em}
+  ul.plain li{margin:.2em 0}
+
+  /* header */
+  header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.88);
+    -webkit-backdrop-filter:saturate(180%) blur(12px);backdrop-filter:saturate(180%) blur(12px);
+    border-bottom:1px solid var(--line)}
+  .bar{display:flex;align-items:center;justify-content:space-between;height:62px}
+  .wordmark{font-family:var(--serif);font-weight:700;font-size:18px;letter-spacing:-.01em;text-transform:lowercase}
+  .bar .eyebrow{color:var(--faint)}
+
+  /* hero */
+  .hero{padding-block:clamp(34px,6vw,72px) clamp(28px,4vw,48px);border-bottom:1px solid var(--line)}
+  .hero .rule{height:0;border-top:1px solid var(--ink);margin:4px 0 26px}
+  .lede{font-size:clamp(17px,1.5vw,20px);color:var(--muted);max-width:56ch;margin:.2em 0 0}
+  .meta{display:grid;grid-template-columns:auto 1fr;gap:8px 20px;margin-top:28px;border-top:1px solid var(--line);padding-top:18px}
+  .meta dt{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding-top:.35em}
+  .meta dd{margin:0;color:var(--ink-body);font-size:15px}
+  .principles{margin-top:22px;border:1px solid var(--ink);padding:14px 16px;font-size:14.5px;color:var(--ink-body)}
+
+  section{padding-block:clamp(34px,5vw,60px);border-bottom:1px solid var(--line)}
+  .head{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;margin-bottom:18px}
+  .num{font-size:11px;font-weight:600;letter-spacing:.2em;color:var(--faint);padding-top:.7em}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{text-align:left;vertical-align:top;padding:9px 8px;border-bottom:1px solid var(--line);font-size:13.5px}
+  th{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--ink)}
+  tbody tr:hover{background:rgba(0,0,0,.025)}
+  .tbd{color:var(--faint);font-style:italic}
+
+  /* checklists */
+  ul.check{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:7px}
+  ul.check li{display:grid;grid-template-columns:12px 1fr;gap:10px;font-size:14.5px;color:var(--ink-body)}
+  ul.check li::before{content:"";width:9px;height:9px;border:1px solid var(--ink);margin-top:.44em}
+
+  /* milestone card */
+  .mcard{border:1px solid var(--line);margin-top:22px;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+  .mcard:hover{transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--ink)}
+  .mhead{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:baseline;
+    background:var(--ink);color:var(--paper);padding:11px 15px}
+  .mhead .id{font-family:var(--serif);font-weight:700;font-size:19px}
+  .mhead .mname{font-family:var(--serif);font-weight:700;font-size:19px;letter-spacing:-.01em}
+  .mhead .tag{font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+  .mbody{padding:15px 16px}
+  .glabel{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:14px}
+  .glabel:first-child{margin-top:0}
+  .gate{border-top:1px solid var(--line);margin-top:16px;padding-top:12px;font-size:14.5px;color:var(--ink-body)}
+  .evidence{color:var(--muted);font-size:13px;margin-top:6px}
+  .note{color:var(--muted);font-size:13px;margin-top:8px}
+
+  /* gantt */
+  .gantt{border:1px solid var(--line);margin-top:12px}
+  .axis{display:grid;grid-template-columns:170px 1fr;border-bottom:1px solid var(--line)}
+  .axis .lab{border-right:1px solid var(--line)}
+  .axis .bands{position:relative;height:26px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .axis .bands span{position:absolute;top:6px}
+  .grow{display:grid;grid-template-columns:170px 1fr;border-top:1px solid var(--line)}
+  .grow:first-child{border-top:0}
+  .glab{padding:6px 10px;font-size:11.5px;color:var(--muted);border-right:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .glab b{color:var(--ink);font-weight:600}
+  .track{position:relative;height:26px;background:
+    repeating-linear-gradient(to right,transparent 0,transparent calc(100%/2 - 1px),var(--line) calc(100%/2 - 1px),var(--line) calc(100%/2))}
+  .bar{position:absolute;top:6px;height:14px;background:var(--ink)}
+  .bar.soft{background:#b9b9b9}
+  .mile{position:absolute;top:8px;width:10px;height:10px;background:var(--ink);transform:rotate(45deg)}
+  .legend{font-size:12px;color:var(--muted);margin-top:8px}
+  .legend i{display:inline-block;width:14px;height:9px;background:var(--ink);margin-right:5px;vertical-align:middle}
+  .legend i.soft{background:#b9b9b9}
+  .legend i.mile{width:9px;height:9px;transform:rotate(45deg);margin-right:7px}
+
+  /* footer */
+  footer{background:var(--ink);color:var(--paper);padding-block:clamp(34px,5vw,56px)}
+  footer .wordmark{color:var(--paper)}
+  footer .eyebrow{color:#8f8f8f}
+  footer .copy{margin-top:14px;font-size:13px;color:#bdbdbd}
+  footer a{color:var(--paper)}
+  @media (max-width:640px){
+    .meta{grid-template-columns:1fr}
+    .head{grid-template-columns:1fr}
+    .num{padding-top:0}
+    .grow,.axis{grid-template-columns:120px 1fr}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <span class="wordmark">huuk</span>
+    <span class="eyebrow">Delivery plan · v3</span>
+  </div>
+</header>
+
+<div class="hero wrap">
+  <span class="eyebrow">teenueng · productivity-prod · huuk</span>
+  <div class="rule"></div>
+  <h1>Huuk — Delivery Plan</h1>
+  <p class="lede"><strong>Milestones · Checkpoints · Definition of Done.</strong> Revised after two audits.</p>
+  <dl class="meta">
+    <dt>Status</dt><dd>P0 flagship, code ~90% done (14 user stories, 94 Rust + 188 frontend tests green)</dd>
+    <dt>Product</dt><dd>Content planner + CMS + client portal — Vue 3 + Rust (Axum), self-hostable</dd>
+    <dt>Target domain</dt><dd>huuk.teenueng.com</dd>
+    <dt>Date</dt><dd>1 Oct 2026</dd>
+  </dl>
+  <div class="principles">
+    <strong>Principles:</strong> close decisions before M0 · one milestone at a time, each gate needs evidence ·
+    production before pilot · OAuth runs parallel only where dependencies allow · feature freeze after M0.
+  </div>
+</div>
+
+<section class="wrap">
+  <div class="head"><span class="num">01</span><div><h2>Executive summary</h2></div></div>
+  <p>Huuk is not missing features. It is missing a path to real use: a production-like rehearsal, working backups,
+  a real client, a live domain and a first invoice. This plan breaks the remaining work into 8 milestones (M0–M7).
+  Each has tickable checkpoints and a single pass/fail gate backed by evidence.</p>
+</section>
+
+<section class="wrap">
+  <div class="head"><span class="num">02</span><div><h2>Pre-flight Decision Log <span style="color:var(--muted);font-size:.6em">(close before M0)</span></h2></div></div>
+  <table>
+    <thead><tr><th>#</th><th>Decision</th><th>Answer</th><th>Owner</th><th>Needed by</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Business model: hosted service vs. customer self-hosts</td><td class="tbd">TBD</td><td>You</td><td>Before M0</td></tr>
+      <tr><td>2</td><td>Staging host and deploy path (A systemd recommended, B Docker Compose)</td><td class="tbd">TBD</td><td>You</td><td>Before M1</td></tr>
+      <tr><td>3</td><td>First OAuth provider (lowest friction first, e.g. Google)</td><td class="tbd">TBD</td><td>You</td><td>Before M5</td></tr>
+      <tr><td>4</td><td>Domain, DNS and TLS owner for huuk.teenueng.com</td><td class="tbd">TBD</td><td>You</td><td>Before M1</td></tr>
+      <tr><td>5</td><td><strong>Pricing hypothesis</strong> (not final) + whether the pilot is free or paid</td><td class="tbd">TBD</td><td>You</td><td>Before M4</td></tr>
+      <tr><td>6</td><td>Pilot client: who, and what agreement / PDPA terms</td><td class="tbd">TBD</td><td>You</td><td>Start finding now</td></tr>
+      <tr><td>7</td><td>M4 pass criteria: articles to publish (e.g. ≥ 3) and definition of &ldquo;blocker bug&rdquo;</td><td class="tbd">TBD</td><td>You</td><td>Before M4</td></tr>
+      <tr><td>8</td><td>Definition of P0 (e.g. every item in the Definition of Done)</td><td class="tbd">TBD</td><td>You</td><td>Before M0</td></tr>
+    </tbody>
+  </table>
+  <p class="note">The pilot client has the longest lead time, so start looking now. Final pricing is confirmed in M6 using pilot feedback.</p>
+</section>
+
+<section class="wrap">
+  <div class="head"><span class="num">03</span><div><h2>Overview and timeline</h2></div></div>
+  <table>
+    <thead><tr><th>M</th><th>Name</th><th>Gate (pass when)</th><th>Time-box</th></tr></thead>
+    <tbody>
+      <tr><td>M0</td><td>Freeze &amp; Green Baseline</td><td>main green, fresh clone runs, scans clean</td><td>1–2 days</td></tr>
+      <tr><td>M1</td><td>Staging Rehearsal</td><td>smoke passes over HTTPS, data survives restart, rollback works</td><td>2–3 days</td></tr>
+      <tr><td>M2</td><td>Backup &amp; Restore</td><td>restore works on another machine with separate key, alert fires</td><td>1–2 days</td></tr>
+      <tr><td>M3</td><td>Production Foundation</td><td>live domain, smoke passes, backup/monitoring on prod</td><td>1–2 days</td></tr>
+      <tr><td>M4</td><td>Client Pilot</td><td>client publishes unaided to agreed criteria</td><td>1–2 weeks</td></tr>
+      <tr><td>M5</td><td>OAuth Live (1 provider)</td><td>a real user links an account, token refresh verified</td><td>1–2 days</td></tr>
+      <tr><td>M6</td><td>Pricing &amp; Invoice</td><td>price announced, invoice sent</td><td>1 day + payment wait</td></tr>
+      <tr><td>M7</td><td>Portfolio &amp; Handoff</td><td>portfolio live, docs complete, P0 = 0</td><td>1 day</td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:18px"><strong>Suggested schedule (with ~25% buffer):</strong></p>
+  <ul class="plain">
+    <li><strong>Week 1:</strong> M0, M1</li>
+    <li><strong>Week 2:</strong> M2, M3, buffer</li>
+    <li><strong>Weeks 3–4:</strong> M4 pilot. M5 starts after M3 (needs the production domain). M6 starts only after the first week of the pilot.</li>
+    <li><strong>End:</strong> M7</li>
+  </ul>
+
+  <h3 style="margin-top:26px">Calendar <span style="color:var(--muted);font-size:.62em;font-family:var(--sans)">(working days, assumes M0 starts Mon 5 Oct 2026)</span></h3>
+  <table>
+    <thead><tr><th>Dates</th><th>Work</th><th>Milestone / checkpoint</th></tr></thead>
+    <tbody>
+      <tr><td>Thu 1 – Fri 2 Oct</td><td>Close Decision Log, start finding pilot client, create OAuth app and submit any provider review</td><td>Pre-flight</td></tr>
+      <tr><td>Mon 5 – Tue 6 Oct</td><td>Freeze, green baseline, audits</td><td><strong>M0</strong> gate Tue 6 Oct</td></tr>
+      <tr><td>Wed 7 – Fri 9 Oct</td><td>Staging, TLS, monitoring, rollback rehearsal</td><td><strong>M1</strong> gate Fri 9 Oct</td></tr>
+      <tr><td>Mon 12 – Tue 13 Oct</td><td>Backups, separate key, restore rehearsal</td><td><strong>M2</strong> gate Tue 13 Oct</td></tr>
+      <tr><td>Wed 14 – Thu 15 Oct</td><td>Go live on huuk.teenueng.com, onboarding guide</td><td><strong>M3</strong> gate Thu 15 Oct</td></tr>
+      <tr><td>Fri 16 Oct</td><td>Buffer; pilot agreement and legal docs signed</td><td>Go/no-go for pilot</td></tr>
+      <tr><td>Mon 19 – Fri 30 Oct</td><td>Client pilot (2 weeks)</td><td><strong>M4</strong> gate Fri 30 Oct</td></tr>
+      <tr><td>Tue 20 – Wed 21 Oct</td><td>OAuth live on production domain</td><td><strong>M5</strong> gate Wed 21 Oct</td></tr>
+      <tr><td>Mon 26 Oct</td><td>Confirm pricing from first-week feedback, send invoice</td><td><strong>M6</strong> gate Mon 26 Oct</td></tr>
+      <tr><td>Mon 2 Nov</td><td>Portfolio, docs, release tag</td><td><strong>M7</strong> gate Mon 2 Nov</td></tr>
+      <tr><td>Fri 13 Nov</td><td>First monthly restore drill</td><td>Recurring monthly</td></tr>
+      <tr><td>Wed 25 Nov</td><td>Payment follow-up (30 days after invoice)</td><td>M6 follow-up metric</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Shift every date by the same offset if the start moves. If a gate slips, use the buffer day on Fri 16 Oct first, then push the pilot start.</p>
+
+  <h3 style="margin-top:26px">Gantt chart</h3>
+  <div class="gantt">
+    <div class="axis">
+      <div class="lab"></div>
+      <div class="bands">
+        <span style="left:0">Oct 2026</span>
+        <span style="left:56.4%">Nov 2026</span>
+      </div>
+    </div>
+    <div class="grow"><div class="glab">Close Decision Log</div><div class="track"><div class="bar soft" style="left:0;width:3.64%"></div></div></div>
+    <div class="grow"><div class="glab">Find pilot client</div><div class="track"><div class="bar soft" style="left:0;width:21.82%"></div></div></div>
+    <div class="grow"><div class="glab">OAuth app + review</div><div class="track"><div class="bar soft" style="left:0;width:3.64%"></div></div></div>
+    <div class="grow"><div class="glab"><b>M0</b> Freeze &amp; green baseline</div><div class="track"><div class="bar" style="left:7.27%;width:3.64%"></div><div class="mile" style="left:9.09%"></div></div></div>
+    <div class="grow"><div class="glab"><b>M1</b> Staging rehearsal</div><div class="track"><div class="bar" style="left:10.91%;width:5.45%"></div><div class="mile" style="left:14.55%"></div></div></div>
+    <div class="grow"><div class="glab"><b>M2</b> Backup &amp; restore</div><div class="track"><div class="bar" style="left:20%;width:3.64%"></div><div class="mile" style="left:21.82%"></div></div></div>
+    <div class="grow"><div class="glab"><b>M3</b> Production foundation</div><div class="track"><div class="bar" style="left:23.64%;width:3.64%"></div><div class="mile" style="left:25.45%"></div></div></div>
+    <div class="grow"><div class="glab">Buffer &amp; legal sign-off</div><div class="track"><div class="bar" style="left:27.27%;width:1.82%"></div></div></div>
+    <div class="grow"><div class="glab"><b>M4</b> Client pilot</div><div class="track"><div class="bar" style="left:32.73%;width:18.18%"></div><div class="mile" style="left:52.73%"></div></div></div>
+    <div class="grow"><div class="glab"><b>M5</b> OAuth live</div><div class="track"><div class="bar" style="left:34.55%;width:3.64%"></div></div></div>
+    <div class="grow"><div class="glab"><b>M6</b> Pricing &amp; invoice</div><div class="track"><div class="bar" style="left:45.45%;width:1.82%"></div></div></div>
+    <div class="grow"><div class="glab"><b>M7</b> Portfolio &amp; handoff</div><div class="track"><div class="bar" style="left:58.18%;width:1.82%"></div></div></div>
+    <div class="grow"><div class="glab">Restore drill (monthly)</div><div class="track"><div class="mile" style="left:78.18%"></div></div></div>
+    <div class="grow"><div class="glab">Payment follow-up</div><div class="track"><div class="mile" style="left:99.5%"></div></div></div>
+  </div>
+  <p class="legend"><i></i>milestone work &nbsp; <i class="soft"></i>pre-flight / buffer &nbsp; <i class="mile"></i>gate / checkpoint</p>
+  <p class="note">Do early, in parallel: create the OAuth app and submit any provider review (Meta/TikTok) now, since review time is the slowest part.</p>
+</section>
+
+<section class="wrap">
+  <div class="head"><span class="num">04</span><div><h2>Milestones</h2></div></div>
+
+  <article class="mcard">
+    <div class="mhead"><span class="id">M0</span><span class="mname">Freeze &amp; Green Baseline</span><span class="tag">1–2 days</span></div>
+    <div class="mbody">
+      <div class="glabel">Goal</div>
+      <p>Lock the <code>app/</code> + <code>server/</code> layout and get everything green before deploying.</p>
+      <div class="glabel">Checkpoints</div>
+      <ul class="check">
+        <li>Commit the folder move; update paths in DEPLOYMENT.md, dev.sh, deploy.sh, CI</li>
+        <li>No duplicate package-lock.json / pnpm-lock.yaml; <code>bun install --frozen-lockfile</code> passes</li>
+        <li><code>cargo test</code> (94) and <code>vitest</code> (188) pass; fix README counts (16/17)</li>
+        <li><code>cargo build --release</code> and <code>bun run build</code> pass</li>
+        <li>CI green on main</li>
+        <li>.gitignore covers data/, backups/, .env*, target/, dist/</li>
+        <li><code>cargo audit</code> + frontend audit: fix or document high-severity findings</li>
+        <li>Secret scan of repo and git history (e.g. gitleaks): no leaked keys</li>
+      </ul>
+      <div class="gate"><strong>Gate:</strong> main green; fresh clone runs <code>bun run dev</code> on :8787 and :5173; scans have no blockers.
+        <div class="evidence">Evidence: CI link, test logs, audit/scan output, tag v0.9.0.</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="mcard">
+    <div class="mhead"><span class="id">M1</span><span class="mname">Staging Rehearsal</span><span class="tag">2–3 days</span></div>
+    <div class="mbody">
+      <div class="glabel">Goal</div>
+      <p>Run the production stack on a separate staging host with TLS and monitoring; prove rollback.</p>
+      <div class="glabel">Checkpoints</div>
+      <ul class="check">
+        <li>Choose deploy path (A systemd recommended)</li>
+        <li><code>./deploy.sh init</code>: ADMIN_EMAIL, ADMIN_TOKEN (≥16), AUTH_REQUIRED=true, DEMO_MODE empty, ALLOW_REGISTRATION=false</li>
+        <li>TLS on staging (Caddy / Let's Encrypt), served over HTTPS</li>
+        <li><code>/api/health</code> and <code>/api/ready</code> respond correctly</li>
+        <li><code>./deploy.sh smoke &lt;url&gt; owner &lt;password&gt; --write</code> passes all 7 checks</li>
+        <li>Verify security headers, HSTS, CSP and secure cookies over real HTTPS</li>
+        <li>Uptime check, log rotation and error log in place</li>
+        <li>Manual: publish → open <code>/#/read/{slug}</code> in a private window; restart keeps data; 11 wrong passwords → 429</li>
+        <li>Rehearse rollback to the previous version</li>
+        <li>Rotate bootstrap password and ADMIN_TOKEN after smoke</li>
+      </ul>
+      <div class="gate"><strong>Gate:</strong> smoke passes over HTTPS; data survives restart; rollback works; a test alert fires.
+        <div class="evidence">Evidence: smoke output, HTTPS URL, /#/read screenshot, alert test.</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="mcard">
+    <div class="mhead"><span class="id">M2</span><span class="mname">Backup &amp; Restore</span><span class="tag">1–2 days</span></div>
+    <div class="mbody">
+      <div class="glabel">Goal</div>
+      <p>Daily encrypted off-host backups that can really be restored. Must pass before the pilot, because one snapshot is all the data (accounts, sessions, articles).</p>
+      <div class="glabel">Checkpoints</div>
+      <ul class="check">
+        <li>Write down RPO ≤ 24h and RTO ≤ 1h</li>
+        <li>Daily systemd timer (or cron) with an alert on failure</li>
+        <li>Backups stored off-host and encrypted (they contain password hashes and sessions)</li>
+        <li>Encryption key stored separately from the backups</li>
+        <li>Retention (default 14) works</li>
+        <li>Snapshot is atomic even while the live store is being written</li>
+        <li>Restore rehearsal on another machine using the separate key; accounts, sessions, articles intact</li>
+        <li>Monthly restore drill scheduled; restore runbook written in DEPLOYMENT.md</li>
+      </ul>
+      <div class="gate"><strong>Gate:</strong> restore succeeds elsewhere with the separate key; failure alert works; RPO/RTO are numbers.
+        <div class="evidence">Evidence: off-host backup file, restore log, alert test, key location.</div>
+        <div class="note">Note: this is a rehearsal on staging; M3 repeats it on production.</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="mcard">
+    <div class="mhead"><span class="id">M3</span><span class="mname">Production Foundation</span><span class="tag">1–2 days</span></div>
+    <div class="mbody">
+      <div class="glabel">Goal</div>
+      <p>Go live on the real domain in production mode before any client touches it.</p>
+      <div class="glabel">Checkpoints</div>
+      <ul class="check">
+        <li>DNS + TLS for huuk.teenueng.com</li>
+        <li>Production env: DEMO_MODE empty, AUTH_REQUIRED=true, SWAGGER_UI empty</li>
+        <li><strong>New secrets for production</strong>, not reused from staging</li>
+        <li>Smoke on the live domain using a dedicated smoke account; delete test content afterward and disable the account</li>
+        <li>Verify security headers, HSTS, CSP on live responses</li>
+        <li>Monitoring (uptime, disk, backup failure) pointed at production, alert tested</li>
+        <li>Backup pointed at production data; restore the production snapshot <strong>onto another machine</strong> (never over prod)</li>
+        <li>Rollback/update plan and an incident-communication plan for clients</li>
+        <li>Short client onboarding guide (login, change password, publish)</li>
+      </ul>
+      <div class="gate"><strong>Gate:</strong> live domain in production mode; smoke passes; backup and monitoring on prod; rollback plan ready.
+        <div class="evidence">Evidence: https://huuk.teenueng.com, smoke output, restore from a prod snapshot.</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="mcard">
+    <div class="mhead"><span class="id">M4</span><span class="mname">Client Pilot</span><span class="tag">1–2 weeks</span></div>
+    <div class="mbody">
+      <div class="glabel">Goal</div>
+      <p>One real client uses Huuk unaided on production. This is the main Definition of Done.</p>
+      <div class="glabel">Checkpoints</div>
+      <ul class="check">
+        <li>Legal: ToS, privacy policy (PDPA, covering OAuth tokens), pilot agreement (states free vs. paid)</li>
+        <li>Process to export or delete a client's data on request</li>
+        <li>Owner creates the client account (role Client, temporary password); client changes it immediately</li>
+        <li>Password reset/recovery flow verified before handover</li>
+        <li>Client sees only Content / Studio (no planner or settings)</li>
+        <li>Client writes → previews → publishes/schedules → shares <code>/#/read/{slug}</code></li>
+        <li>Measure against the criteria from the Decision Log (e.g. ≥ 3 articles in 1–2 weeks)</li>
+        <li>Collect feedback, rank bugs, set up a support channel</li>
+      </ul>
+      <div class="gate"><strong>Gate:</strong> client publishes unaided to the agreed criteria; no blocker bugs (as defined in the Decision Log).
+        <div class="evidence">Evidence: links to client-published articles, feedback summary, measured criteria.</div>
+        <div class="note">Note: I'm not a lawyer; have the legal documents reviewed by a professional.</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="mcard">
+    <div class="mhead"><span class="id">M5</span><span class="mname">OAuth Live, 1 provider</span><span class="tag">after M3 · parallel to M4</span></div>
+    <div class="mbody">
+      <div class="glabel">Goal</div>
+      <p>Connect one real provider end to end, using the production domain.</p>
+      <div class="glabel">Checkpoints</div>
+      <ul class="check">
+        <li>Create the OAuth app; set META_* / GOOGLE_* / TIKTOK_* in env</li>
+        <li>Register the redirect URI <code>PUBLIC_URL/api/oauth/{platform}/callback</code> for the production domain</li>
+        <li>Set PUBLIC_URL, FRONTEND_URL, CORS_ORIGINS to match</li>
+        <li>Login → callback lands on <code>/#/profile?oauth=...&amp;status=ok</code></li>
+        <li>Tokens are encrypted (chacha20poly1305) and absent from logs</li>
+        <li><strong>Token refresh verified over time.</strong> Check the provider's current rules, since some testing modes expire refresh tokens quickly</li>
+        <li>Revoke, then reconnect</li>
+      </ul>
+      <div class="gate"><strong>Gate:</strong> a real user links an account, sees platform data, and refresh works.
+        <div class="evidence">Evidence: <code>/#/profile?oauth=ok</code> screen, refresh test result.</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="mcard">
+    <div class="mhead"><span class="id">M6</span><span class="mname">Pricing &amp; Invoice</span><span class="tag">1 day + payment wait</span></div>
+    <div class="mbody">
+      <div class="glabel">Goal</div>
+      <p>Confirm pricing using pilot feedback and send the first invoice. Starts after the first week of the pilot.</p>
+      <div class="glabel">Checkpoints</div>
+      <ul class="check">
+        <li>Choose pricing model (per seat / per workspace / per content volume)</li>
+        <li>Set ALLOW_REGISTRATION to match (self-serve vs. invite-only)</li>
+        <li>Payment channel, quote and invoice ready</li>
+        <li>Trial and renewal terms</li>
+        <li>Announce price and send the pilot client's invoice</li>
+      </ul>
+      <div class="gate"><strong>Gate:</strong> price announced and invoice sent.
+        <div class="evidence">Follow-up metric (does not block closing): payment received within 30 days. Assign an owner and a review date in the backlog.</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="mcard">
+    <div class="mhead"><span class="id">M7</span><span class="mname">Portfolio &amp; Handoff</span><span class="tag">1 day</span></div>
+    <div class="mbody">
+      <div class="glabel">Goal</div>
+      <p>Close out so the project can be maintained without relying on memory.</p>
+      <div class="glabel">Checkpoints</div>
+      <ul class="check">
+        <li>Add Huuk to 02_Website/portfolio (link, description, preview image)</li>
+        <li>Update Docs/00_STATUS.md and MASTER_INDEX.md</li>
+        <li>Update CHANGELOG and tag the release</li>
+        <li>Final client/admin guide (onboarding, backup/restore, update, password reset)</li>
+        <li>Close P0 items per the agreed definition; open the next backlog</li>
+      </ul>
+      <div class="gate"><strong>Gate:</strong> portfolio link opens; docs complete; P0 = 0.
+        <div class="evidence">Evidence: portfolio link, release tag.</div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="wrap">
+  <div class="head"><span class="num">05</span><div><h2>Risks and mitigations</h2></div></div>
+  <table>
+    <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td>OAuth review is slow (Meta)</td><td>Submit early; M5 doesn't block launch; lowest-friction provider first; manual platform fallback</td></tr>
+      <tr><td>Backup key lost or on one machine</td><td>Store key separately; test restore with it in M2</td></tr>
+      <tr><td>Data loss (single JSON store)</td><td>M2 before pilot; off-host backups; restore drills; failure alerts</td></tr>
+      <tr><td>Client pays late</td><td>M6 gate is &ldquo;invoice sent&rdquo;; payment tracked as a follow-up</td></tr>
+      <tr><td>Pricing unclear</td><td>Hypothesis before M0; confirmed in M6 with pilot feedback</td></tr>
+      <tr><td>PDPA / legal exposure</td><td>ToS, privacy policy, pilot agreement, data export/delete process before handover; professional review</td></tr>
+      <tr><td>Scope creep</td><td>Feature freeze after M0; new ideas go to the next backlog</td></tr>
+      <tr><td>Bad release</td><td>Rollback rehearsed in M1; update/rollback steps in the runbook</td></tr>
+      <tr><td>Test data pollutes production</td><td>Dedicated smoke account, cleanup, separate prod secrets</td></tr>
+      <tr><td>No Docker on host</td><td>Option A (systemd) from M1</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="wrap">
+  <div class="head"><span class="num">06</span><div><h2>Definition of Done</h2></div></div>
+  <p>The project is complete when all of these are true at once:</p>
+  <ol class="plain">
+    <li>A real client logs in and creates/sends articles via <code>/#/studio</code> unaided, to the agreed criteria</li>
+    <li>Articles are published and publicly readable at <code>/#/read/{slug}</code></li>
+    <li>At least one real OAuth provider is connected end to end, with token refresh verified</li>
+    <li>Daily backups run and a restore succeeded on another machine with a separately stored key, with failure alerts</li>
+    <li>Live on huuk.teenueng.com in production mode with TLS, monitoring and rollback</li>
+    <li>ToS and privacy policy (PDPA) are ready, and password reset works</li>
+    <li>Price announced and first invoice sent (payment tracked as a follow-up)</li>
+    <li>Docs updated (STATUS, DEPLOYMENT runbook, MASTER_INDEX, CHANGELOG) and Huuk is in the portfolio</li>
+  </ol>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="wordmark">huuk</span>
+    <div class="copy">
+      Huuk by teenueng — Delivery Plan v3 · 1 Oct 2026.<br>
+      Companion files: <code style="background:transparent;border-color:#444;color:#fff">07_Plan.pdf</code> ·
+      <code style="background:transparent;border-color:#444;color:#fff">07_Plan.typ</code>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
