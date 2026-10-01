@@ -1,0 +1,6 @@
+# Tauri build output and the staged sidecar binary (rebuilt via
+# `npm run desktop:sidecar`, never committed).
+/target/
+/gen/
+/binaries/
+WixTools/

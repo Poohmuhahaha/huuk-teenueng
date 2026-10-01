@@ -1,0 +1,8 @@
+# Machine-local Tauri desktop support (no sudo on this box): the WebKitGTK
+# stack lives in ~/tauri-sys/root (see app/scripts/desktop-sidecar.sh
+# notes / README "Desktop" section). This adds its lib dir to the linker search
+# path for every cargo build run from app (harmless for the server:
+# an extra -L that matches nothing there). At runtime the same dir must be on
+# LD_LIBRARY_PATH — see ~/huuk-desktop/huuk.sh.
+[build]
+rustflags = ["-L", "native-/home/aslpooht/tauri-sys/root/usr/lib"]

@@ -1,0 +1,12 @@
+[package]
+name = "huuk-desktop"
+version = "1.0.0"
+edition = "2021"
+description = "Huuk desktop shell: Vite frontend plus the content-planner server as a sidecar."
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"

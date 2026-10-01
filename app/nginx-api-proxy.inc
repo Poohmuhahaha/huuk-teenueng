@@ -1,0 +1,9 @@
+# Shared proxy settings for every /api/ location (included by nginx.conf).
+proxy_pass http://api:8787;
+proxy_http_version 1.1;
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_read_timeout 35s;
+client_max_body_size 3m;

@@ -1,0 +1,7 @@
+// Popups and auth overlays.
+export { default as ChangePasswordModal } from './ChangePasswordModal.vue'
+export { default as LoginModal } from './LoginModal.vue'
+export { default as PlatformLogin } from './PlatformLogin.vue'
+export { default as ProfilePanel } from './ProfilePanel.vue'
+export { default as ProtectedModal } from './ProtectedModal.vue'
+export { default as SettingsPanel } from './SettingsPanel.vue'
