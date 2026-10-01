@@ -1,0 +1,2549 @@
+openapi: 3.0.3
+info:
+  title: Huuk API (by teenueng)
+  version: 0.1.0
+  description: >-
+    REST API for Huuk by teenueng (Vue 3 frontend in `app/`,
+    Rust/Axum backend in `server/`). All request and response bodies are JSON
+    with camelCase field names; errors use the envelope
+    `{ "error": "message" }`.
+
+    Authentication: send `Authorization: Bearer <token>` from
+    `POST /api/auth/login`. Auth is only enforced when `authRequired` is true
+    (production default); in demo mode (`DEMO_MODE=1`) reads and writes are
+    open and the Bearer token is optional. In production every `GET` also
+    requires a live token, except liveness (`/api/health`, `/api/ready`), the
+    redacted `GET /api/setup`, the public delivery API (`/api/public/*`), the
+    brand CI (`/api/brand`, `/api/brand/fonts`, font files) and the OAuth/docs
+    routes; every mutating operation is gated by the permission named in its
+    `x-permission` field.
+
+    Content items (`/api/content`) implement an editorial workflow with
+    optimistic concurrency: send the `version` you last read on every
+    update/publish/schedule/restore call and expect `409` when someone else
+    saved in between.
+
+    Interactive docs are served by the app itself: `GET /api/docs` (Swagger UI)
+    and `GET /api/openapi.yaml` (this document).
+servers:
+  - url: /
+    description: Same origin (the server also serves the built SPA when STATIC_DIR is set)
+  - url: http://localhost:8787
+    description: Local development
+tags:
+  - name: Health
+    description: Liveness and readiness probes.
+  - name: Setup
+    description: Workspace configuration — language, year, owner, option lists, users, roles.
+  - name: Auth
+    description: Accounts and sessions (email + password, Argon2id).
+  - name: Accounts
+    description: Admin account onboarding and administration (users.manage).
+  - name: Content
+    description: CMS content items with revisions, publishing and scheduling.
+  - name: Public content
+    description: Read-only delivery API for published content.
+  - name: Posts
+    description: The planner write-master — one row per scheduled post.
+  - name: Ideas
+    description: Content idea backlog.
+  - name: Hashtags
+    description: Grouped hashtag library.
+  - name: Metrics
+    description: Per-post performance metrics (deterministic pseudo-import until provider sync lands).
+  - name: Finance
+    description: Budget transactions.
+  - name: Brand
+    description: Brand identity (voice, palette, dos/donts).
+  - name: Platforms
+    description: Social platform connections (connect / disconnect / sync).
+  - name: OAuth
+    description: Credential-optional OAuth 2.0 authorization-code flow.
+  - name: Docs
+    description: API documentation endpoints.
+security:
+  - bearerAuth: []
+paths:
+  /api/health:
+    get:
+      operationId: health
+      tags: [Health]
+      summary: Liveness probe
+      security: []
+      responses:
+        '200':
+          description: Service is up.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status: { type: string, example: ok }
+                  service: { type: string, example: content-planner-server }
+  /api/ready:
+    get:
+      operationId: ready
+      tags: [Health]
+      summary: Readiness probe
+      security: []
+      responses:
+        '200':
+          description: Store is reachable and the server is serving.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service, version, demoMode, authRequired, static, accounts]
+                properties:
+                  status: { type: string, example: ready }
+                  service: { type: string, example: content-planner-server }
+                  version: { type: string, example: 0.1.0 }
+                  demoMode: { type: boolean }
+                  authRequired: { type: boolean }
+                  static: { type: boolean, description: True when STATIC_DIR is configured. }
+                  accounts: { type: integer, description: Number of registered accounts. }
+  /api/setup:
+    get:
+      operationId: getSetup
+      tags: [Setup]
+      summary: Get the workspace configuration
+      security: []
+      responses:
+        '200':
+          description: Current SetupConfig.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupConfig' }
+    patch:
+      operationId: patchSetup
+      tags: [Setup]
+      summary: Update workspace configuration
+      description: >-
+        Partial update. A rejected `roles` replacement never half-applies.
+        Replacing roles must be non-empty, duplicate-free, permission-valid and
+        keep every role a directory user holds.
+      x-permission: setup.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetupPatch' }
+      responses:
+        '200':
+          description: Updated SetupConfig.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/setup/options:
+    post:
+      operationId: addOption
+      tags: [Setup]
+      summary: Add an item to an option list
+      description: Duplicates are ignored.
+      x-permission: setup.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddOptionBody' }
+      responses:
+        '200':
+          description: Updated SetupConfig.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/setup/users:
+    post:
+      operationId: addUser
+      tags: [Setup]
+      summary: Add a directory user
+      x-permission: users.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserBody' }
+      responses:
+        '200':
+          description: Updated SetupConfig.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/setup/users/{name}:
+    delete:
+      operationId: removeUser
+      tags: [Setup]
+      summary: Remove a directory user
+      x-permission: users.manage
+      parameters:
+        - $ref: '#/components/parameters/Name'
+      responses:
+        '200':
+          description: Updated SetupConfig.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/setup/roles:
+    post:
+      operationId: addRole
+      tags: [Setup]
+      summary: Add a role
+      x-permission: users.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoleBody' }
+      responses:
+        '200':
+          description: Updated SetupConfig.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/setup/roles/{name}:
+    delete:
+      operationId: removeRole
+      tags: [Setup]
+      summary: Remove a role
+      description: The last role and roles assigned to directory users cannot be removed.
+      x-permission: users.manage
+      parameters:
+        - $ref: '#/components/parameters/Name'
+      responses:
+        '200':
+          description: Updated SetupConfig.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/auth/register:
+    post:
+      operationId: register
+      tags: [Auth]
+      summary: Register an account (auto-login)
+      description: >-
+        Public endpoint. Requires `allowRegistration`; the new account gets the
+        directory role when the name exists, otherwise Viewer.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterBody' }
+      responses:
+        '200':
+          description: Session token and user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403':
+          description: Registration is disabled.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Email already registered or display name already taken.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      summary: Log in with email and password
+      description: >-
+        On success returns a 64-char session token (30-day TTL). Repeated
+        failures lock the account for 15 minutes (`429`).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginBody' }
+      responses:
+        '200':
+          description: Session token and user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: Invalid email or password (message is identical for both).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /api/auth/me:
+    get:
+      operationId: me
+      tags: [Auth]
+      summary: Get the current session's user
+      responses:
+        '200':
+          description: The signed-in user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: '#/components/schemas/AuthUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/logout:
+    post:
+      operationId: logout
+      tags: [Auth]
+      summary: Revoke the current session
+      responses:
+        '200':
+          description: Session revoked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OkResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/logout-all:
+    post:
+      operationId: logoutAll
+      tags: [Auth]
+      summary: Revoke every session of the account
+      responses:
+        '200':
+          description: All sessions revoked, including the caller's.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OkResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [Auth]
+      summary: Change the current account's password
+      description: Keeps the caller's token valid and revokes every other session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordBody' }
+      responses:
+        '200':
+          description: Password changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OkResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/profile:
+    patch:
+      operationId: updateProfile
+      tags: [Auth]
+      summary: Rename the current account
+      description: >-
+        Requires a live session but no permission. The directory entry follows
+        the rename so the role survives; active post locks are rewritten.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateProfileBody' }
+      responses:
+        '200':
+          description: Updated user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: '#/components/schemas/AuthUser' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/auth/accounts:
+    get:
+      operationId: listAccounts
+      tags: [Accounts]
+      summary: List accounts with live session counts
+      description: Never exposes password hashes.
+      x-permission: users.manage
+      responses:
+        '200':
+          description: Account rows sorted by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AccountRow' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      operationId: createAccount
+      tags: [Accounts]
+      summary: Onboard an account (admin-created)
+      description: >-
+        Creates the sign-in account and assigns the directory role. When
+        `password` is omitted the server generates one and returns it exactly
+        once as `temporaryPassword`.
+      x-permission: users.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewAccountBody' }
+      responses:
+        '200':
+          description: Account created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatedAccount' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/auth/accounts/{email}:
+    delete:
+      operationId: deleteAccount
+      tags: [Accounts]
+      summary: Delete an account and revoke its sessions
+      description: The directory entry is untouched; the last administrator cannot be deleted.
+      x-permission: users.manage
+      parameters:
+        - name: email
+          in: path
+          required: true
+          description: Account email (case-insensitive).
+          schema: { type: string, format: email }
+      responses:
+        '200':
+          description: Account deleted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OkResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/content:
+    get:
+      operationId: listContent
+      tags: [Content]
+      summary: List content items (summaries)
+      description: Sorted by `updatedAt` descending; due scheduled items are promoted first.
+      security: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filter by workflow status.
+          schema:
+            type: string
+            enum: [draft, review, scheduled, published, archived]
+        - name: q
+          in: query
+          required: false
+          description: Case-insensitive search over title, excerpt and tags.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Content summaries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ContentSummary' }
+    post:
+      operationId: createContent
+      tags: [Content]
+      summary: Create a content item
+      description: >-
+        Server assigns `id`, `slug` (when empty), timestamps and version; the
+        status is forced to `draft` unless it is `draft` or `review`.
+      x-permission: content.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContentInput' }
+      responses:
+        '200':
+          description: Created content item (revision bodies omitted).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Content' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/content/{id}:
+    get:
+      operationId: getContent
+      tags: [Content]
+      summary: Get a content item
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: Content item (revision bodies omitted).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Content' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateContent
+      tags: [Content]
+      summary: Update a content item
+      description: >-
+        Requires the current `version`; the pre-edit state is stored as a
+        revision (max 20). `status` may only be set to draft, review or
+        archived here — publishing and scheduling have their own endpoints.
+      x-permission: content.write
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContentPatch' }
+      responses:
+        '200':
+          description: Updated content item.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Content' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Version conflict (content changed since the version you sent).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      operationId: deleteContent
+      tags: [Content]
+      summary: Delete a content item
+      x-permission: content.delete
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: Content deleted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OkResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/content/{id}/publish:
+    post:
+      operationId: publishContent
+      tags: [Content]
+      summary: Publish a content item
+      x-permission: content.publish
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VersionBody' }
+      responses:
+        '200':
+          description: Published content item.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Content' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/content/{id}/unpublish:
+    post:
+      operationId: unpublishContent
+      tags: [Content]
+      summary: Unpublish a content item (back to draft)
+      x-permission: content.publish
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VersionBody' }
+      responses:
+        '200':
+          description: Unpublished content item (status draft).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Content' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/content/{id}/schedule:
+    post:
+      operationId: scheduleContent
+      tags: [Content]
+      summary: Schedule a content item for future publication
+      description: The server promotes the item to published when the timestamp passes.
+      x-permission: content.publish
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ScheduleBody' }
+      responses:
+        '200':
+          description: Scheduled content item.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Content' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/content/{id}/duplicate:
+    post:
+      operationId: duplicateContent
+      tags: [Content]
+      summary: Duplicate a content item
+      description: The copy gets a new id, a "(copy)" title, a unique slug, no revisions and draft status.
+      x-permission: content.write
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: New content item.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Content' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/content/{id}/revisions:
+    get:
+      operationId: listContentRevisions
+      tags: [Content]
+      summary: List a content item's revisions
+      description: Newest first; revision bodies are included here (history view only).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '200':
+          description: Revisions, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ContentRevision' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/content/{id}/revisions/{revision}:
+    get:
+      operationId: getContentRevision
+      tags: [Content]
+      summary: Get one revision (with body)
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+        - $ref: '#/components/parameters/Revision'
+      responses:
+        '200':
+          description: The revision snapshot.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContentRevision' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/content/{id}/revisions/{revision}/restore:
+    post:
+      operationId: restoreContentRevision
+      tags: [Content]
+      summary: Restore a revision
+      description: >-
+        Restores text fields from the revision; never silently republishes —
+        published/scheduled states fall back to draft.
+      x-permission: content.write
+      parameters:
+        - $ref: '#/components/parameters/ContentId'
+        - $ref: '#/components/parameters/Revision'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VersionBody' }
+      responses:
+        '200':
+          description: Restored content item.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Content' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/public/content:
+    get:
+      operationId: listPublicContent
+      tags: [Public content]
+      summary: List published content
+      description: Sorted by `publishedAt` descending; due scheduled items are promoted first. No auth.
+      security: []
+      responses:
+        '200':
+          description: Published content summaries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ContentSummary' }
+  /api/public/content/{slug}:
+    get:
+      operationId: getPublicContent
+      tags: [Public content]
+      summary: Get published content by slug
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Published content body.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicContent' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/posts:
+    get:
+      operationId: listPosts
+      tags: [Posts]
+      summary: List posts
+      security: []
+      parameters:
+        - name: month
+          in: query
+          required: false
+          description: Filter by month (1–12). Omit to return every month.
+          schema: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        '200':
+          description: Posts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Post' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    post:
+      operationId: createPost
+      tags: [Posts]
+      summary: Create a post
+      description: Server assigns `id`; any client-supplied `lockedBy` is ignored.
+      x-permission: posts.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostInput' }
+      responses:
+        '200':
+          description: Created post.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/posts/{id}:
+    patch:
+      operationId: updatePost
+      tags: [Posts]
+      summary: Update a post
+      description: >-
+        With auth on, the lock check uses the session's account; in demo mode a
+        client-supplied `user` is compared. `date: null` clears the date.
+      x-permission: posts.write
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostPatch' }
+      responses:
+        '200':
+          description: Updated post.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Post is locked by another user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      operationId: deletePost
+      tags: [Posts]
+      summary: Delete a planned row
+      description: >-
+        Removes a planner row so a month can be re-planned from scratch
+        (permission `posts.write`). A row locked by another user is refused.
+      x-permission: posts.write
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        '200': { description: Deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Post is locked by another user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/posts/{id}/lock:
+    post:
+      operationId: lockPost
+      tags: [Posts]
+      summary: Lock a post while editing
+      description: Idempotent for the holder; 409 for anyone else. Session-derived when auth is on.
+      x-permission: posts.lock
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LockBody' }
+      responses:
+        '200':
+          description: Locked post (`lockedBy` set).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/posts/{id}/unlock:
+    post:
+      operationId: unlockPost
+      tags: [Posts]
+      summary: Release a post lock
+      x-permission: posts.lock
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LockBody' }
+      responses:
+        '200':
+          description: Unlocked post (`lockedBy` null).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/ideas:
+    get:
+      operationId: listIdeas
+      tags: [Ideas]
+      summary: List ideas
+      security: []
+      responses:
+        '200':
+          description: Ideas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Idea' }
+    post:
+      operationId: createIdea
+      tags: [Ideas]
+      summary: Add an idea
+      x-permission: ideas.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IdeaInput' }
+      responses:
+        '200':
+          description: Created idea.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Idea' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/ideas/{id}/toggle:
+    post:
+      operationId: toggleIdea
+      tags: [Ideas]
+      summary: Toggle an idea's done flag
+      x-permission: ideas.write
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Updated idea.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Idea' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/ideas/{id}/promote:
+    post:
+      operationId: promoteIdea
+      tags: [Ideas]
+      summary: Promote an idea into a dated planner post
+      description: The idea is marked done; the new post gets the requested month.
+      x-permission: ideas.write
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: month
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        '200':
+          description: The created post.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/tags:
+    get:
+      operationId: listTags
+      tags: [Hashtags]
+      summary: List hashtag groups
+      security: []
+      responses:
+        '200':
+          description: Hashtag groups.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/HashtagGroup' }
+  /api/tags/{id}:
+    post:
+      operationId: addTag
+      tags: [Hashtags]
+      summary: Add a tag to a group
+      x-permission: hashtags.write
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TagBody' }
+      responses:
+        '200':
+          description: Updated hashtag group.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HashtagGroup' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/metrics:
+    get:
+      operationId: listMetrics
+      tags: [Metrics]
+      summary: List per-post metrics
+      security: []
+      responses:
+        '200':
+          description: Metrics.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Metric' }
+  /api/metrics/import:
+    post:
+      operationId: importMetrics
+      tags: [Metrics]
+      summary: Import deterministic pseudo-metrics
+      description: >-
+        Generates views/likes for every post of the month assigned to the
+        platform (same input → same numbers) and upserts them per post/platform.
+        Real provider pulls are specified in `features/analytics.pdf`.
+      x-permission: metrics.import
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ImportBody' }
+      responses:
+        '200':
+          description: Import summary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/txns:
+    get:
+      operationId: listTxns
+      tags: [Finance]
+      summary: List budget transactions
+      security: []
+      responses:
+        '200':
+          description: Transactions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Txn' }
+    post:
+      operationId: createTxn
+      tags: [Finance]
+      summary: Add a transaction
+      x-permission: finance.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TxnInput' }
+      responses:
+        '200':
+          description: Created transaction.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Txn' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/brand:
+    get:
+      operationId: getBrand
+      tags: [Brand]
+      summary: Get the brand identity
+      security: []
+      responses:
+        '200':
+          description: Brand identity.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Brand' }
+    patch:
+      operationId: saveBrand
+      tags: [Brand]
+      summary: Update the brand identity (partial)
+      x-permission: brand.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BrandPatch' }
+      responses:
+        '200':
+          description: Updated brand identity.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Brand' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/workspaces:
+    get:
+      operationId: listWorkspaces
+      tags: [Workspaces]
+      summary: List workspaces
+      description: >-
+        Workspaces separate brands: each owns its own brand identity and social
+        connections. Every request targets one via the `X-Workspace-Id` header
+        (falling back to the first workspace).
+      responses:
+        '200':
+          description: All workspaces with connection counts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/WorkspaceSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: createWorkspace
+      tags: [Workspaces]
+      summary: Create a workspace
+      x-permission: platforms.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 80 }
+      responses:
+        '200':
+          description: The created workspace.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceSummary' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/workspaces/{id}:
+    patch:
+      operationId: renameWorkspace
+      tags: [Workspaces]
+      summary: Rename a workspace
+      x-permission: platforms.manage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 80 }
+      responses:
+        '200':
+          description: The renamed workspace.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceSummary' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteWorkspace
+      tags: [Workspaces]
+      summary: Delete a workspace
+      description: >-
+        Drops the workspace with everything scoped to it (connections, provider
+        tokens, pending OAuth state). The last workspace cannot be deleted.
+      x-permission: platforms.manage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Deletion result with the fallback workspace id.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted, fallback]
+                properties:
+                  deleted: { type: string }
+                  fallback: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/workspaces/{id}/members:
+    get:
+      operationId: listWorkspaceMembers
+      tags: [Workspaces]
+      summary: List workspace members
+      description: >-
+        The owner plus the registered accounts the owner added. Only the owner
+        can read or change the list.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: The owner and the member list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceMembers' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: addWorkspaceMember
+      tags: [Workspaces]
+      summary: Add a workspace member
+      description: >-
+        Adds a registered account by email. The account must already exist; the
+        owner and existing members are rejected.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: The updated owner and member list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceMembers' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/workspaces/{id}/members/{email}:
+    delete:
+      operationId: removeWorkspaceMember
+      tags: [Workspaces]
+      summary: Remove a workspace member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: email
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: The updated owner and member list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceMembers' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/platforms:
+    get:
+      operationId: listPlatforms
+      tags: [Platforms]
+      summary: List platform connections
+      security: []
+      responses:
+        '200':
+          description: Connections (never includes tokens).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PlatformConnection' }
+  /api/platforms/{id}/connect:
+    post:
+      operationId: connectPlatform
+      tags: [Platforms]
+      summary: Mark a platform connected
+      description: With provider credentials configured, connections happen through OAuth instead.
+      x-permission: platforms.manage
+      parameters:
+        - $ref: '#/components/parameters/PlatformId'
+      responses:
+        '200':
+          description: Updated connection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlatformConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/platforms/{id}/disconnect:
+    post:
+      operationId: disconnectPlatform
+      tags: [Platforms]
+      summary: Disconnect a platform
+      x-permission: platforms.manage
+      parameters:
+        - $ref: '#/components/parameters/PlatformId'
+      responses:
+        '200':
+          description: Updated connection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlatformConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/live:
+    get:
+      operationId: getLive
+      tags: [Platforms]
+      summary: Live mirror of the connected platforms' content
+      description: >-
+        Posts and account stats pulled from Meta (Facebook Page + linked
+        Instagram) by the last sync or background refresh. Read-only; empty
+        until a platform is connected and synced.
+      responses:
+        '200':
+          description: The active workspace's live mirror.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LiveData' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/ads:
+    get:
+      operationId: getAds
+      tags: [Ads]
+      summary: Meta Ads mirror (accounts, campaigns, settings, performance)
+      description: >-
+        Ad accounts, campaigns, ad sets, ads and their last-30-days insights
+        pulled from the Meta Marketing API by sync or the background refresh.
+        `canManage` reports the workspace's management opt-in; writes are
+        rejected while it is false.
+      responses:
+        '200':
+          description: The active workspace's ads mirror.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdsView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/ads/sync:
+    post:
+      operationId: syncAds
+      tags: [Ads]
+      summary: Refresh the Meta Ads mirror
+      description: >-
+        Calls the Marketing API (read-only) for every ad account the login can
+        see and stores the result in the workspace. Requires Meta to be
+        connected with a stored token; permission `platforms.manage`.
+      responses:
+        '200':
+          description: The refreshed mirror.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdsView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/ads/manage:
+    post:
+      operationId: setAdsManage
+      tags: [Ads]
+      summary: Turn campaign management on/off for the workspace
+      description: >-
+        Explicit opt-in required by every write endpoint. Off by default;
+        toggling it is recorded nowhere but is itself permission-gated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        '200':
+          description: The new state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [canManage]
+                properties:
+                  canManage: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/ads/campaigns/{id}/status:
+    post:
+      operationId: setAdCampaignStatus
+      tags: [Ads]
+      summary: Pause, resume or archive a campaign
+      description: >-
+        Requires the management opt-in, permission `platforms.manage`, and a
+        campaign that exists in this workspace's mirror. Recorded in the audit
+        trail.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [ACTIVE, PAUSED, ARCHIVED] }
+      responses:
+        '200': { description: Applied. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/ads/campaigns/{id}/budget:
+    post:
+      operationId: setAdCampaignBudget
+      tags: [Ads]
+      summary: Update a campaign's daily or lifetime budget
+      description: >-
+        Budgets are in the ad account's minor currency unit (50000 = 500.00).
+        Requires the management opt-in; recorded in the audit trail.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dailyBudget: { type: integer, minimum: 1 }
+                lifetimeBudget: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: Applied. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/ads/campaigns/{id}/duplicate:
+    post:
+      operationId: duplicateAdCampaign
+      tags: [Ads]
+      summary: Deep-copy a campaign (paused)
+      description: >-
+        Copies the campaign with its ad sets and ads; the copy starts paused.
+        Requires the management opt-in; recorded in the audit trail.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The new campaign id.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [campaignId]
+                properties:
+                  campaignId: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/ads/boost:
+    post:
+      operationId: createAdBoost
+      tags: [Ads]
+      summary: Boost a Page post (paused campaign + ad set + ad)
+      description: >-
+        Creates a paused campaign, ad set and ad that promote an existing Page
+        post from the live mirror. Nothing spends until the campaign is
+        resumed. Requires the management opt-in; recorded in the audit trail.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, objective, dailyBudget, days, countries, storyId]
+              properties:
+                name: { type: string }
+                objective:
+                  type: string
+                  enum: [OUTCOME_AWARENESS, OUTCOME_TRAFFIC, OUTCOME_ENGAGEMENT, OUTCOME_LEADS, OUTCOME_SALES]
+                dailyBudget: { type: integer, minimum: 1, description: Minor currency units. }
+                days: { type: integer, minimum: 1, maximum: 90 }
+                countries:
+                  type: array
+                  items: { type: string }
+                  minItems: 1
+                storyId: { type: string, description: Page post id from the live mirror. }
+      responses:
+        '200':
+          description: The created (paused) campaign id.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [campaignId]
+                properties:
+                  campaignId: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/platforms/{id}/sync:
+    post:
+      operationId: syncPlatform
+      tags: [Platforms]
+      summary: Sync a connected platform
+      description: >-
+        Meta performs a real Graph refresh (posts, Instagram media, engagement)
+        and updates the live mirror; other providers only get their sync stamp
+        bumped. Requires an existing connection.
+      x-permission: platforms.manage
+      parameters:
+        - $ref: '#/components/parameters/PlatformId'
+      responses:
+        '200':
+          description: Updated connection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlatformConnection' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/oauth/{platform}:
+    get:
+      operationId: oauthStatus
+      tags: [OAuth]
+      summary: OAuth mode for a provider
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PlatformId'
+      responses:
+        '200':
+          description: Current mode; `mock` when no credentials are configured.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OAuthStatus' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/oauth/{platform}/start:
+    get:
+      operationId: oauthStart
+      tags: [OAuth]
+      summary: Start the OAuth flow
+      description: >-
+        Returns `{ "mode": "mock" }` without credentials, or a provider
+        authorize URL plus a single-use `state` (10-minute TTL) in redirect
+        mode. Client secrets never appear in the URL.
+      x-permission: platforms.manage
+      parameters:
+        - $ref: '#/components/parameters/PlatformId'
+      responses:
+        '200':
+          description: Mock mode or the authorize URL.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OAuthStart' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/oauth/{platform}/callback:
+    get:
+      operationId: oauthCallback
+      tags: [OAuth]
+      summary: OAuth callback (provider redirect)
+      description: >-
+        Validates the single-use `state`, exchanges the code, connects the
+        platform and 303-redirects the browser back to the frontend
+        (`#/profile?oauth=…&status=ok|error`). When the provider returns
+        several connectable accounts the connection is parked instead and the
+        browser lands on `#/profile?oauth=…&status=pick&pick=…` for
+        `/pending` + `/choose` below.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PlatformId'
+        - name: code
+          in: query
+          required: false
+          schema: { type: string }
+        - name: state
+          in: query
+          required: true
+          description: Single-use CSRF state created by `/start`.
+          schema: { type: string }
+      responses:
+        '303':
+          description: Browser is redirected back to the frontend with the result.
+          headers:
+            Location:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/oauth/{platform}/pending:
+    get:
+      operationId: oauthPending
+      tags: [OAuth]
+      summary: List the connect candidates of a pending pick
+      description: >-
+        Returns the Pages/accounts Meta returned for one unfinished connect
+        flow (`status=pick`). Never exposes the stored user token. The pick id
+        is unguessable, single-flow and expires after 10 minutes.
+      parameters:
+        - $ref: '#/components/parameters/PlatformId'
+        - name: pick
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Candidate list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [platform, accounts]
+                properties:
+                  platform: { type: string }
+                  accounts:
+                    type: array
+                    items:
+                      type: object
+                      required: [handle, external_id]
+                      properties:
+                        handle: { type: string }
+                        external_id: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/oauth/{platform}/choose:
+    post:
+      operationId: oauthChoose
+      tags: [OAuth]
+      summary: Connect the chosen account of a pending pick
+      description: >-
+        Finalizes a pending pick by connecting the given `external_id`
+        (must be one of the pick's candidates) and consumes the pick.
+      x-permission: platforms.manage
+      parameters:
+        - $ref: '#/components/parameters/PlatformId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pick, external_id]
+              properties:
+                pick: { type: string }
+                external_id: { type: string }
+      responses:
+        '200':
+          description: The connected platform.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [platform, connection]
+                properties:
+                  platform: { type: string }
+                  connection:
+                    type: object
+                    nullable: true
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/docs:
+    get:
+      operationId: apiDocs
+      tags: [Docs]
+      summary: Swagger UI for this API
+      security: []
+      responses:
+        '200':
+          description: Interactive documentation page.
+          content:
+            text/html:
+              schema: { type: string }
+  /api/openapi.yaml:
+    get:
+      operationId: openapiSpec
+      tags: [Docs]
+      summary: This OpenAPI document
+      security: []
+      responses:
+        '200':
+          description: OpenAPI 3.0 document (YAML).
+          content:
+            application/yaml:
+              schema: { type: string }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >-
+        Session token from `POST /api/auth/login`. Optional while
+        `authRequired` is false (demo mode); required for mutations in
+        production.
+  parameters:
+    Name:
+      name: name
+      in: path
+      required: true
+      description: URL-encoded directory name.
+      schema: { type: string }
+    ContentId:
+      name: id
+      in: path
+      required: true
+      description: Content item id (e.g. `c-1`).
+      schema: { type: string }
+    Revision:
+      name: revision
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    PostId:
+      name: id
+      in: path
+      required: true
+      description: Post id (e.g. `p-desk`).
+      schema: { type: string }
+    PlatformId:
+      name: platform
+      in: path
+      required: true
+      description: Platform id (e.g. `meta`, `youtube`, `tiktok`).
+      schema: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid payload or failed validation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing, unknown or expired bearer token.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: The signed-in role lacks the required permission.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Unknown id or route.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Locked by another user, duplicate email/name, or version conflict.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: Login lockout (10 failures per 15 minutes).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string, example: post is locked by Studio Owner }
+    OkResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean, example: true }
+    AuthUser:
+      type: object
+      required: [name, role]
+      properties:
+        name: { type: string, example: Studio Owner }
+        role: { type: string, example: Owner }
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token: { type: string, description: 64-char hex session token. }
+        user: { $ref: '#/components/schemas/AuthUser' }
+    RegisterBody:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string, example: Editor Earn }
+        email: { type: string, format: email, example: earn@studio.local }
+        password: { type: string, minLength: 8, maxLength: 256 }
+    LoginBody:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    ChangePasswordBody:
+      type: object
+      required: [oldPassword, newPassword]
+      properties:
+        oldPassword: { type: string }
+        newPassword: { type: string, minLength: 8, maxLength: 256 }
+    UpdateProfileBody:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+    AccountRow:
+      type: object
+      required: [name, email, sessions]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        sessions: { type: integer, description: Live session count. }
+    NewAccountBody:
+      type: object
+      required: [name, email, role]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, description: Must exist in SetupConfig.roles. }
+        password:
+          type: string
+          description: Optional; when omitted the server generates one and returns it once.
+    CreatedAccount:
+      type: object
+      required: [ok, account]
+      properties:
+        ok: { type: boolean }
+        account:
+          type: object
+          required: [name, email, role, sessions]
+          properties:
+            name: { type: string }
+            email: { type: string, format: email }
+            role: { type: string }
+            sessions: { type: integer }
+        temporaryPassword:
+          type: string
+          nullable: true
+          description: Present only when the server generated the password.
+    User:
+      type: object
+      required: [name, role]
+      properties:
+        name: { type: string }
+        role: { type: string }
+    Role:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        permissions:
+          type: array
+          items: { $ref: '#/components/schemas/Permission' }
+    Permission:
+      type: string
+      description: Known permission strings the server validates against.
+      enum:
+        - setup.write
+        - users.manage
+        - posts.write
+        - posts.lock
+        - metrics.import
+        - finance.write
+        - brand.write
+        - ideas.write
+        - hashtags.write
+        - platforms.manage
+        - content.write
+        - content.publish
+        - content.delete
+    SetupConfig:
+      type: object
+      required:
+        - language
+        - year
+        - owner
+        - pillars
+        - formats
+        - goals
+        - statuses
+        - platforms
+        - showEditableColors
+        - users
+        - authRequired
+        - roles
+      properties:
+        language: { type: string, enum: [EN, TH] }
+        year: { type: integer, minimum: 1970, maximum: 9999 }
+        owner: { type: string }
+        pillars: { type: array, items: { type: string } }
+        formats: { type: array, items: { type: string } }
+        goals: { type: array, items: { type: string } }
+        statuses: { type: array, items: { type: string } }
+        platforms: { type: array, items: { type: string } }
+        showEditableColors: { type: boolean }
+        users: { type: array, items: { $ref: '#/components/schemas/User' } }
+        authRequired: { type: boolean }
+        roles: { type: array, items: { $ref: '#/components/schemas/Role' } }
+    SetupPatch:
+      type: object
+      description: Partial update — send only the fields to change.
+      properties:
+        language: { type: string, enum: [EN, TH] }
+        year: { type: integer, minimum: 1970, maximum: 9999 }
+        owner: { type: string, minLength: 1 }
+        showEditableColors: { type: boolean }
+        authRequired: { type: boolean }
+        roles:
+          type: array
+          description: Full replacement; must be non-empty, duplicate-free, valid and keep in-use roles.
+          items: { $ref: '#/components/schemas/Role' }
+    AddOptionBody:
+      type: object
+      required: [list, item]
+      properties:
+        list:
+          type: string
+          enum: [pillars, formats, goals, statuses, platforms]
+        item: { type: string, minLength: 1, maxLength: 200 }
+    UserBody:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+        role: { type: string, description: Defaults to Editor. }
+    RoleBody:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+        permissions:
+          type: array
+          items: { $ref: '#/components/schemas/Permission' }
+    Post:
+      type: object
+      required:
+        - month
+        - topic
+        - pillar
+        - format
+        - goal
+        - time
+        - status
+        - hook
+        - caption
+        - cta
+        - hashtagGroup
+        - hashtags
+        - imageUrl
+        - note
+        - done
+        - platforms
+      properties:
+        id: { type: string }
+        month: { type: integer, minimum: 1, maximum: 12 }
+        topic: { type: string, description: Required and non-empty. }
+        pillar: { type: string, description: Must exist in SetupConfig.pillars when the list is non-empty. }
+        format: { type: string }
+        goal: { type: string }
+        date: { type: string, format: date, nullable: true, description: Omitted/null = undated backlog. }
+        time: { type: string, example: '18:30' }
+        status: { type: string, example: Start }
+        hook: { type: string }
+        caption: { type: string }
+        cta: { type: string }
+        hashtagGroup: { type: string }
+        hashtags: { type: array, items: { type: string } }
+        imageUrl: { type: string }
+        note: { type: string }
+        done: { type: boolean }
+        platforms: { type: array, items: { type: string } }
+        lockedBy:
+          type: string
+          nullable: true
+          description: Editing-lock holder; null when unlocked.
+    PostInput:
+      type: object
+      description: Same shape as Post without `id`/`lockedBy` (both ignored on create).
+      required:
+        - month
+        - topic
+        - pillar
+        - format
+        - goal
+        - time
+        - status
+        - hook
+        - caption
+        - cta
+        - hashtagGroup
+        - hashtags
+        - imageUrl
+        - note
+        - done
+        - platforms
+      properties:
+        month: { type: integer, minimum: 1, maximum: 12 }
+        topic: { type: string }
+        pillar: { type: string }
+        format: { type: string }
+        goal: { type: string }
+        date: { type: string, format: date, nullable: true }
+        time: { type: string }
+        status: { type: string }
+        hook: { type: string }
+        caption: { type: string }
+        cta: { type: string }
+        hashtagGroup: { type: string }
+        hashtags: { type: array, items: { type: string } }
+        imageUrl: { type: string }
+        note: { type: string }
+        done: { type: boolean }
+        platforms: { type: array, items: { type: string } }
+    PostPatch:
+      type: object
+      description: Partial update — send only the fields to change.
+      properties:
+        month: { type: integer, minimum: 1, maximum: 12 }
+        topic: { type: string }
+        pillar: { type: string }
+        format: { type: string }
+        goal: { type: string }
+        date: { type: string, format: date, nullable: true, description: Explicit null clears the date. }
+        time: { type: string }
+        status: { type: string }
+        hook: { type: string }
+        caption: { type: string }
+        cta: { type: string }
+        hashtagGroup: { type: string }
+        hashtags: { type: array, items: { type: string } }
+        imageUrl: { type: string }
+        note: { type: string }
+        done: { type: boolean }
+        platforms: { type: array, items: { type: string } }
+        user: { type: string, description: Demo mode only — ignored when auth is on (the session decides). }
+    LockBody:
+      type: object
+      description: Demo mode only; when auth is on the session's account is the holder.
+      properties:
+        user: { type: string }
+    Idea:
+      type: object
+      required: [topic, format, idea, link, done]
+      properties:
+        id: { type: string }
+        topic: { type: string, description: Required and non-empty. }
+        format: { type: string }
+        idea: { type: string }
+        link: { type: string }
+        done: { type: boolean }
+    IdeaInput:
+      type: object
+      required: [topic]
+      properties:
+        topic: { type: string }
+        format: { type: string, default: '' }
+        idea: { type: string, default: '' }
+        link: { type: string, default: '' }
+        done: { type: boolean, default: false }
+    HashtagGroup:
+      type: object
+      required: [id, title, tags]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        tags: { type: array, items: { type: string } }
+    TagBody:
+      type: object
+      required: [tag]
+      properties:
+        tag: { type: string, minLength: 1 }
+    Metric:
+      type: object
+      required: [postId, platform, likes, views]
+      properties:
+        postId: { type: string }
+        platform: { type: string }
+        likes: { type: integer, minimum: 0 }
+        views: { type: integer, minimum: 0 }
+    ImportBody:
+      type: object
+      required: [platform, month]
+      properties:
+        platform: { type: string, example: Instagram }
+        month: { type: integer, minimum: 1, maximum: 12 }
+    ImportResult:
+      type: object
+      required: [imported, metrics]
+      properties:
+        imported: { type: integer }
+        metrics: { type: array, items: { $ref: '#/components/schemas/Metric' } }
+    Txn:
+      type: object
+      required: [date, amount, kind, category, sub]
+      properties:
+        id: { type: string }
+        date: { type: string, format: date }
+        amount: { type: number, exclusiveMinimum: 0, maximum: 1000000000000 }
+        kind: { type: string, enum: [IN, OUT] }
+        category: { type: string }
+        sub: { type: string }
+    TxnInput:
+      type: object
+      required: [date, amount, kind, category, sub]
+      properties:
+        date: { type: string, format: date }
+        amount: { type: number, exclusiveMinimum: 0 }
+        kind: { type: string, enum: [IN, OUT] }
+        category: { type: string }
+        sub: { type: string }
+    WorkspaceSummary:
+      type: object
+      required: [id, name, created, connected, total, isOwner]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        created: { type: string }
+        connected: { type: integer, description: Platforms currently connected. }
+        total: { type: integer, description: Platform slots in the workspace. }
+        isOwner: { type: boolean, description: Whether the requesting account owns the workspace. }
+    WorkspaceMembers:
+      type: object
+      required: [owner, members]
+      properties:
+        owner:
+          type: object
+          required: [email, name]
+          properties:
+            email: { type: string }
+            name: { type: string }
+        members:
+          type: array
+          items:
+            type: object
+            required: [email, name, role]
+            properties:
+              email: { type: string }
+              name: { type: string }
+              role: { type: string }
+    Brand:
+      type: object
+      required: [channel, positioning, slogan, audience, voice, dos, donts, palette, fonts]
+      properties:
+        channel: { type: string }
+        positioning: { type: string }
+        slogan: { type: string }
+        audience: { type: string }
+        voice: { type: string }
+        dos: { type: array, items: { type: string } }
+        donts: { type: array, items: { type: string } }
+        palette: { type: array, items: { type: string }, description: Hex codes. }
+        fonts: { type: array, items: { type: string } }
+        logos:
+          type: array
+          maxItems: 3
+          items: { type: string }
+          description: Main/secondary/social logo URLs (uploaded or https; blanks allowed).
+        moodboard:
+          type: array
+          maxItems: 12
+          items: { type: string }
+          description: Moodboard image URLs (uploaded or https).
+    BrandPatch:
+      type: object
+      properties:
+        channel: { type: string }
+        positioning: { type: string }
+        slogan: { type: string }
+        audience: { type: string }
+        voice: { type: string }
+        dos: { type: array, items: { type: string } }
+        donts: { type: array, items: { type: string } }
+        palette: { type: array, items: { type: string } }
+        fonts: { type: array, items: { type: string } }
+    PlatformConnection:
+      type: object
+      required: [id, status, handle, externalId, scopes, tokenType, mediaCount, note]
+      properties:
+        id: { type: string }
+        status:
+          type: string
+          enum: [connected, disconnected, connecting, error]
+        handle: { type: string }
+        externalId: { type: string }
+        scopes: { type: array, items: { type: string } }
+        tokenType: { type: string }
+        expiresAt: { type: string, nullable: true }
+        lastSync: { type: string, nullable: true }
+        mediaCount: { type: integer, minimum: 0 }
+        note: { type: string }
+        hasToken:
+          type: boolean
+          description: >-
+            Runtime-only (list responses): whether a usable provider token
+            exists. A connected slot with `hasToken: false` must be reconnected
+            before it can sync.
+    LiveData:
+      type: object
+      required: [fetchedAt, accounts, posts, error]
+      properties:
+        fetchedAt:
+          type: integer
+          nullable: true
+          description: Unix seconds of the last successful refresh; null = never.
+        accounts:
+          type: array
+          items: { $ref: '#/components/schemas/LiveAccount' }
+        posts:
+          type: array
+          items: { $ref: '#/components/schemas/LivePost' }
+        error:
+          type: string
+          description: Last refresh failure (posts stay from the previous refresh).
+    AdAccount:
+      type: object
+      required: [id, name, status, currency, timezone]
+      properties:
+        id: { type: string, description: 'act_<id> — the id Graph ads endpoints use.' }
+        name: { type: string }
+        status: { type: string, description: 'active | disabled | unsettled | ...' }
+        currency: { type: string }
+        timezone: { type: string }
+        business: { type: string }
+    AdCampaign:
+      type: object
+      required: [id, accountId, name, objective, status]
+      properties:
+        id: { type: string }
+        accountId: { type: string }
+        name: { type: string }
+        objective: { type: string, description: 'Graph objective, e.g. OUTCOME_TRAFFIC.' }
+        status: { type: string, description: 'ACTIVE | PAUSED | DELETED | ARCHIVED' }
+        effectiveStatus: { type: string }
+        buyingType: { type: string }
+        dailyBudget: { type: integer, minimum: 0, description: Minor currency units. }
+        lifetimeBudget: { type: integer, minimum: 0 }
+        budgetRemaining: { type: integer, minimum: 0 }
+        bidStrategy: { type: string }
+        specialAdCategories:
+          type: array
+          items: { type: string }
+        startTime: { type: string }
+        stopTime: { type: string }
+        createdTime: { type: string }
+    AdSet:
+      type: object
+      required: [id, campaignId, name, status]
+      properties:
+        id: { type: string }
+        campaignId: { type: string }
+        name: { type: string }
+        status: { type: string }
+        effectiveStatus: { type: string }
+        dailyBudget: { type: integer, minimum: 0 }
+        lifetimeBudget: { type: integer, minimum: 0 }
+        optimizationGoal: { type: string }
+        billingEvent: { type: string }
+        bidAmount: { type: integer, minimum: 0 }
+        startTime: { type: string }
+        endTime: { type: string }
+        targeting: { type: string, description: 'Short human summary, never the raw targeting blob.' }
+        promotedObject: { type: string }
+    Ad:
+      type: object
+      required: [id, adsetId, name, status]
+      properties:
+        id: { type: string }
+        adsetId: { type: string }
+        name: { type: string }
+        status: { type: string }
+        effectiveStatus: { type: string }
+        creativeTitle: { type: string }
+        creativeBody: { type: string }
+        imageUrl: { type: string }
+        thumbnailUrl: { type: string }
+        storyId: { type: string, description: 'Page post this ad promotes (matches LivePost.id).' }
+        previewUrl: { type: string }
+    AdInsight:
+      type: object
+      required: [campaignId]
+      properties:
+        campaignId: { type: string }
+        spend: { type: number }
+        impressions: { type: integer, minimum: 0 }
+        reach: { type: integer, minimum: 0 }
+        frequency: { type: number }
+        clicks: { type: integer, minimum: 0 }
+        ctr: { type: number }
+        cpc: { type: number }
+        cpm: { type: number }
+        results: { type: integer, minimum: 0 }
+        resultLabel: { type: string }
+        roas: { type: number }
+    AdsAudit:
+      type: object
+      required: [at, actor, action, target]
+      properties:
+        at: { type: string }
+        actor: { type: string }
+        action: { type: string }
+        target: { type: string }
+        detail: { type: string }
+    AdsData:
+      type: object
+      required: [fetchedAt, accounts, campaigns, adsets, ads, insights, audit, error]
+      properties:
+        fetchedAt:
+          type: integer
+          nullable: true
+          description: Unix seconds of the last successful refresh; null = never.
+        accounts:
+          type: array
+          items: { $ref: '#/components/schemas/AdAccount' }
+        campaigns:
+          type: array
+          items: { $ref: '#/components/schemas/AdCampaign' }
+        adsets:
+          type: array
+          items: { $ref: '#/components/schemas/AdSet' }
+        ads:
+          type: array
+          items: { $ref: '#/components/schemas/Ad' }
+        insights:
+          type: array
+          items: { $ref: '#/components/schemas/AdInsight' }
+        audit:
+          type: array
+          items: { $ref: '#/components/schemas/AdsAudit' }
+        error:
+          type: string
+          description: Last refresh failure (data stays from the previous refresh).
+    AdsView:
+      allOf:
+        - $ref: '#/components/schemas/AdsData'
+        - type: object
+          required: [canManage]
+          properties:
+            canManage:
+              type: boolean
+              description: Whether this workspace allows campaign management.
+    LiveAccount:
+      type: object
+      required: [platform, id, username, followers, posts]
+      properties:
+        platform: { type: string, description: meta = Facebook Page, instagram = linked IG account. }
+        id: { type: string }
+        username: { type: string }
+        followers: { type: integer, minimum: 0 }
+        posts: { type: integer, minimum: 0 }
+    LivePost:
+      type: object
+      required:
+        - id
+        - platform
+        - kind
+        - caption
+        - mediaUrl
+        - thumbnailUrl
+        - permalink
+        - createdAt
+        - likes
+        - comments
+        - shares
+        - views
+        - fetchedAt
+      properties:
+        id: { type: string }
+        platform: { type: string }
+        kind: { type: string, description: post | photo | video | reel | carousel }
+        caption: { type: string }
+        mediaUrl: { type: string }
+        thumbnailUrl: { type: string }
+        permalink: { type: string }
+        createdAt: { type: string }
+        likes: { type: integer, minimum: 0 }
+        comments: { type: integer, minimum: 0 }
+        shares: { type: integer, minimum: 0 }
+        views: { type: integer, minimum: 0, description: 0 = the platform does not report it. }
+        fetchedAt: { type: integer }
+    OAuthStatus:
+      type: object
+      required: [platform, mode, configured, authorizeHost]
+      properties:
+        platform: { type: string }
+        mode:
+          type: string
+          enum: [mock, redirect]
+          description: mock = simulation (no credentials); redirect = real authorization-code flow.
+        configured: { type: boolean }
+        authorizeHost: { type: string }
+    OAuthStart:
+      type: object
+      required: [mode]
+      properties:
+        mode: { type: string, enum: [mock, redirect] }
+        url: { type: string, description: Provider authorize URL (redirect mode only). }
+    ContentSummary:
+      type: object
+      required:
+        - id
+        - title
+        - slug
+        - kind
+        - status
+        - excerpt
+        - heroImageUrl
+        - tags
+        - author
+        - updatedAt
+        - version
+        - revisionCount
+        - wordCount
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        kind: { type: string, enum: [article, page, note] }
+        status: { type: string, enum: [draft, review, scheduled, published, archived] }
+        excerpt: { type: string }
+        heroImageUrl: { type: string }
+        tags: { type: array, items: { type: string } }
+        author: { type: string }
+        updatedAt: { type: string }
+        publishedAt: { type: string, nullable: true }
+        scheduledFor: { type: string, nullable: true }
+        version: { type: integer, minimum: 1 }
+        revisionCount: { type: integer, minimum: 0 }
+        wordCount: { type: integer, minimum: 0 }
+    Content:
+      type: object
+      required: [id, title, slug, kind, status, version]
+      properties:
+        id: { type: string }
+        title: { type: string, maxLength: 200 }
+        slug: { type: string, description: Lowercase letters, numbers and dashes. }
+        kind: { type: string, enum: [article, page, note] }
+        status: { type: string, enum: [draft, review, scheduled, published, archived] }
+        body: { type: string, maxLength: 200000 }
+        excerpt: { type: string, maxLength: 500 }
+        heroImageUrl: { type: string, maxLength: 2000 }
+        tags: { type: array, maxItems: 20, items: { type: string, maxLength: 50 } }
+        seoTitle: { type: string, maxLength: 200 }
+        seoDescription: { type: string, maxLength: 500 }
+        author: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        publishedAt: { type: string, nullable: true }
+        scheduledFor: { type: string, nullable: true }
+        version: { type: integer, minimum: 1, description: Optimistic-concurrency token; increments on every write. }
+        revisions:
+          type: array
+          description: Stored history; bodies are omitted in item responses (fetch a revision explicitly).
+          items: { $ref: '#/components/schemas/ContentRevision' }
+    ContentInput:
+      type: object
+      required: [title]
+      description: >-
+        Server assigns id, slug (when empty), author, timestamps and version.
+        `status` is forced to draft unless it is draft or review.
+      properties:
+        title: { type: string, maxLength: 200 }
+        slug: { type: string }
+        kind: { type: string, enum: [article, page, note], default: article }
+        status: { type: string, enum: [draft, review], default: draft }
+        body: { type: string, maxLength: 200000 }
+        excerpt: { type: string, maxLength: 500 }
+        heroImageUrl: { type: string, maxLength: 2000 }
+        tags: { type: array, maxItems: 20, items: { type: string, maxLength: 50 } }
+        seoTitle: { type: string, maxLength: 200 }
+        seoDescription: { type: string, maxLength: 500 }
+    ContentPatch:
+      type: object
+      required: [version]
+      properties:
+        version: { type: integer, description: Version you last read — required; 409 on mismatch. }
+        title: { type: string, maxLength: 200 }
+        slug: { type: string }
+        kind: { type: string, enum: [article, page, note] }
+        status: { type: string, enum: [draft, review, archived], description: Publish/schedule have dedicated endpoints. }
+        body: { type: string, maxLength: 200000 }
+        excerpt: { type: string, maxLength: 500 }
+        heroImageUrl: { type: string, maxLength: 2000 }
+        tags: { type: array, maxItems: 20, items: { type: string, maxLength: 50 } }
+        seoTitle: { type: string, maxLength: 200 }
+        seoDescription: { type: string, maxLength: 500 }
+        note: { type: string, description: Revision note stored with the pre-edit snapshot. }
+    VersionBody:
+      type: object
+      required: [version]
+      properties:
+        version: { type: integer, description: Version you last read. }
+    ScheduleBody:
+      type: object
+      required: [version, scheduledFor]
+      properties:
+        version: { type: integer }
+        scheduledFor: { type: string, format: date-time, description: RFC 3339 timestamp in the future. }
+    ContentRevision:
+      type: object
+      required: [revision, savedAt, author, title, body, status]
+      properties:
+        revision: { type: integer, minimum: 1 }
+        savedAt: { type: string }
+        author: { type: string }
+        note: { type: string }
+        title: { type: string }
+        body: { type: string }
+        excerpt: { type: string }
+        seoTitle: { type: string }
+        seoDescription: { type: string }
+        tags: { type: array, items: { type: string } }
+        status: { type: string }
+    PublicContent:
+      type: object
+      required: [id, title, slug, kind, body]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        kind: { type: string, enum: [article, page, note] }
+        body: { type: string }
+        excerpt: { type: string }
+        heroImageUrl: { type: string }
+        tags: { type: array, items: { type: string } }
+        author: { type: string }
+        publishedAt: { type: string, nullable: true }
+        updatedAt: { type: string }
