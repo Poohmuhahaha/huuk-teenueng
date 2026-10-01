@@ -1,0 +1,40 @@
+# dependencies / builds
+node_modules/
+archive/wireframe/node_modules/
+archive/wireframe/dist/
+production/node_modules/
+production/dist/
+server/target/
+dist/
+
+# python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# research heavies — kept locally, not tracked (regenerate from .md sources)
+*.pdf
+*.typ
+*.prompt.md
+
+# backend persistence snapshots
+data/
+*.tmp
+
+# deployment secrets + backups
+ops/deploy/.env.production
+ops/deploy/postgres/
+backups/
+
+# local env
+.env
+.env.local
+*.local
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# logs
+*.log
