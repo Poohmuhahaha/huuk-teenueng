@@ -24,7 +24,18 @@ const { can } = usePermission()
 const canWrite = computed(() => can('campaigns.write'))
 const canDelete = computed(() => can('campaigns.delete'))
 
-const selectedId = ref<string | null>(typeof route.params.id === 'string' ? route.params.id : null)
+const props = defineProps<{ id?: string; embedded?: boolean }>()
+const emit = defineEmits<{ 'update:id': [string] }>()
+
+const selectedId = ref<string | null>(
+  props.id ?? (typeof route.params.id === 'string' ? route.params.id : null),
+)
+watch(
+  () => props.id,
+  (value) => {
+    if (props.embedded) selectedId.value = value ?? null
+  },
+)
 const draft = ref<Campaign | null>(null)
 const hashtagsText = ref('')
 const error = ref('')
@@ -35,6 +46,10 @@ const METRICS: CampaignMetric[] = ['views', 'likes', 'reach', 'posts']
 
 function select(id: string | null): void {
   selectedId.value = id
+  if (props.embedded) {
+    emit('update:id', id ?? '')
+    return
+  }
   void router.replace(id ? `/campaigns/${id}` : '/campaigns')
 }
 

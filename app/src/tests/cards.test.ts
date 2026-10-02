@@ -1,5 +1,6 @@
-// Deck card registry: Live, Campaigns, Ads, Members and Content (Studio) are
-// cards in the slide deck, not standalone pages.
+// Compact IA: the app is 6 hub screens (Home, Plan, Content, Promote, Analyze,
+// Settings). Related features live as tabs inside a hub; legacy deep links
+// redirect into the owning hub + tab.
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -8,54 +9,67 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { screens, screenIndexOf } from '@/core/screens'
 import appRouter from '@/app/router'
 import AppShell from '@/components/layout/AppShell.vue'
-import LivePage from '@/pages/LivePage.vue'
-import CampaignsPage from '@/pages/CampaignsPage.vue'
-import AdsPage from '@/pages/AdsPage.vue'
-import MembersPage from '@/pages/MembersPage.vue'
-import StudioPage from '@/pages/StudioPage.vue'
+import DashboardPage from '@/pages/DashboardPage.vue'
+import PlanPage from '@/pages/PlanPage.vue'
+import ContentPage from '@/pages/ContentPage.vue'
+import PromotePage from '@/pages/PromotePage.vue'
+import AnalyzePage from '@/pages/AnalyzePage.vue'
+import SettingsPage from '@/pages/SettingsPage.vue'
 import { login, logout } from '@/core/auth'
 
-describe('deck card registry', () => {
-  it('lists Live, Campaigns, Ads, Members and Content as cards', () => {
+describe('hub registry', () => {
+  it('lists the six hub screens', () => {
     const byTo = new Map(screens.map((s) => [s.to, s]))
-    expect(byTo.get('/live')?.component).toBe(LivePage)
-    expect(byTo.get('/campaigns')?.component).toBe(CampaignsPage)
-    expect(byTo.get('/ads')?.component).toBe(AdsPage)
-    expect(byTo.get('/members')?.component).toBe(MembersPage)
-    expect(byTo.get('/studio')?.component).toBe(StudioPage)
+    expect(byTo.get('/dashboard')?.component).toBe(DashboardPage)
+    expect(byTo.get('/plan')?.component).toBe(PlanPage)
+    expect(byTo.get('/content')?.component).toBe(ContentPage)
+    expect(byTo.get('/promote')?.component).toBe(PromotePage)
+    expect(byTo.get('/analyze')?.component).toBe(AnalyzePage)
+    expect(byTo.get('/settings')?.component).toBe(SettingsPage)
+    expect(screens).toHaveLength(6)
   })
 
-  it('resolves detail URLs to their cards', () => {
-    const campaigns = screens.findIndex((s) => s.to === '/campaigns')
-    const studio = screens.findIndex((s) => s.to === '/studio')
-    expect(screenIndexOf('/campaigns')).toBe(campaigns)
-    expect(screenIndexOf('/campaigns/cmp-1')).toBe(campaigns)
-    expect(screenIndexOf('/studio/abc')).toBe(studio)
-    expect(screenIndexOf('/live')).toBe(screens.findIndex((s) => s.to === '/live'))
+  it('resolves each hub path to its card', () => {
+    expect(screenIndexOf('/dashboard')).toBe(screens.findIndex((s) => s.to === '/dashboard'))
+    expect(screenIndexOf('/plan')).toBe(screens.findIndex((s) => s.to === '/plan'))
+    expect(screenIndexOf('/content')).toBe(screens.findIndex((s) => s.to === '/content'))
+    expect(screenIndexOf('/promote')).toBe(screens.findIndex((s) => s.to === '/promote'))
+    expect(screenIndexOf('/analyze')).toBe(screens.findIndex((s) => s.to === '/analyze'))
+    expect(screenIndexOf('/settings')).toBe(screens.findIndex((s) => s.to === '/settings'))
   })
 
-  it('keeps Brand first so / lands on it', () => {
-    expect(screens[0].to).toBe('/brand')
+  it('lands / on Home', () => {
+    expect(screens[0].to).toBe('/dashboard')
   })
 
-  it('routes the former standalone pages through the deck', () => {
-    for (const [path, page] of [
-      ['/live', LivePage],
-      ['/campaigns', CampaignsPage],
-      ['/campaigns/cmp-1', CampaignsPage],
-      ['/ads', AdsPage],
-      ['/members', MembersPage],
-      ['/studio', StudioPage],
-      ['/studio/abc', StudioPage],
+  it('redirects legacy deep links into the owning hub + tab', async () => {
+    for (const [path, target, tab] of [
+      ['/brand', '/settings', 'brand'],
+      ['/members', '/settings', 'members'],
+      ['/calendar', '/plan', 'calendar'],
+      ['/hashtags', '/plan', 'hashtags'],
+      ['/feed', '/content', 'feed'],
+      ['/studio', '/content', 'studio'],
+      ['/live', '/dashboard', undefined],
+      ['/campaigns', '/promote', 'campaigns'],
+      ['/ads', '/promote', 'ads'],
+      ['/performance', '/analyze', 'performance'],
+      ['/finance', '/analyze', 'finance'],
     ] as const) {
-      const route = appRouter.resolve(path)
-      expect(route.meta.standalone).toBeFalsy()
-      expect(route.matched[0]?.components?.default).toBe(page)
+      await appRouter.push(path)
+      expect(appRouter.currentRoute.value.path).toBe(target)
+      if (tab) expect(appRouter.currentRoute.value.query.tab).toBe(tab)
     }
+    await appRouter.push('/studio/abc')
+    expect(appRouter.currentRoute.value.path).toBe('/content')
+    expect(appRouter.currentRoute.value.query).toMatchObject({ tab: 'studio', id: 'abc' })
+    await appRouter.push('/campaigns/cmp-1')
+    expect(appRouter.currentRoute.value.path).toBe('/promote')
+    expect(appRouter.currentRoute.value.query).toMatchObject({ tab: 'campaigns', id: 'cmp-1' })
   })
 })
 
-describe('navbar groups', () => {
+describe('compact navbar', () => {
   function mountShell() {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const router = createRouter({
@@ -71,32 +85,18 @@ describe('navbar groups', () => {
     })
   }
 
-  it('groups links into four dropdowns and closes on navigation', async () => {
+  it('renders one flat link per hub', async () => {
+    await login('owner@studio.local', 'demo1234')
     const w = mountShell()
     try {
-      const labels = w.findAll('.navdrop').map((d) => d.text())
-      expect(labels).toHaveLength(4)
-      for (const name of ['Plan', 'Create', 'Promote', 'Analyze']) {
-        expect(labels.some((t) => t.includes(name))).toBe(true)
+      const labels = w.findAll('.navlink').map((l) => l.text())
+      for (const name of ['Home', 'Plan', 'Content', 'Promote', 'Analyze', 'Settings']) {
+        expect(labels).toContain(name)
       }
-
-      await w.findAll('.navdrop')[2].trigger('click')
-      await vi.waitFor(() => expect(w.find('.navmenu').exists()).toBe(true), { timeout: 5000 })
-      expect(w.find('.navmenu').findAll('.navmenu-link').map((l) => l.text())).toEqual(
-        ['Live', 'Campaigns', 'Ads'],
-      )
-
-      // Opening another group switches the menu.
-      await w.findAll('.navdrop')[0].trigger('click')
-      expect(w.find('.navmenu').findAll('.navmenu-link').map((l) => l.text())).toEqual(
-        ['Brand', 'Monthly', 'Calendar', 'Ideas', 'Hashtags'],
-      )
-
-      // Navigating closes the menu via the route watcher.
-      await w.findAll('.navmenu-link')[0].trigger('click')
-      await vi.waitFor(() => expect(w.find('.navmenu').exists()).toBe(false), { timeout: 5000 })
+      expect(w.findAll('.navdrop')).toHaveLength(0)
     } finally {
       w.unmount()
+      await logout().catch(() => undefined)
     }
   })
 })

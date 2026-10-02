@@ -275,7 +275,7 @@ function onAuthSuccess(mode: 'login' | 'register'): void {
   authOpen.value = false
   // Client accounts land in their content studio, not the internal planner.
   if (currentRole.value === 'Client') {
-    void router.push('/studio')
+    void router.push('/content')
     return
   }
   if (mode !== 'register') return
@@ -287,13 +287,12 @@ function onDocClick(e: MouseEvent): void {
   const target = e.target as HTMLElement | null
   if (!target?.closest?.('.avatar-wrap')) profileOpen.value = false
   if (!target?.closest?.('.ws-wrap')) wsOpen.value = false
-  if (!target?.closest?.('.navgroup')) openGroup.value = null
 }
 // Client accounts belong in the studio: steer them away from planner pages.
 watch(currentRole, (role) => {
   if (role !== 'Client') return
   if (route.meta.standalone || route.meta.public) return
-  void router.replace('/studio')
+  void router.replace('/content')
 })
 
 function onKeyGlobal(e: KeyboardEvent): void {
@@ -302,7 +301,6 @@ function onKeyGlobal(e: KeyboardEvent): void {
   else if (settingsOpen.value) settingsOpen.value = false
   else if (wsOpen.value) wsOpen.value = false
   else if (profileOpen.value) profileOpen.value = false
-  else if (openGroup.value) openGroup.value = null
 }
 
 onMounted(() => {
@@ -318,79 +316,27 @@ onBeforeUnmount(() => {
 interface NavLink {
   to: string
   label: string
-  match?: string[]
-}
-
-interface NavGroup {
-  label: string
-  items: NavLink[]
 }
 
 const isClient = computed(() => currentRole.value === 'Client')
 
-// Grouped navbar: four dropdowns instead of ten flat links. Client accounts
-// only get their studio; staff keep everything, with Members owner-only.
-const groups = computed<NavGroup[]>(() => [
-  {
-    label: t('nav.gPlan'),
-    items: [
-      { to: '/brand', label: t('nav.brand'), match: ['/brand'] },
-      { to: '/planner', label: t('nav.monthly'), match: ['/planner'] },
-      { to: '/calendar', label: t('nav.calendar'), match: ['/calendar'] },
-      { to: '/ideas', label: t('nav.ideas'), match: ['/ideas'] },
-      { to: '/hashtags', label: t('nav.hashtags'), match: ['/hashtags'] },
-    ],
-  },
-  {
-    label: t('nav.gCreate'),
-    items: [
-      { to: '/feed', label: t('nav.feed') },
-      { to: '/studio', label: t('nav.content'), match: ['/studio'] },
-    ],
-  },
-  {
-    label: t('nav.gPromote'),
-    items: [
-      { to: '/live', label: t('nav.live'), match: ['/live'] },
-      { to: '/campaigns', label: t('nav.campaigns'), match: ['/campaigns'] },
-      { to: '/ads', label: t('nav.ads'), match: ['/ads'] },
-    ],
-  },
-  {
-    label: t('nav.gAnalyze'),
-    items: [
-      { to: '/dashboard', label: t('nav.stats'), match: ['/dashboard', '/performance'] },
-      { to: '/finance', label: t('nav.finance') },
-    ],
-  },
-])
-
-// Members is owner-only: the link follows the active workspace summary.
-const membersLink = computed<NavLink | null>(() =>
-  activeWs.value?.isOwner === true && !isClient.value
-    ? { to: '/members', label: t('nav.members'), match: ['/members'] }
-    : null,
+// Compact navbar: one link per hub (the compact IA). Clients only get Content.
+const navLinks = computed<NavLink[]>(() =>
+  isClient.value
+    ? [{ to: '/content', label: t('nav.content') }]
+    : [
+        { to: '/dashboard', label: t('nav.home') },
+        { to: '/plan', label: t('nav.plan') },
+        { to: '/content', label: t('nav.content') },
+        { to: '/promote', label: t('nav.promote') },
+        { to: '/analyze', label: t('nav.analyze') },
+        { to: '/settings', label: t('nav.settings') },
+      ],
 )
 
-const openGroup = ref<string | null>(null)
-
-function toggleGroup(label: string): void {
-  openGroup.value = openGroup.value === label ? null : label
-}
-
 function isActive(l: NavLink): boolean {
-  if (l.match) return l.match.some((m) => route.path.startsWith(m))
-  return route.path === l.to
+  return route.path === l.to || route.path.startsWith(l.to + '/')
 }
-
-function groupActive(g: NavGroup): boolean {
-  return g.items.some(isActive)
-}
-
-// A route change from anywhere (deck slide, deep link) closes the menu.
-watch(() => route.path, () => {
-  openGroup.value = null
-})
 
 </script>
 
@@ -403,33 +349,11 @@ watch(() => route.path, () => {
         </RouterLink>
       </div>
       <nav class="links">
-        <RouterLink v-if="isClient" to="/studio" class="navlink"
-          :class="{ active: route.path.startsWith('/studio') }"
-          :aria-current="route.path.startsWith('/studio') ? 'page' : undefined">
-          {{ t('nav.content') }}
+        <RouterLink v-for="l in navLinks" :key="l.to" :to="l.to" class="navlink"
+          :class="{ active: isActive(l) }"
+          :aria-current="isActive(l) ? 'page' : undefined">
+          {{ l.label }}
         </RouterLink>
-        <template v-else>
-          <div v-for="g in groups" :key="g.label" class="navgroup">
-            <button type="button" class="navlink navdrop" :class="{ active: groupActive(g) }"
-              :aria-current="groupActive(g) ? 'page' : undefined"
-              aria-haspopup="menu" :aria-expanded="openGroup === g.label" @click.stop="toggleGroup(g.label)">
-              {{ g.label }}
-              <span class="ws-caret" aria-hidden="true">▾</span>
-            </button>
-            <div v-if="openGroup === g.label" class="navmenu" role="menu" :aria-label="g.label" @click.stop>
-              <RouterLink v-for="l in g.items" :key="l.to" :to="l.to" class="navmenu-link"
-                :class="{ active: isActive(l) }" role="menuitem"
-                :aria-current="isActive(l) ? 'page' : undefined">
-                {{ l.label }}
-              </RouterLink>
-            </div>
-          </div>
-          <RouterLink v-if="membersLink" :to="membersLink.to" class="navlink"
-            :class="{ active: isActive(membersLink) }"
-            :aria-current="isActive(membersLink) ? 'page' : undefined">
-            {{ membersLink.label }}
-          </RouterLink>
-        </template>
       </nav>
       <div class="side">
         <template v-if="!currentUser">

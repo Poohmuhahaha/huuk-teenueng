@@ -18,7 +18,8 @@ import CopyBar from '@/components/ui/CopyBar.vue'
 import ProtectedModal from '@/components/overlays/ProtectedModal.vue'
 import Chip from '@/components/ui/Chip.vue'
 
-const props = defineProps<{ month?: string }>()
+const props = defineProps<{ month?: string; embedded?: boolean }>()
+const emit = defineEmits<{ 'update:month': [string] }>()
 const route = useRoute()
 const router = useRouter()
 
@@ -187,7 +188,9 @@ function goMonth(value: string | number): void {
   if (next === null || next === month.value) return
   month.value = next
   selectedId.value = null
-  void router.replace({ path: `/planner/${next}`, query: route.query })
+  // Embedded in the Plan hub: the parent owns the tab/month and the URL.
+  if (props.embedded) emit('update:month', String(next))
+  else void router.replace({ path: `/planner/${next}`, query: route.query })
 }
 
 const assembled = computed(() => {

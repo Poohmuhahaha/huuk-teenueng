@@ -88,7 +88,7 @@ describe('workspace members page', () => {
 
     const shell = mountShell()
     await vi.waitFor(() => {
-      expect(navLabels(shell)).toContain('Members')
+      expect(navLabels(shell)).toContain('Settings')
     }, { timeout: 8000 })
     shell.unmount()
   })
@@ -138,9 +138,9 @@ describe('workspace members page', () => {
 })
 
 describe('members route registration', () => {
-  it('registers /members as a deck card (App renders the deck, not a standalone view)', () => {
-    const route = appRouter.resolve('/members')
-    expect(route.meta.standalone).toBeFalsy()
-    expect(route.matched[0]?.components?.default).toBe(MembersPage)
+  it('redirects /members into the Settings hub (members tab)', async () => {
+    await appRouter.push('/members')
+    expect(appRouter.currentRoute.value.path).toBe('/settings')
+    expect(appRouter.currentRoute.value.query.tab).toBe('members')
   })
 })

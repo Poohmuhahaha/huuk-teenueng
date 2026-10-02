@@ -17,7 +17,7 @@ const router = useRouter()
 // query-client free for unit tests.
 const visible = computed<Screen[]>(() =>
   currentRole.value === 'Client'
-    ? screens.filter((s) => s.match.some((m) => m.startsWith('/studio')))
+    ? screens.filter((s) => s.match.some((m) => m.startsWith('/content')))
     : screens,
 )
 

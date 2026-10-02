@@ -10,6 +10,8 @@ import InfoTip from '@/components/ui/InfoTip.vue'
 import type { ContentStatus, ContentSummary } from '@/mock/db'
 import ContentEditor from '@/components/editor/ContentEditor.vue'
 
+const props = defineProps<{ id?: string; embedded?: boolean }>()
+const emit = defineEmits<{ 'update:id': [string] }>()
 const route = useRoute()
 const router = useRouter()
 const { can, isLoggedIn } = usePermission()
@@ -34,18 +36,23 @@ const params = computed(() => ({
 const listQ = useContentList(params)
 const create = useCreateContent()
 
-const selectedId = computed(() => (typeof route.params.id === 'string' ? route.params.id : ''))
+const selectedId = computed(() =>
+  props.id ?? (typeof route.params.id === 'string' ? route.params.id : ''),
+)
 const rows = computed<ContentSummary[]>(() => listQ.data.value ?? [])
 
 function select(id: string): void {
-  if (id !== selectedId.value) void router.push(`/studio/${id}`)
+  if (id === selectedId.value) return
+  if (props.embedded) emit('update:id', id)
+  else void router.push(`/studio/${id}`)
 }
 
 async function newContent(): Promise<void> {
   if (!canWrite.value || create.isPending.value) return
   try {
     const created = await create.mutateAsync({ title: 'Untitled', kind: 'article' })
-    void router.push(`/studio/${created.id}`)
+    if (props.embedded) emit('update:id', created.id)
+    else void router.push(`/studio/${created.id}`)
   } catch {
     // the list surfaces mutation errors; creating is best-effort here
   }

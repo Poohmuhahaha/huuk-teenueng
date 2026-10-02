@@ -9,17 +9,48 @@ import RegisterPage from '@/pages/RegisterPage.vue'
 import PlansPage from '@/pages/PlansPage.vue'
 import WorkspaceSetupPage from '@/pages/WorkspaceSetupPage.vue'
 
-// One sheet, one route — routes derived from the slide deck registry.
-// Profile & setup is not a deck card: it opens as a popup from the avatar, and
-// `/profile` + `/setup` are kept as aliases for links and the OAuth callback
-// (both preserve query params so the callback notice still lands).
+// One sheet, one route — routes derived from the hub registry (compact IA).
+// Legacy deep links (the old per-feature paths) redirect into the owning hub
+// + tab, so bookmarks keep working.
+const legacy: RouteRecordRaw[] = [
+  { path: '/brand', redirect: (to) => ({ path: '/settings', query: { ...to.query, tab: 'brand' } }) },
+  { path: '/home', redirect: (to) => ({ path: '/dashboard', query: to.query }) },
+  { path: '/planner', redirect: (to) => ({ path: '/plan', query: { ...to.query, tab: 'monthly' } }) },
+  {
+    path: '/planner/:month',
+    redirect: (to) => ({ path: '/plan', query: { ...to.query, tab: 'monthly', m: String(to.params.month) } }),
+  },
+  { path: '/calendar', redirect: (to) => ({ path: '/plan', query: { ...to.query, tab: 'calendar' } }) },
+  { path: '/ideas', redirect: (to) => ({ path: '/plan', query: { ...to.query, tab: 'ideas' } }) },
+  { path: '/hashtags', redirect: (to) => ({ path: '/plan', query: { ...to.query, tab: 'hashtags' } }) },
+  { path: '/feed', redirect: (to) => ({ path: '/content', query: { ...to.query, tab: 'feed' } }) },
+  {
+    path: '/studio/:id?',
+    redirect: (to) => ({
+      path: '/content',
+      query: { ...to.query, tab: 'studio', ...(typeof to.params.id === 'string' && to.params.id ? { id: to.params.id } : {}) },
+    }),
+  },
+  { path: '/live', redirect: (to) => ({ path: '/dashboard', query: to.query }) },
+  {
+    path: '/campaigns/:id?',
+    redirect: (to) => ({
+      path: '/promote',
+      query: { ...to.query, tab: 'campaigns', ...(typeof to.params.id === 'string' && to.params.id ? { id: to.params.id } : {}) },
+    }),
+  },
+  { path: '/ads', redirect: (to) => ({ path: '/promote', query: { ...to.query, tab: 'ads' } }) },
+  { path: '/performance', redirect: (to) => ({ path: '/analyze', query: { ...to.query, tab: 'performance' } }) },
+  { path: '/finance', redirect: (to) => ({ path: '/analyze', query: { ...to.query, tab: 'finance' } }) },
+  { path: '/members', redirect: (to) => ({ path: '/settings', query: { ...to.query, tab: 'members' } }) },
+]
+
 const routes: RouteRecordRaw[] = [
   { path: '/', redirect: (to) => ({ path: screens[0].to, query: to.query }) },
   { path: '/profile', redirect: (to) => ({ path: '/', query: to.query }) },
   { path: '/setup', redirect: (to) => ({ path: '/', query: to.query }) },
-  ...screens.map((s) => ({ path: s.path, component: s.component, props: true })),
-  // Monthly planner without a month in the URL opens the current month.
-  { path: '/planner', component: () => import('@/pages/PlannerPage.vue'), meta: { standalone: false } },
+  ...screens.map((s) => ({ path: s.path, component: s.component })),
+  ...legacy,
   // SaaS onboarding: login, signup and packages (no app shell).
   { path: '/login', component: LoginPage, meta: { public: true } },
   { path: '/register', component: RegisterPage, meta: { public: true } },

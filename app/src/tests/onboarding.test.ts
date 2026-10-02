@@ -56,8 +56,9 @@ describe('plans page', () => {
     const w = mountPage(PlansPage)
 
     await w.find('.plan-card .btn-primary').trigger('click')
-    // '/' redirects to the first deck screen — onboarding lands on Brand Identity.
-    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/brand'), { timeout: 5000 })
+    // '/' redirects into the compact IA: the first-run setup lands on Settings › Brand.
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/settings'), { timeout: 5000 })
+    expect(router.currentRoute.value.query.tab).toBe('brand')
     expect(router.currentRoute.value.query.onboarding).toBe('1')
     expect(currentUser.value?.plan).toBe('free')
     w.unmount()
