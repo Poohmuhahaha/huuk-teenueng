@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # Content Planner deployment helper (Docker Compose).
 #
-#   ./deploy.sh init              create ops/deploy/.env.production with generated secrets
-#   ./deploy.sh up [--tls]        build + start (adds the Caddy TLS profile with --tls)
-#   ./deploy.sh down              stop containers, keep data
-#   ./deploy.sh destroy           stop and DELETE volumes (double confirmation)
-#   ./deploy.sh ps                show container status
-#   ./deploy.sh logs [service]    follow logs (api | web | proxy)
-#   ./deploy.sh restart           restart the stack
-#   ./deploy.sh update            rebuild (pulling base images) and roll forward
-#   ./deploy.sh backup [file]     copy the API snapshot to a local file
-#   ./deploy.sh restore <file>    replace the snapshot and restart the API
-#   ./deploy.sh smoke [url]       run scripts/smoke.sh against the deployment
-#   ./deploy.sh help
+#   ops/scripts/deploy.sh init              create ops/deploy/.env.production with generated secrets
+#   ops/scripts/deploy.sh up [--tls]        build + start (adds the Caddy TLS profile with --tls)
+#   ops/scripts/deploy.sh down              stop containers, keep data
+#   ops/scripts/deploy.sh destroy           stop and DELETE volumes (double confirmation)
+#   ops/scripts/deploy.sh ps                show container status
+#   ops/scripts/deploy.sh logs [service]    follow logs (api | web | proxy)
+#   ops/scripts/deploy.sh restart           restart the stack
+#   ops/scripts/deploy.sh update            rebuild (pulling base images) and roll forward
+#   ops/scripts/deploy.sh backup [file]     copy the API snapshot to a local file
+#   ops/scripts/deploy.sh restore <file>    replace the snapshot and restart the API
+#   ops/scripts/deploy.sh smoke [url]       run ops/scripts/smoke.sh against the deployment
+#   ops/scripts/deploy.sh help
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 ENV_FILE="${ENV_FILE:-ops/deploy/.env.production}"
@@ -30,15 +30,15 @@ require_docker() {
   if ! command -v docker >/dev/null 2>&1; then
     die "docker is not installed.
 This host can run the Docker-free stack instead:
-  sudo scripts/install.sh          # one binary serves API + frontend + systemd
-  scripts/install.sh --help        # options (prefix, port, admin email, …)
-Other container hosts are covered in DEPLOYMENT.md."
+  sudo ops/scripts/install.sh          # one binary serves API + frontend + systemd
+  ops/scripts/install.sh --help        # options (prefix, port, admin email, …)
+Other container hosts are covered in docs/DEPLOYMENT.md."
   fi
   docker compose version >/dev/null 2>&1 || die "docker compose v2 is required"
 }
 
 require_env() {
-  [[ -f "$ENV_FILE" ]] || die "missing $ENV_FILE — run: ./deploy.sh init"
+  [[ -f "$ENV_FILE" ]] || die "missing $ENV_FILE — run: ops/scripts/deploy.sh init"
 }
 
 # Cryptographically random hex string (openssl preferred).
@@ -78,13 +78,13 @@ cmd_init() {
   log "Keep both safe and change the password after the first login."
   log "Before going live, edit $ENV_FILE:"
   log "  FRONTEND_URL / PUBLIC_URL / CORS_ORIGINS  -> your public URL"
-  log "  SITE_ADDRESS                              -> your domain (for ./deploy.sh up --tls)"
+  log "  SITE_ADDRESS                              -> your domain (for ops/scripts/deploy.sh up --tls)"
   log ""
   local port
   port="$(env_value WEB_PORT)"; port="${port:-8080}"
   log "Then:"
-  log "  ./deploy.sh up          # http://localhost:${port}"
-  log "  ./deploy.sh up --tls    # Caddy on 80/443 with automatic HTTPS"
+  log "  ops/scripts/deploy.sh up          # http://localhost:${port}"
+  log "  ops/scripts/deploy.sh up --tls    # Caddy on 80/443 with automatic HTTPS"
 }
 
 cmd_up() {
@@ -94,7 +94,7 @@ cmd_up() {
   for arg in "$@"; do
     case "$arg" in
       --tls) with_tls=1 ;;
-      *) die "unknown option: $arg (usage: ./deploy.sh up [--tls])" ;;
+      *) die "unknown option: $arg (usage: ops/scripts/deploy.sh up [--tls])" ;;
     esac
   done
 
@@ -138,7 +138,7 @@ cmd_backup() {
   chmod 700 "$BACKUP_DIR" 2>/dev/null || true
   umask 077
   if ! "${COMPOSE[@]}" ps --status running --services 2>/dev/null | grep -qx api; then
-    die "the api container is not running (start it with ./deploy.sh up)"
+    die "the api container is not running (start it with ops/scripts/deploy.sh up)"
   fi
   "${COMPOSE[@]}" exec -T api cat /app/data/content-planner.json > "$out"
   [[ -s "$out" ]] || die "backup file is empty"
@@ -163,7 +163,7 @@ cmd_restore() {
   require_docker
   require_env
   local file="${1:-}"
-  [[ -n "$file" && -f "$file" ]] || die "usage: ./deploy.sh restore <backup.json>"
+  [[ -n "$file" && -f "$file" ]] || die "usage: ops/scripts/deploy.sh restore <backup.json>"
   if command -v python3 >/dev/null 2>&1; then
     python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$file" \
       || die "$file is not valid JSON"
@@ -188,14 +188,14 @@ cmd_update() {
 }
 
 cmd_smoke() {
-  # Usage: ./deploy.sh smoke [https://app.example.com] [email password] [--write]
+  # Usage: ops/scripts/deploy.sh smoke [https://app.example.com] [email password] [--write]
   local url=""
   if [[ "${1:-}" == http* ]]; then
     url="$1"
     shift
   fi
   if [[ -z "$url" ]]; then
-    [[ -f "$ENV_FILE" ]] || die "missing $ENV_FILE (or pass a URL: ./deploy.sh smoke https://app.example.com)"
+    [[ -f "$ENV_FILE" ]] || die "missing $ENV_FILE (or pass a URL: ops/scripts/deploy.sh smoke https://app.example.com)"
     local port site
     port="$(env_value WEB_PORT)"; port="${port:-8080}"
     site="$(env_value SITE_ADDRESS)"
@@ -207,7 +207,7 @@ cmd_smoke() {
       url="http://localhost:${port}"
     fi
   fi
-  bash scripts/smoke.sh "$url" "$@"
+  bash ops/scripts/smoke.sh "$url" "$@"
 }
 
 cmd_help() {
@@ -229,5 +229,5 @@ case "$command" in
   restore) cmd_restore "$@" ;;
   smoke) cmd_smoke "$@" ;;
   help | --help | -h) cmd_help ;;
-  *) die "unknown command: $command (run ./deploy.sh help)" ;;
+  *) die "unknown command: $command (run ops/scripts/deploy.sh help)" ;;
 esac

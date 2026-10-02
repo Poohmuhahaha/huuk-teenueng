@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Production / staging smoke test for a Content Planner deployment.
 #
-#   ops/ops/scripts/smoke.sh <base-url> [admin-email admin-password] [--write]
+#   ops/scripts/smoke.sh <base-url> [admin-email admin-password] [--write]
 #
 # Without credentials only public/prod-safety checks run. With credentials the
 # login + profile path is verified; --write additionally exercises the full CMS

@@ -1,10 +1,10 @@
 # Production stack: API + static web host. Optional Caddy TLS front (profile "tls").
 #
-#   ./deploy.sh init      # create ops/deploy/.env.production (generated secrets)
-#   ./deploy.sh up        # build + start on http://host:${WEB_PORT:-8080}
-#   ./deploy.sh up --tls  # also start Caddy (80/443, auto-HTTPS for SITE_ADDRESS)
+#   ops/scripts/deploy.sh init      # create ops/deploy/.env.production (generated secrets)
+#   ops/scripts/deploy.sh up        # build + start on http://host:${WEB_PORT:-8080}
+#   ops/scripts/deploy.sh up --tls  # also start Caddy (80/443, auto-HTTPS for SITE_ADDRESS)
 #
-# All settings live in deploy/.env.production (passed with --env-file by deploy.sh).
+# All settings live in deploy/.env.production (passed with --env-file by ops/scripts/deploy.sh).
 name: content-planner
 
 services:
@@ -49,8 +49,9 @@ services:
 
   web:
     build:
-      context: ../app
-      dockerfile: Dockerfile
+      # Root context so app/Dockerfile can also copy ops/nginx/*.
+      context: ..
+      dockerfile: app/Dockerfile
       args:
         # Empty => same-origin /api (recommended behind the proxy).
         VITE_API_URL: ${VITE_API_URL:-}

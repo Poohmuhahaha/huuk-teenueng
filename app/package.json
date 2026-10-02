@@ -12,11 +12,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "vue-tsc -b",
-    "tauri": "tauri",
+    "tauri": "cd ../desktop && tauri",
     "desktop:sidecar": "bash scripts/desktop-sidecar.sh",
-    "desktop:dev": "tauri dev",
-    "desktop:build": "bun run desktop:sidecar && tauri build",
-    "desktop:build:local": "bun run desktop:sidecar && cargo build --release --manifest-path src-tauri/Cargo.toml --features tauri/custom-protocol"
+    "desktop:dev": "cd ../desktop && tauri dev",
+    "desktop:build": "bun run desktop:sidecar && cd ../desktop && tauri build",
+    "desktop:build:local": "bun run desktop:sidecar && cargo build --release --manifest-path ../desktop/Cargo.toml --features tauri/custom-protocol"
   },
   "dependencies": {
     "@tanstack/vue-query": "^5.102.8",

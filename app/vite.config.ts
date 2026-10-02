@@ -2,7 +2,7 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
-// Tauri desktop expects a fixed dev-server port (see src-tauri/tauri.conf.json).
+// Tauri desktop expects a fixed dev-server port (see desktop/tauri.conf.json).
 const host = process.env.TAURI_DEV_HOST
 
 // https://vite.dev/config/
@@ -16,7 +16,7 @@ export default defineConfig({
   // Prevent vite from obscuring rust errors.
   clearScreen: false,
   server: {
-    // Make sure this matches `devUrl` in src-tauri/tauri.conf.json.
+    // Make sure this matches `devUrl` in desktop/tauri.conf.json.
     port: 5173,
     // Tauri expects a fixed port — fail instead of silently incrementing.
     strictPort: true,
@@ -25,7 +25,7 @@ export default defineConfig({
     hmr: host ? { protocol: 'ws', host, port: 1421 } : undefined,
     watch: {
       // Ignore the desktop shell: it has its own cargo watcher.
-      ignored: ['**/src-tauri/**'],
+      ignored: ['**/desktop/**'],
     },
   },
   // Variables starting with these prefixes are exposed to the frontend.

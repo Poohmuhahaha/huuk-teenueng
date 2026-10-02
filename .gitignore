@@ -1,11 +1,13 @@
 # dependencies / builds
 node_modules/
-archive/wireframe/node_modules/
-archive/wireframe/dist/
-production/node_modules/
-production/dist/
 server/target/
+desktop/target/
+desktop/gen/
 dist/
+
+# desktop sidecar + installer binaries (rebuilt, never committed)
+*.binaries
+desktop/binaries/
 
 # python artifacts
 __pycache__/
@@ -25,6 +27,8 @@ data/
 ops/deploy/.env.production
 ops/deploy/postgres/
 backups/
+passwords
+*.secret
 
 # local env
 .env

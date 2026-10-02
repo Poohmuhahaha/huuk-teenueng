@@ -1,4 +1,4 @@
-# Installed by scripts/install.sh (placeholders are substituted).
+# Installed by ops/scripts/install.sh (placeholders are substituted).
 [Unit]
 Description=Content Planner (API + web)
 After=network.target

@@ -4,11 +4,11 @@
 #     ops/deploy/systemd/content-planner-backup.{service,timer} >/etc/systemd/system/  (one at a time)
 #   sudo systemctl daemon-reload && sudo systemctl enable --now content-planner-backup.timer
 [Unit]
-Description=Content Planner snapshot backup (deploy.sh backup)
+Description=Content Planner snapshot backup (ops/scripts/deploy.sh backup)
 
 [Service]
 Type=oneshot
 User=__RUN_USER__
 SupplementaryGroups=docker
 WorkingDirectory=__REPO__
-ExecStart=__REPO__/deploy.sh backup
+ExecStart=__REPO__/ops/scripts/deploy.sh backup

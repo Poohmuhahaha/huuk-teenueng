@@ -1,0 +1,18 @@
+# Build context is the repo root (ops/ sits inside it), so exclude everything
+# the two images don't need. Keeps the web image context small and avoids
+# leaking local state/secrets into the build.
+.git
+.gitignore
+**/node_modules
+app/dist
+app/.env
+app/.env.local
+app/.env.*.local
+server/target
+data
+backups
+ops/deploy/.env.production
+ops/deploy/postgres
+docs
+**/*.log
+*.prompt.md

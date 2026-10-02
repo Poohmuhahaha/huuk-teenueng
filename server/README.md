@@ -28,13 +28,13 @@ server/
 From the repository root, one command runs the backend **and** the frontend wired to it:
 
 ```sh
-bun run dev               # or: npm run dev / bash dev.sh   (Ctrl+C stops both)
+bun run dev               # or: npm run dev / bash ops/scripts/dev.sh   (Ctrl+C stops both)
 bun run dev:server        # backend only
 bun run test              # Rust + frontend tests
 ```
 
 Or work on the server directly — `DEMO_MODE=1` keeps the local wireframe behavior
-(seeded demo accounts, auth optional, open registration), which is what `dev.sh` sets:
+(seeded demo accounts, auth optional, open registration), which is what `ops/scripts/dev.sh` sets:
 
 ```sh
 cd server
@@ -82,7 +82,7 @@ VITE_API_URL=http://localhost:8787
 
 Then `npm run dev` (restart Vite after adding the env var) and every page reads/writes through
 the Rust API. Both modules implement the same functions, so no page or component changes are
-needed — this is the "swap point" described in `../production/docs/GUIDES.md`.
+needed — this is the "swap point" described in `../docs/GUIDES.md`.
 
 > CORS follows `CORS_ORIGINS` (comma-separated allow-list). In demo mode it stays permissive;
 > in production it defaults to `FRONTEND_URL` + the local Vite origins, so set

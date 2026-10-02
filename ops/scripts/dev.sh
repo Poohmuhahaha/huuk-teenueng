@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # One command to run the whole stack:
 #
-#   bash dev.sh          → Rust backend (:8787) + Vue dev server, frontend wired to the API
-#   bash dev.sh --mock   → frontend only, in-memory mock data (no backend)
-#   bash dev.sh --server → backend only
+#   bash ops/scripts/dev.sh          → Rust backend (:8787) + Vue dev server, frontend wired to the API
+#   bash ops/scripts/dev.sh --mock   → frontend only, in-memory mock data (no backend)
+#   bash ops/scripts/dev.sh --server → backend only
+#   (or from the repo root: make dev / make dev-mock / make dev-server)
 #
 # Ctrl+C stops everything (the backend is cleaned up automatically).
 set -euo pipefail
 set -m  # job control: each background job becomes its own process group
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PORT="${PORT:-8787}"
 HEALTH="http://localhost:${PORT}/api/health"
 MODE="all"

@@ -82,7 +82,7 @@ Typography: `"Noto Sans Thai", "Inter", "Segoe UI", system-ui` — body 15px, h1
 Preserved from the wireframe (do not change casually — they are product behavior, not styling):
 the **1:3:3:1 deck viewport**, snap geometry, the full-page `width`/`left` animation, container
 queries at 720/1100 px, and the responsive breakpoints at 860/560/640 px. See
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+[`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md).
 
 ## Non-negotiable rules
 
@@ -100,21 +100,19 @@ queries at 720/1100 px, and the responsive breakpoints at 860/560/640 px. See
 
 | Doc | Read it when… |
 |---|---|
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | You need to understand data flow, the deck, animation or layout |
-| [`docs/COMPONENTS.md`](docs/COMPONENTS.md) | You need to find what a component/page does |
-| [`docs/GUIDES.md`](docs/GUIDES.md) | You are making a change (how-tos + gotchas) |
-| [`docs/CHANGELOG.md`](docs/CHANGELOG.md) | You want the build history and decisions |
-| [`../../business/features/theming/theming.md`](../../business/features/theming/theming.md) | You are implementing per-workspace client CI theming |
-| [`../../business/design/design.md`](../../business/design/design.md) | You need the product/system design and acceptance gates |
+| [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) | You need to understand data flow, the deck, animation or layout |
+| [`../docs/COMPONENTS.md`](../docs/COMPONENTS.md) | You need to find what a component/page does |
+| [`../docs/GUIDES.md`](../docs/GUIDES.md) | You are making a change (how-tos + gotchas) |
+| [`../docs/CHANGELOG.md`](../docs/CHANGELOG.md) | You want the build history and decisions |
 | [`../server/README.md`](../server/README.md) | You need the API reference and production path |
 
-Deployment: [`../../DEPLOYMENT.md`](../../DEPLOYMENT.md). The copied `Dockerfile` and `nginx.conf` build
-this folder as a static image (from the repo root: `docker build -f app/Dockerfile app`); the backend can
-also serve it directly with `STATIC_DIR=app/dist`.
+Deployment: [`../../docs/DEPLOYMENT.md`](../../docs/DEPLOYMENT.md). `Dockerfile` (built from the repo-root
+context: `docker build -f app/Dockerfile .`) plus `ops/nginx/` build this folder as a static image; the
+backend can also serve it directly with `STATIC_DIR=app/dist`.
 
 ## Desktop (Tauri, no browser needed)
 
-`src-tauri/` wraps this frontend plus the Rust backend (`../server`, bundled as a
+`../desktop/` wraps this frontend plus the Rust backend (`../server`, bundled as a
 sidecar) into a standalone Huuk desktop app. The sidecar runs localhost-only on
 port 8787 with the snapshot at the OS app-data dir and single-user demo auth,
 so the app works fully offline; data persists across restarts.
@@ -125,10 +123,10 @@ npm run desktop:dev      # Vite + Tauri window with the local sidecar
 npm run desktop:build    # sidecar + frontend bundle → installer (.deb/.AppImage/…)
 ```
 
-On this machine (CachyOS, no sudo) the system web libs live in `~/tauri-sys`
-instead, so the shell links via `app/.cargo/config.toml` and runs
-via `~/huuk-desktop/huuk.sh` (see also the Huuk entry in the app launcher).
-Rebuild the binary the same no-sudo way with:
+On this machine (CachyOS, no sudo) the system web libs live in
+`~/.local/share/tauri-sys` instead, so the shell links via
+`desktop/.cargo/config.toml` and runs via `desktop/huuk.sh` (see also the Huuk
+entry in the app launcher). Rebuild the binary the same no-sudo way with:
 
 ```sh
 npm run desktop:build:local
@@ -137,8 +135,8 @@ npm run desktop:build:local
 Why the `:local` variant: the Tauri CLI injects the `custom-protocol` cargo
 feature on `tauri build` (without it the window falls back to the Vite
 dev-server URL); direct `cargo build` needs the feature passed explicitly.
-`~/tauri-sys/lib/webkit-path-shim.so` additionally remaps WebKit's hardcoded
-helper paths to the staged copy — a single future
+`~/.local/share/tauri-sys/lib/webkit-path-shim.so` additionally remaps WebKit's
+hardcoded helper paths to the staged copy — a single future
 `sudo pacman -S webkit2gtk-4.1 xdg-dbus-proxy` removes that shim.
 
 Linux needs the Tauri system libraries once (no sudo here, so run this yourself):
@@ -150,4 +148,4 @@ sudo apt update && sudo apt install libwebkit2gtk-4.1-dev build-essential curl w
 
 `npm run build:desktop` bakes `VITE_API_URL=http://127.0.0.1:8787` into `dist/`
 (the regular web `npm run build` is untouched). Icons live in
-`src-tauri/icons/` (regenerate: `npx tauri icon src-tauri/icon.svg`).
+`../desktop/icons/` (regenerate: `npx tauri icon ../desktop/icon.svg`).

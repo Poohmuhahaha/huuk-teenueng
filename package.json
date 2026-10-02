@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "description": "Content Planner \u2014 Vue frontend (app/) + Rust backend (server/)",
   "scripts": {
-    "dev": "bash dev.sh",
-    "dev:mock": "bash dev.sh --mock",
-    "dev:server": "bash dev.sh --server",
-    "app": "bash dev.sh --mock",
+    "dev": "bash ops/scripts/dev.sh",
+    "dev:mock": "bash ops/scripts/dev.sh --mock",
+    "dev:server": "bash ops/scripts/dev.sh --server",
+    "app": "bash ops/scripts/dev.sh --mock",
     "server": "cargo run --manifest-path server/Cargo.toml",
     "test": "cargo test --manifest-path server/Cargo.toml && (cd app && bun run test)",
     "build": "cargo build --release --manifest-path server/Cargo.toml && (cd app && bun run build)"

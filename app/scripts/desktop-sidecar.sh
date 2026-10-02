@@ -6,7 +6,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TRIPLE="$(rustc --print host-tuple)"
-BIN_DIR="$ROOT/src-tauri/binaries"
+BIN_DIR="$ROOT/../desktop/binaries"
 
 cargo build --release --manifest-path "$ROOT/../server/Cargo.toml"
 mkdir -p "$BIN_DIR"

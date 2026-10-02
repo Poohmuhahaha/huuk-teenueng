@@ -5,9 +5,9 @@
   "identifier": "com.teeneung.huuk",
   "build": {
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "npm run dev:desktop",
-    "beforeBuildCommand": "npm run build:desktop",
-    "frontendDist": "../dist"
+    "beforeDevCommand": "npm --prefix ../app run dev:desktop",
+    "beforeBuildCommand": "npm --prefix ../app run build:desktop",
+    "frontendDist": "../app/dist"
   },
   "app": {
     "windows": [
