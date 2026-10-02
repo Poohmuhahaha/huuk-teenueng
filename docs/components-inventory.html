@@ -1,0 +1,581 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Huuk — Page & UI Inventory</title><style>
+:root{--ink:#000;--ink-body:#1a1a1a;--muted:#6b6b6b;--faint:#a3a3a3;--line:#e4e4e4;--paper:#fff;
+ --sans:"Inter Variable",Inter,ui-sans-serif,system-ui,-apple-system,"Noto Sans Thai",sans-serif;
+ --serif:Tinos,"Times New Roman",Times,Georgia,"Noto Serif Thai",serif;}
+*{box-sizing:border-box;border-radius:0}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 var(--sans);letter-spacing:-.011em;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:clamp(24px,5vw,72px)}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:700;line-height:1.1;letter-spacing:-.015em;text-wrap:balance}
+h1{font-size:clamp(32px,4.6vw,50px);letter-spacing:-.02em;margin:.1em 0 .3em}
+h2{font-size:clamp(20px,2.6vw,28px);margin:1.6em 0 .4em;padding-top:.5em;border-top:1px solid var(--ink)}
+h3{font-size:17px;margin:1.3em 0 .3em}
+h4{font-size:15px;margin:1em 0 .2em}
+p,ul,ol{margin:.4em 0}
+blockquote{margin:.6em 0;padding:.5em .9em;border-left:3px solid var(--ink);color:var(--muted);background:#fafafa}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;background:rgba(0,0,0,.05);border:1px solid var(--line);padding:.5px 4px}
+hr{border:0;border-top:1px solid var(--line);margin:1.6em 0}
+table{width:100%;border-collapse:collapse;margin:.8em 0;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:8px 9px;border-bottom:1px solid var(--line)}
+th{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--ink)}
+tbody tr:hover{background:rgba(0,0,0,.025)}
+ul{padding-left:1.15em}
+strong{font-weight:600}
+a{color:var(--ink)}
+hr + h2{border-top:0}
+@media print{ .wrap{max-width:none;padding:0} h2{break-after:avoid} table{break-inside:auto} tr{break-inside:avoid} @page{margin:16mm} }
+</style></head>
+<body><div class="wrap"><h1>Huuk — Component &amp; Module Inventory (ครบ)</h1>
+<blockquote>
+<p><strong>56 <code>.vue</code> + 22 <code>.ts</code> (non-test)</strong> — แบ่งเป็น Shared components · Screen(pages) · App · Core/API/Mock</p>
+</blockquote>
+<h2>สรุป</h2>
+<table>
+<thead>
+<tr>
+<th>ประเภท</th>
+<th>จำนวน</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Shared components (<code>components/</code>)</td>
+<td>30</td>
+</tr>
+<tr>
+<td>Screen components (<code>pages/</code> + <code>App.vue</code>)</td>
+<td>26</td>
+</tr>
+<tr>
+<td>Core / API / Mock modules (<code>.ts</code>)</td>
+<td>22</td>
+</tr>
+<tr>
+<td><strong>รวม <code>.vue</code></strong></td>
+<td><strong>56</strong></td>
+</tr>
+</tbody></table>
+<h2>1) Shared components — 30</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>group</th>
+<th>หน้าที่</th>
+<th>Props</th>
+<th>Emits</th>
+<th>ใช้ที่</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>BarChart</code></td>
+<td>ui</td>
+<td>กราฟแท่ง</td>
+<td>items:{label,value}[]</td>
+<td>—</td>
+<td>Home, Analyze</td>
+</tr>
+<tr>
+<td><code>BudgetCards</code></td>
+<td>ui</td>
+<td>การ์ดสรุป Income/Expense/Balance</td>
+<td>income·expense·balance·currency</td>
+<td>—</td>
+<td>Analyze›Finance</td>
+</tr>
+<tr>
+<td><code>CalendarGrid</code></td>
+<td>ui</td>
+<td>ปฏิทิน WEEK 1–6</td>
+<td>year·month·posts·weekStart·show*</td>
+<td>—</td>
+<td>Plan›Calendar</td>
+</tr>
+<tr>
+<td><code>CardBase</code></td>
+<td>ui</td>
+<td>การ์ดมีเดียพื้นฐาน (ยังไม่ใช้)</td>
+<td>title·meta·coverLabel</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>CarouselTabs</code></td>
+<td>ui</td>
+<td>แท็บเลื่อนแนวนอน</td>
+<td>items[]·v-model</td>
+<td>update:modelValue</td>
+<td>Home, Plan, Calendar</td>
+</tr>
+<tr>
+<td><code>Chip</code></td>
+<td>ui</td>
+<td>ป้าย/tag (toggle)</td>
+<td>label·dark?</td>
+<td>—</td>
+<td>หลายหน้า</td>
+</tr>
+<tr>
+<td><code>CopyBar</code></td>
+<td>ui</td>
+<td>คัดลอกข้อความ</td>
+<td>text</td>
+<td>—</td>
+<td>Plan›Monthly</td>
+</tr>
+<tr>
+<td><code>DatePickerPopup</code></td>
+<td>ui</td>
+<td>ปุ่ม+ปฏิทินเลือกวันที่</td>
+<td>v-model·disabled·id·title</td>
+<td>update:modelValue</td>
+<td>Home(topbar), Promote</td>
+</tr>
+<tr>
+<td><code>ErrorBoundary</code></td>
+<td>ui</td>
+<td>ดัก error ลูก</td>
+<td>—</td>
+<td>—</td>
+<td>App</td>
+</tr>
+<tr>
+<td><code>FeedGrid</code></td>
+<td>ui</td>
+<td>พรีวิวฟีด 3×3</td>
+<td>posts·platform·variant?</td>
+<td>—</td>
+<td>Content›Feed</td>
+</tr>
+<tr>
+<td><code>GuideHero</code></td>
+<td>ui</td>
+<td>เนื้อหา Guide</td>
+<td>—</td>
+<td>—</td>
+<td>AppShell</td>
+</tr>
+<tr>
+<td><code>HashtagGroups</code></td>
+<td>ui</td>
+<td>กลุ่มแฮชแท็ก+add</td>
+<td>groups·add?</td>
+<td>—</td>
+<td>Plan›Hashtags</td>
+</tr>
+<tr>
+<td><code>HubTabs</code></td>
+<td>ui</td>
+<td>แถบแท็บ hub</td>
+<td>tabs[{id,label}]·v-model</td>
+<td>update:modelValue</td>
+<td>ทุก hub</td>
+</tr>
+<tr>
+<td><code>InfoTip</code></td>
+<td>ui</td>
+<td>ปุ่ม Info</td>
+<td>text</td>
+<td>—</td>
+<td>Ads/Brand/Campaigns/Live/Members/Studio/Register</td>
+</tr>
+<tr>
+<td><code>KpiCard</code></td>
+<td>ui</td>
+<td>การ์ด KPI</td>
+<td>label·value</td>
+<td>—</td>
+<td>Home</td>
+</tr>
+<tr>
+<td><code>SocialMediaBar</code></td>
+<td>ui</td>
+<td>เลือก/เชื่อมแพลตฟอร์ม</td>
+<td>—</td>
+<td>—</td>
+<td>Content›Feed, Settings›Connections</td>
+</tr>
+<tr>
+<td><code>StatusChip</code></td>
+<td>ui</td>
+<td>ป้ายสถานะ</td>
+<td>status</td>
+<td>—</td>
+<td>MasterTable</td>
+</tr>
+<tr>
+<td><code>StatusFunnel</code></td>
+<td>ui</td>
+<td>Start→Design→Dev→Done</td>
+<td>current</td>
+<td>advance(Status)</td>
+<td>Plan›Monthly</td>
+</tr>
+<tr>
+<td><code>AppShell</code></td>
+<td>layout</td>
+<td>shell หลัก (navbar/avatar menu/overlays)</td>
+<td>—</td>
+<td>—</td>
+<td>App</td>
+</tr>
+<tr>
+<td><code>ScreensDeck</code></td>
+<td>layout</td>
+<td>deck สไลด์หน้าจอ</td>
+<td>—</td>
+<td>—</td>
+<td>App</td>
+</tr>
+<tr>
+<td><code>ChangePasswordModal</code></td>
+<td>overlays</td>
+<td>modal เปลี่ยนรหัสผ่าน</td>
+<td>open</td>
+<td>close</td>
+<td>AppShell</td>
+</tr>
+<tr>
+<td><code>LoginModal</code></td>
+<td>overlays</td>
+<td>modal login/register</td>
+<td>open·initialMode?</td>
+<td>close·success</td>
+<td>AppShell</td>
+</tr>
+<tr>
+<td><code>PlatformLogin</code></td>
+<td>overlays</td>
+<td>full-screen connect/manage</td>
+<td>platform</td>
+<td>close</td>
+<td>AppShell, SocialMediaBar</td>
+</tr>
+<tr>
+<td><code>ProfilePanel</code></td>
+<td>overlays</td>
+<td>แผงโปรไฟล์ใน avatar menu</td>
+<td>—</td>
+<td>—</td>
+<td>AppShell</td>
+</tr>
+<tr>
+<td><code>ProtectedModal</code></td>
+<td>overlays</td>
+<td>เตือนแก้ computed cell</td>
+<td>open·field</td>
+<td>cancel·confirm</td>
+<td>Home, Plan›Monthly</td>
+</tr>
+<tr>
+<td><code>SettingsPanel</code></td>
+<td>overlays</td>
+<td>workspace/permissions/accounts</td>
+<td>—</td>
+<td>—</td>
+<td>AppShell, Settings</td>
+</tr>
+<tr>
+<td><code>MasterTable</code></td>
+<td>tables</td>
+<td>ตารางหลัก (search/sort/select)</td>
+<td>rows·loading?</td>
+<td>select(Post)</td>
+<td>Plan›Monthly</td>
+</tr>
+<tr>
+<td><code>TxnTable</code></td>
+<td>tables</td>
+<td>ตารางรายรับรายจ่าย</td>
+<td>rows·currency</td>
+<td>—</td>
+<td>Analyze›Finance</td>
+</tr>
+<tr>
+<td><code>ContentEditor</code></td>
+<td>editor</td>
+<td>เอดิเตอร์ CMS</td>
+<td>id</td>
+<td>—</td>
+<td>Content›Studio</td>
+</tr>
+<tr>
+<td><code>LiveSection</code></td>
+<td>live</td>
+<td>section live mirror</td>
+<td>variant?·limit?</td>
+<td>—</td>
+<td>Home, Content›Feed, Live, Analyze</td>
+</tr>
+</tbody></table>
+<h2>2) Screen components (pages) — 26</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>kind</th>
+<th>route / ที่อยู่</th>
+<th>หน้าที่</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>App.vue.vue</code></td>
+<td>root</td>
+<td><code>app/App.vue</code></td>
+<td>boot gate: restore → login gate → workspace gate → shell</td>
+</tr>
+<tr>
+<td><code>DashboardPage.vue</code></td>
+<td>screen</td>
+<td><code>/dashboard (Home)</code></td>
+<td>Home hub — KPI · Live · campaigns · charts · top5</td>
+</tr>
+<tr>
+<td><code>PlanPage.vue</code></td>
+<td>hub</td>
+<td><code>/plan</code></td>
+<td>Plan hub with tabs</td>
+</tr>
+<tr>
+<td><code>ContentPage.vue</code></td>
+<td>hub</td>
+<td><code>/content</code></td>
+<td>Content hub with tabs</td>
+</tr>
+<tr>
+<td><code>PromotePage.vue</code></td>
+<td>hub</td>
+<td><code>/promote</code></td>
+<td>Promote hub with tabs</td>
+</tr>
+<tr>
+<td><code>AnalyzePage.vue</code></td>
+<td>hub</td>
+<td><code>/analyze</code></td>
+<td>Analyze hub with tabs</td>
+</tr>
+<tr>
+<td><code>SettingsPage.vue</code></td>
+<td>hub</td>
+<td><code>/settings</code></td>
+<td>Settings hub with tabs</td>
+</tr>
+<tr>
+<td><code>PlannerPage.vue</code></td>
+<td>screen</td>
+<td><code>/plan › Monthly</code></td>
+<td>Monthly planner — master table + row editor (embed)</td>
+</tr>
+<tr>
+<td><code>CalendarPage.vue</code></td>
+<td>screen</td>
+<td><code>/plan › Calendar</code></td>
+<td>Smart Calendar</td>
+</tr>
+<tr>
+<td><code>IdeasPage.vue</code></td>
+<td>screen</td>
+<td><code>/plan › Ideas</code></td>
+<td>Idea bank</td>
+</tr>
+<tr>
+<td><code>HashtagsPage.vue</code></td>
+<td>screen</td>
+<td><code>/plan › Hashtags</code></td>
+<td>Hashtag library</td>
+</tr>
+<tr>
+<td><code>StudioPage.vue</code></td>
+<td>screen</td>
+<td><code>/content › Studio</code></td>
+<td>CMS list + editor (embed)</td>
+</tr>
+<tr>
+<td><code>FeedPage.vue</code></td>
+<td>screen</td>
+<td><code>/content › Feed</code></td>
+<td>Feed review</td>
+</tr>
+<tr>
+<td><code>CampaignsPage.vue</code></td>
+<td>screen</td>
+<td><code>/promote › Campaigns</code></td>
+<td>Campaign manager (embed)</td>
+</tr>
+<tr>
+<td><code>AdsPage.vue</code></td>
+<td>screen</td>
+<td><code>/promote › Meta Ads</code></td>
+<td>Meta Ads mirror + manage</td>
+</tr>
+<tr>
+<td><code>PerformancePage.vue</code></td>
+<td>screen</td>
+<td><code>/analyze › Performance</code></td>
+<td>Metrics import + goals + per-post</td>
+</tr>
+<tr>
+<td><code>FinancePage.vue</code></td>
+<td>screen</td>
+<td><code>/analyze › Finance</code></td>
+<td>Income/expense ledger</td>
+</tr>
+<tr>
+<td><code>BrandPage.vue</code></td>
+<td>screen</td>
+<td><code>/settings › Brand</code></td>
+<td>Brand identity / CI</td>
+</tr>
+<tr>
+<td><code>MembersPage.vue</code></td>
+<td>screen</td>
+<td><code>/settings › Members</code></td>
+<td>Workspace members (owner-only)</td>
+</tr>
+<tr>
+<td><code>LivePage.vue</code></td>
+<td>screen</td>
+<td><code>(orphan — /live→/dashboard)</code></td>
+<td>เต็มหน้า Live (ซ้ำกับ Home LiveSection)</td>
+</tr>
+<tr>
+<td><code>LoginPage.vue</code></td>
+<td>public</td>
+<td><code>/login</code></td>
+<td>Login gate</td>
+</tr>
+<tr>
+<td><code>RegisterPage.vue</code></td>
+<td>public</td>
+<td><code>/register</code></td>
+<td>Signup</td>
+</tr>
+<tr>
+<td><code>PlansPage.vue</code></td>
+<td>public</td>
+<td><code>/plans</code></td>
+<td>Package chooser</td>
+</tr>
+<tr>
+<td><code>WorkspaceSetupPage.vue</code></td>
+<td>public</td>
+<td><code>/welcome</code></td>
+<td>First-run workspace creation</td>
+</tr>
+<tr>
+<td><code>ReadPage.vue</code></td>
+<td>public</td>
+<td><code>/read · /read/:slug</code></td>
+<td>Public reader</td>
+</tr>
+<tr>
+<td><code>NotFoundPage.vue</code></td>
+<td>public</td>
+<td><code>*</code></td>
+<td>404</td>
+</tr>
+</tbody></table>
+<h2>3) Core / API / Mock modules — 22</h2>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>หน้าที่</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>core/auth.ts</code></td>
+<td>session auth (US-012) — email+password accounts</td>
+</tr>
+<tr>
+<td><code>core/queries.ts</code></td>
+<td>TanStack Query hooks ทั้งแอป</td>
+</tr>
+<tr>
+<td><code>core/session.ts</code></td>
+<td>session state (auth/http/query cache)</td>
+</tr>
+<tr>
+<td><code>core/token.ts</code></td>
+<td>token storage (isolated)</td>
+</tr>
+<tr>
+<td><code>core/workspace.ts</code></td>
+<td>active workspace storage</td>
+</tr>
+<tr>
+<td><code>core/screens.ts</code></td>
+<td>screen registry (6 hubs)</td>
+</tr>
+<tr>
+<td><code>core/i18n.ts</code></td>
+<td>copy dictionary (English-only)</td>
+</tr>
+<tr>
+<td><code>core/theme.ts</code></td>
+<td>brand-driven theming (CI)</td>
+</tr>
+<tr>
+<td><code>core/platforms.ts</code></td>
+<td>platform metadata + active platforms</td>
+</tr>
+<tr>
+<td><code>core/oauth.ts</code></td>
+<td>OAuth hand-off (state + redirect)</td>
+</tr>
+<tr>
+<td><code>core/images.ts</code></td>
+<td>brand image rules (slots/bounds)</td>
+</tr>
+<tr>
+<td><code>core/markdown.ts</code></td>
+<td>markdown renderer (escape-first)</td>
+</tr>
+<tr>
+<td><code>core/deeplink.ts</code></td>
+<td>hash deep-link fixups</td>
+</tr>
+<tr>
+<td><code>core/navdate.ts</code></td>
+<td>global navbar date</td>
+</tr>
+<tr>
+<td><code>core/protected.ts</code></td>
+<td>computed-cell guard suppression</td>
+</tr>
+<tr>
+<td><code>app/router/index.ts</code></td>
+<td>routes จาก hub registry + legacy redirects</td>
+</tr>
+<tr>
+<td><code>app/main.ts</code></td>
+<td>boot (clear cache between sessions)</td>
+</tr>
+<tr>
+<td><code>api/index.ts</code></td>
+<td>data-source switch (mock/http)</td>
+</tr>
+<tr>
+<td><code>api/contract.ts</code></td>
+<td>data-source contract</td>
+</tr>
+<tr>
+<td><code>api/http.ts</code></td>
+<td>HTTP client → Rust backend</td>
+</tr>
+<tr>
+<td><code>mock/api.ts</code></td>
+<td>mock async API</td>
+</tr>
+<tr>
+<td><code>mock/db.ts</code></td>
+<td>domain model (workbook)</td>
+</tr>
+</tbody></table>
+<h2>หมายเหตุ</h2>
+<ul>
+<li><code>LivePage.vue</code> ตอนนี้ <strong>ไม่มี route</strong> (ยุบเป็น section ใน Home) — เป็น orphan ควรลบหรือเก็บเป็น reference</li>
+<li><code>CardBase.vue</code> ยังไม่ถูกใช้</li>
+<li>hub pages (<code>PlanPage/ContentPage/…</code>) เก็บ child screen ไว้เป็น tabs (embedded props/emit)</li>
+</ul>
+</div></body></html>

@@ -1,0 +1,45 @@
+%% 10-content-studio-cms — Sequence — Autosave, conflict & publish
+sequenceDiagram
+  autonumber
+  actor E as Editor/Client
+  participant CE as ContentEditor
+  participant Q as TanStack Query
+  participant API as handlers.rs
+  participant ST as Store
+
+  CE->>Q: useContentItem(id) → GET /api/content/:id
+  API->>ST: promote_due_scheduled (write lock)
+  API-->>CE: Content (revision.body = "")
+
+  loop dirty ทุก ~1.5s
+    CE->>Q: useUpdateContent({id, patch, version})
+    Q->>API: PATCH /api/content/:id
+    API->>ST: check_content_version
+    alt ไม่ส่ง version
+      API-->>Q: 400
+    else version ไม่ตรง
+      API-->>Q: 409 + version ปัจจุบัน
+      Q-->>CE: conflict banner
+      E->>CE: เลือก Reload latest หรือ Keep mine
+      opt Keep mine
+        CE->>CE: loadedVersion = serverVersion
+        CE->>Q: PATCH ซ้ำ (override note)
+      end
+    else ตรง
+      ST->>ST: push_revision + unique_slug + validate + version+1
+      API-->>Q: 200 Content
+      Q->>Q: re-seed baseline + loadedVersion
+    end
+  end
+
+  E->>CE: กด Publish
+  CE->>CE: ensureSaved()
+  CE->>Q: usePublishContent({id, version})
+  Q->>API: POST /api/content/:id/publish {version}
+  API->>ST: check_content_version + title ไม่ว่าง?
+  alt title ว่าง/version ไม่ตรง
+    API-->>Q: 400/409
+  else ok
+    ST->>ST: status=published + publishedAt + revision "Published"
+    API-->>Q: 200 Content
+  end

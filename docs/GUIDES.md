@@ -115,7 +115,7 @@ add a new mutating endpoint/mock function, add it to both enforcement points and
 ## Change the full-page animation
 
 Everything lives in `setFull()` in `src/components/ScreensDeck.vue` (see
-`docs/ARCHITECTURE.md §3`). Rules learned the hard way:
+`ARCHITECTURE.md §3`). Rules learned the hard way:
 
 - Animate **`width` / `left` on a pinned (`position: fixed`) card** — not `scale` (distorts the
   content) and not `flex-basis` (reflows the whole deck and snaps mid-flight).

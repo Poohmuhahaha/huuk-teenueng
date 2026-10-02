@@ -1,0 +1,12 @@
+%% 09-meta-ads — Gate diagram — Ads mutation
+flowchart TD
+  Req["Ads mutation"] --> Perm["require_perm(platforms.manage)"]
+  Perm --> Ctx["manage_context(campaignId)"]
+  Ctx --> Known{"campaign อยู่ใน mirror?"}
+  Known -->|no| E400a["400 unknown campaign"]
+  Known -->|yes| Gate{"workspace.adsManage == true?"}
+  Gate -->|no| E400b["400 เปิด campaign management ก่อน"]
+  Gate -->|yes| Acct["accounts.first() (ข้อจำกัด)"]
+  Acct --> Graph["Graph POST (token ใน query)"]
+  Graph --> Mirror["อัปเดต mirror + AdsAudit"]
+  Mirror --> Inv["FE invalidate ['ads']"]

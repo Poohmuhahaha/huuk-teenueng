@@ -1,0 +1,36 @@
+%% User Flow 02 — Feature dependencies (how features combine)
+flowchart LR
+  WS["Workspace — scope ของทุกข้อมูล"] --> Brand["E03 Brand identity"]
+  WS --> Planner["E04 Content planner"]
+  WS --> Ideas["E05 Ideas & Hashtags"]
+  WS --> Perf["E06 Performance / Finance"]
+  WS --> Camp["E07 Campaigns"]
+  WS --> Conn["E08 Connections / Live"]
+  WS --> Ads["E09 Meta Ads"]
+  WS --> CMS["E10 Content Studio"]
+  WS --> Settings["E11 Settings / Permissions"]
+
+  Brand -->|"applyBrandTheme"| Theme["ธีมทั้งเว็บ + หน้า public read"]
+  Theme --> Shell["AppShell"]
+  Theme --> PublicRead["/#/read — public"]
+
+  Conn -->|"ต้อง connected และมี token"| Live["E08 Live mirror"]
+  Conn -->|"ต้อง connected"| Metrics["E06 Import metrics"]
+  Conn -->|"ต้อง connected"| Ads
+  Ads -->|"เปิด ads_manage"| AdsMut["แก้ campaign + audit"]
+
+  Ideas -->|"promote (ideas.write)"| Planner
+  Planner -->|"derived views (posts master)"| Feed["Calendar / Dashboard / Feed / Performance"]
+  Perf -->|"import metrics"| Feed
+  Camp -->|"link content"| CMS
+  CMS -->|"publish / schedule"| PublicRead
+
+  Settings -->|"roles + permissions"| Gate["require_perm — ด่านทุก write"]
+  Gate -.-> Brand
+  Gate -.-> Planner
+  Gate -.-> Ideas
+  Gate -.-> Perf
+  Gate -.-> Camp
+  Gate -.-> Conn
+  Gate -.-> Ads
+  Gate -.-> CMS

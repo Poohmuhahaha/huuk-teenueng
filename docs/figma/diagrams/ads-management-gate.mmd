@@ -1,0 +1,10 @@
+flowchart TD
+  Start["Ads mutation request"] --> Perm["require_perm(platforms.manage)"]
+  Perm --> Ctx["manage_context(id)"]
+  Ctx --> Known{"campaign อยู่ใน mirror?"}
+  Known -->|no| E400a["400 unknown campaign"]
+  Known -->|yes| Gate{"workspace.adsManage == true?"}
+  Gate -->|no| E400b["400 ต้องเปิด campaign management ก่อน"]
+  Gate -->|yes| Acct["ใช้ accounts.first() ⚠️"]
+  Acct --> Graph["Graph call (token ใน query)"]
+  Graph --> Audit["AdsAudit + mirror update"]

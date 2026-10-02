@@ -1,0 +1,28 @@
+%% 02-workspace — Flow — Workspace lifecycle & scoping
+flowchart TD
+  Login["ล็อกอินสำเร็จ"] --> Has{"มี workspace?"}
+  Has -->|no| Setup["WorkspaceSetupPage"]
+  Setup --> Create["POST /api/workspaces {name}"]
+  Create --> VName{"ชื่อ 1..80?"}
+  VName -->|no| E400["400"]
+  VName -->|yes| VCap{"visible >= 50?"}
+  VCap -->|yes| E400b["400"]
+  VCap -->|no| Mk["สร้าง ws-hex, owner=email, brand ว่าง, 3 slots"]
+  Mk --> Act["setActiveWorkspace(id) + invalidate + '/'"]
+  Has -->|yes| Active["AppShell"]
+
+  Active --> Switch["POST? ไม่มี — สลับฝั่ง client"]
+  Switch --> Set["setActiveWorkspace(id) → cp.workspace"]
+  Set --> Inj["ทุก request แนบ X-Workspace-Id"]
+
+  Active --> Rename["PATCH /api/workspaces/:id"]
+  Rename --> Vis{"visible_to(account)?"}
+  Vis -->|no| R404["404"]
+  Vis -->|yes| RDone["อัปเดตชื่อ"]
+
+  Active --> Delete["DELETE /api/workspaces/:id"]
+  Delete --> DLast{"เหลือตัวเดียว?"}
+  DLast -->|yes| D400["400"]
+  DLast -->|no| DClear["clear tokens + oauth states/picks"]
+  DClear --> DFall["คืน { deleted, fallback }"]
+  DFall --> Set

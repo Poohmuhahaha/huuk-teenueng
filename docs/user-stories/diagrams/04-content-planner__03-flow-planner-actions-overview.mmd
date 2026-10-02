@@ -1,0 +1,18 @@
+%% 04-content-planner — Flow — Planner actions overview
+flowchart TD
+  Open["เปิด /planner/:month"] --> List["GET /api/posts?month=N"]
+  List --> Pick{"ทำอะไร"}
+  Pick -->|"เพิ่ม"| Add["POST /api/posts (posts.write + validate_post)"]
+  Pick -->|"เลือกแถว"| Sel["draft = row"]
+  Sel --> Lock{"lockedBy อื่น?"}
+  Lock -->|yes| Block["ปิดการแก้"]
+  Lock -->|no| Edit["แก้ฟิลด์"]
+  Edit --> Save["PATCH /api/posts/:id"]
+  Save --> SV{"validate + lock?"}
+  SV -->|"409/400"| Err["แสดง error"]
+  SV -->|ok| Inv["invalidate posts + metrics"]
+  Pick -->|"ล็อก"| Lk["POST /api/posts/:id/lock (posts.lock)"]
+  Pick -->|"ปลดล็อก"| Ul["POST /api/posts/:id/unlock"]
+  Pick -->|"ลบ"| Dl["DELETE /api/posts/:id"]
+  Add --> Inv
+  Dl --> Inv

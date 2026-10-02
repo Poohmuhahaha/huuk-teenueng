@@ -1,6 +1,6 @@
 # Architecture
 
-How the app is put together. For file-by-file reading order see [`../CODEMAP.md`](../CODEMAP.md).
+How the app is put together. For file-by-file reading order see [`../app/CODEMAP.md`](../app/CODEMAP.md).
 
 ```
 index.html

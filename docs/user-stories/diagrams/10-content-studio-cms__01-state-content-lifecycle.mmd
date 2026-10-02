@@ -1,0 +1,14 @@
+%% 10-content-studio-cms — State — Content lifecycle
+stateDiagram-v2
+  [*] --> draft: create_content (coerce non-draft/review → draft)
+  draft --> review: update_content status=review
+  review --> draft: update_content status=draft
+  draft --> archived: update_content status=archived
+  review --> published: publish_content (title required, version checked)
+  published --> draft: unpublish_content (publishedAt คงอยู่)
+  draft --> scheduled: schedule_content (RFC3339 อนาคต)
+  review --> scheduled: schedule_content
+  scheduled --> published: promote_due_scheduled (lazy, ตอนมี read)
+  published --> published: publish_content ซ้ำ (version++)
+  archived --> draft: update_content status=draft
+  draft --> draft: restore_content_revision (บังคับ draft)

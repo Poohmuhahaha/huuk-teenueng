@@ -1,0 +1,276 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Huuk — Page & UI Inventory</title><style>
+:root{--ink:#000;--ink-body:#1a1a1a;--muted:#6b6b6b;--faint:#a3a3a3;--line:#e4e4e4;--paper:#fff;
+ --sans:"Inter Variable",Inter,ui-sans-serif,system-ui,-apple-system,"Noto Sans Thai",sans-serif;
+ --serif:Tinos,"Times New Roman",Times,Georgia,"Noto Serif Thai",serif;}
+*{box-sizing:border-box;border-radius:0}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 var(--sans);letter-spacing:-.011em;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:clamp(24px,5vw,72px)}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:700;line-height:1.1;letter-spacing:-.015em;text-wrap:balance}
+h1{font-size:clamp(32px,4.6vw,50px);letter-spacing:-.02em;margin:.1em 0 .3em}
+h2{font-size:clamp(20px,2.6vw,28px);margin:1.6em 0 .4em;padding-top:.5em;border-top:1px solid var(--ink)}
+h3{font-size:17px;margin:1.3em 0 .3em}
+h4{font-size:15px;margin:1em 0 .2em}
+p,ul,ol{margin:.4em 0}
+blockquote{margin:.6em 0;padding:.5em .9em;border-left:3px solid var(--ink);color:var(--muted);background:#fafafa}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;background:rgba(0,0,0,.05);border:1px solid var(--line);padding:.5px 4px}
+hr{border:0;border-top:1px solid var(--line);margin:1.6em 0}
+table{width:100%;border-collapse:collapse;margin:.8em 0;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:8px 9px;border-bottom:1px solid var(--line)}
+th{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--ink)}
+tbody tr:hover{background:rgba(0,0,0,.025)}
+ul{padding-left:1.15em}
+strong{font-weight:600}
+a{color:var(--ink)}
+hr + h2{border-top:0}
+@media print{ .wrap{max-width:none;padding:0} h2{break-after:avoid} table{break-inside:auto} tr{break-inside:avoid} @page{margin:16mm} }
+</style></head>
+<body><div class="wrap"><h1>Huuk — โครงสร้างหน้าใหม่ (compact IA) เพื่อ UX ที่ดีที่สุด</h1>
+<blockquote>
+<p>เป้าหมาย: ยุบページให้เหลือ <strong>6 หน้าหลัก + tabs</strong> (จากเดิม 14 การ์ด), ทำให้ทุก user story (101) มีที่อยู่ชัดเจน, ลดการสลับหน้า, และจัดกลุ่มตามงาน (job) ของผู้ใช้</p>
+</blockquote>
+<h2>หลักคิด (UX rationale)</h2>
+<ul>
+<li><strong>จัดกลุ่มตามงาน ไม่ใช่ตามฟีเจอร์</strong>: ผู้ใช้คิดเป็น &quot;วางแผน → ทำคอนเทนต์ → โปรโมท → วัดผล → ตั้งค่า&quot;</li>
+<li><strong>ลดหน้า แต่เพิ่ม tab</strong>: ฟีเจอร์ที่ต้องดูคู่กัน (Monthly+Calendar, Campaigns+Ads, Performance+Finance, Brand+Members+Connections) อยู่ในหน้าเดียว</li>
+<li><strong>Live ไม่ต้องเป็นหน้า</strong>: ย้ายเป็น <em>section</em> ใน Home + จัดการ connection ที่ Settings › Connections</li>
+<li><strong>Hashtags ไม่ต้องเป็นหน้า</strong>: เป็น tab ใน Plan และมี quick access บน navbar</li>
+<li><strong>ทุก write ยังถูกกั้นด้วย permission เดิม</strong> (FE can() + BE require_perm) และ states เดิม (loading/empty/error/no-perm/reconnect)</li>
+</ul>
+<h2>โครงสร้างใหม่ (target)</h2>
+<pre><code>Navbar (staff):  Home · Plan · Content · Promote · Analyze · Settings
+
+Home            ── Dashboard KPIs + Live mirror + Active campaigns + Onboarding hint
+Plan            ── tabs: Monthly | Calendar | Ideas | Hashtags
+Content         ── Studio (list + editor) ── Publish/Schedule/Revisions
+Promote         ── tabs: Campaigns | Ads
+Analyze         ── tabs: Performance | Finance
+Settings        ── tabs: Brand | Workspace | Members | Connections | Permissions
+
+Public/Onboarding (no shell):  Welcome · Login · Register · Plans · Read/:slug · 404
+Overlays (ไม่นับเป็นหน้า):  Account menu · Settings sheet · Guide · Login modal ·
+                            Change password · Platform connect (full) · Protected modal ·
+                            Date picker · Ads dialogs · Publish menu · Revisions drawer
+</code></pre>
+<h2>Mapping: Page → Tab → User stories</h2>
+<table>
+<thead>
+<tr>
+<th>หน้า</th>
+<th>Tab / section</th>
+<th>Epics</th>
+<th># stories</th>
+<th>story ids</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Welcome (public)</strong></td>
+<td>onboarding</td>
+<td>E00</td>
+<td>1</td>
+<td>US-00-01</td>
+</tr>
+<tr>
+<td><strong>Account</strong></td>
+<td>Sign in / Sign up + account menu</td>
+<td>E01</td>
+<td>11</td>
+<td>US-01-01, US-01-02, US-01-03, US-01-04, US-01-05, US-01-06, US-01-07, US-01-08, US-01-09, US-01-10, US-01-11</td>
+</tr>
+<tr>
+<td><strong>Settings</strong></td>
+<td>Workspace &amp; Members</td>
+<td>E02</td>
+<td>8</td>
+<td>US-02-01, US-02-02, US-02-03, US-02-04, US-02-05, US-02-06, US-02-07, US-02-08</td>
+</tr>
+<tr>
+<td><strong>Settings</strong></td>
+<td>Brand</td>
+<td>E03</td>
+<td>10</td>
+<td>US-03-01, US-03-02, US-03-03, US-03-04, US-03-05, US-03-06, US-03-07, US-03-08, US-03-09, US-03-10</td>
+</tr>
+<tr>
+<td><strong>Settings</strong></td>
+<td>Connections</td>
+<td>E08</td>
+<td>8</td>
+<td>US-08-01, US-08-02, US-08-03, US-08-04, US-08-05, US-08-06, US-08-07, US-08-08</td>
+</tr>
+<tr>
+<td><strong>Settings</strong></td>
+<td>Workspace &amp; Permissions</td>
+<td>E11</td>
+<td>8</td>
+<td>US-11-01, US-11-02, US-11-03, US-11-04, US-11-05, US-11-06, US-11-07, US-11-08</td>
+</tr>
+<tr>
+<td><strong>Plan</strong></td>
+<td>Monthly</td>
+<td>E04</td>
+<td>10</td>
+<td>US-04-01, US-04-02, US-04-03, US-04-04, US-04-05, US-04-06, US-04-07, US-04-08, US-04-09, US-04-10</td>
+</tr>
+<tr>
+<td><strong>Plan</strong></td>
+<td>Ideas &amp; Hashtags</td>
+<td>E05</td>
+<td>6</td>
+<td>US-05-01, US-05-02, US-05-03, US-05-04, US-05-05, US-05-06</td>
+</tr>
+<tr>
+<td><strong>Analyze</strong></td>
+<td>Performance &amp; Finance</td>
+<td>E06</td>
+<td>6</td>
+<td>US-06-01, US-06-02, US-06-03, US-06-04, US-06-05, US-06-06</td>
+</tr>
+<tr>
+<td><strong>Promote</strong></td>
+<td>Campaigns</td>
+<td>E07</td>
+<td>7</td>
+<td>US-07-01, US-07-02, US-07-03, US-07-04, US-07-05, US-07-06, US-07-07</td>
+</tr>
+<tr>
+<td><strong>Promote</strong></td>
+<td>Ads</td>
+<td>E09</td>
+<td>8</td>
+<td>US-09-01, US-09-02, US-09-03, US-09-04, US-09-05, US-09-06, US-09-07, US-09-08</td>
+</tr>
+<tr>
+<td><strong>Content</strong></td>
+<td>Studio</td>
+<td>E10</td>
+<td>13</td>
+<td>US-10-01, US-10-02, US-10-03, US-10-04, US-10-05, US-10-06, US-10-07, US-10-08, US-10-09, US-10-10, US-10-11, US-10-12, US-10-13</td>
+</tr>
+<tr>
+<td><strong>Read (public)</strong></td>
+<td>Delivery</td>
+<td>E12</td>
+<td>5</td>
+<td>US-12-01, US-12-02, US-12-03, US-12-04, US-12-05</td>
+</tr>
+<tr>
+<td><strong>Home</strong></td>
+<td>Live section</td>
+<td>E08</td>
+<td>8</td>
+<td>US-08-01, US-08-02, US-08-03, US-08-04, US-08-05, US-08-06, US-08-07, US-08-08</td>
+</tr>
+</tbody></table>
+<p><strong>รวม 109 mapping</strong> จาก 101 stories (มี E08 ที่โผล่ทั้ง Home และ Settings → ซ้ำ 0 รายการ)</p>
+<h2>โครงคร่าวต่อหน้า (wireframe skeleton)</h2>
+<ul>
+<li><strong>Home</strong> — KPI cards (6) · <strong>Live section</strong> (last N posts + Sync) · <strong>Active campaigns</strong> card (link ไป Promote) · onboarding/guide hint · Date picker</li>
+<li><strong>Plan</strong> — Tab bar (Monthly/Calendar/Ideas/Hashtags) · <strong>Monthly</strong>: master table + row editor (fields+StatusFunnel+CopyBar+Lock) · <strong>Calendar</strong>: month grid + filters · <strong>Ideas</strong>: table + Capture · <strong>Hashtags</strong>: groups</li>
+<li><strong>Content</strong> — Left list (search + status tabs + items) · <strong>Editor</strong>: title/status/save-state · actions (Save/Publish▾/Duplicate/History/Archive/Delete) · fields + markdown toolbar + SEO · preview · <strong>Feed preview</strong> section</li>
+<li><strong>Promote</strong> — Tab bar (Campaigns/Ads) · <strong>Campaigns</strong>: list + form + schedule + link content · <strong>Ads</strong>: opt-in + account + KPI tiles + campaign table + detail + audit</li>
+<li><strong>Analyze</strong> — Tab bar (Performance/Finance) · <strong>Performance</strong>: import metrics + goals table + views chart + per-post table · <strong>Finance</strong>: budget cards + charts + txn table + log form</li>
+<li><strong>Settings</strong> — Tab bar (Brand/Workspace/Members/Connections/Permissions) · Brand kit · Workspace+options · Members list · Connections (platform rows + connect/manage) · Roles matrix + accounts</li>
+</ul>
+<h2>เดิม → ใหม่ (14 → 6)</h2>
+<table>
+<thead>
+<tr>
+<th>เดิม (การ์ด)</th>
+<th>ใหม่</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Brand</td>
+<td>Settings › Brand</td>
+</tr>
+<tr>
+<td>Planner (Monthly)</td>
+<td>Plan › Monthly (+ Calendar รวมเป็น tab)</td>
+</tr>
+<tr>
+<td>Calendar</td>
+<td>Plan › Calendar</td>
+</tr>
+<tr>
+<td>Ideas</td>
+<td>Plan › Ideas</td>
+</tr>
+<tr>
+<td>Hashtags</td>
+<td>Plan › Hashtags (quick access บน navbar)</td>
+</tr>
+<tr>
+<td>Feed</td>
+<td>Content › Feed preview (section)</td>
+</tr>
+<tr>
+<td>Studio (CMS)</td>
+<td>Content › Studio</td>
+</tr>
+<tr>
+<td>Dashboard</td>
+<td>Home</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Analyze › Performance</td>
+</tr>
+<tr>
+<td>Finance</td>
+<td>Analyze › Finance</td>
+</tr>
+<tr>
+<td>Live</td>
+<td>Home › Live section + Settings › Connections</td>
+</tr>
+<tr>
+<td>Campaigns</td>
+<td>Promote › Campaigns</td>
+</tr>
+<tr>
+<td>Ads</td>
+<td>Promote › Ads</td>
+</tr>
+<tr>
+<td>Members</td>
+<td>Settings › Members</td>
+</tr>
+</tbody></table>
+<h2>Public / Onboarding (แยก ไม่มี shell)</h2>
+<table>
+<thead>
+<tr>
+<th>หน้า</th>
+<th>บทบาท</th>
+<th>stories</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Welcome</td>
+<td>สร้าง workspace แรก</td>
+<td>+ แนะนำ onboarding</td>
+</tr>
+<tr>
+<td>Login / Register</td>
+<td>เข้าสู่ระบบ/สมัคร</td>
+<td>E01</td>
+</tr>
+<tr>
+<td>Plans</td>
+<td>เลือกแพ็กเกจ</td>
+<td>E01 (plan)</td>
+</tr>
+<tr>
+<td>Read /:slug</td>
+<td>หน้าอ่าน public</td>
+<td>E12</td>
+</tr>
+<tr>
+<td>404</td>
+<td>ทางตัน → planner</td>
+<td>–</td>
+</tr>
+</tbody></table>
+</div></body></html>

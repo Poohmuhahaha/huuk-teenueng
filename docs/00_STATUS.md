@@ -6,7 +6,7 @@
 - Docs: `Docs/01_Dev` → `02_Design` → `03_Component` → `04_API` → `05_Tech-Stack` → `06_Business` (อ่านโค้ดจริง 2026-09-27)
 
 ## Next 3
-1. `./deploy.sh init + up + smoke` ซ้อม staging แล้ว rotate รหัส bootstrap
+1. `ops/scripts/deploy.sh init + up + smoke` ซ้อม staging แล้ว rotate รหัส bootstrap
 2. ต่อ OAuth จริง 1 เจ้า (Meta/Google/TikTok) end-to-end + ตรวจ `/#/profile?oauth`
 3. เปิด backup systemd รายวัน + ทดสอบ restore นอกเครื่อง
 

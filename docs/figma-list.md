@@ -1,0 +1,124 @@
+# Huuk — Figma List
+
+## SCREENS (frames)
+
+### Public / Auth
+- Login
+- Register
+- Plans (3 tiers)
+- Welcome (create workspace)
+- 404 Not found
+
+### Public delivery
+- Read — index (list)
+- Read — article
+
+### App (with shell)
+- Home
+- Plan › Monthly
+- Plan › Calendar
+- Plan › Ideas
+- Plan › Hashtags
+- Content › Studio
+- Content › Feed preview
+- Promote › Campaigns
+- Promote › Meta Ads
+- Analyze › Performance
+- Analyze › Finance
+- Settings › Brand
+- Settings › Workspace
+- Settings › Members
+- Settings › Connections
+
+### Overlays
+- Account menu
+- Settings sheet
+- Login modal
+- Change password modal
+- Protected cell modal
+- Platform connect (full screen)
+- OAuth page picker
+- Guide
+- Date picker popup
+- Ads: Edit budget dialog
+- Ads: Manage opt-in confirm
+- Ads: Boost a post dialog
+- Publish menu
+- Revisions drawer
+
+---
+
+## COMPONENTS
+
+### Buttons
+- Button / Solid
+- Button / Ghost
+- Button / Small
+- Button / Danger
+- Icon button
+- Tab
+- Segmented control
+
+### Forms & inputs
+- Text field
+- Textarea
+- Select
+- Checkbox
+- Radio / segmented (Shadows)
+- Search field
+- Date field + calendar popup
+- Range slider
+- Number input
+- Color picker tile
+- File upload button
+
+### Navigation
+- Navbar
+- Nav link
+- Nav group (dropdown)
+- Avatar button
+- Hub tabs
+- Carousel tabs
+- Status funnel
+
+### Data display
+- KPI card
+- Budget card
+- Bar chart
+- Calendar grid
+- Feed grid
+- Table (master)
+- Table (transactions)
+- Stat tile
+- Definition list (settings)
+
+### Labels & status
+- Chip
+- Feature tag
+- Status chip
+- Badge
+- Platform status row
+- Lock chip
+
+### Feedback & states
+- Alert / error
+- Notice (success toast)
+- Empty state
+- Loading / skeleton
+- Info tip
+- Banner (inline notice)
+
+### Overlays
+- Modal
+- Sheet / dialog
+- Drawer
+- Popup menu
+- Full-screen overlay
+
+### Brand kit
+- Logo slot (main/secondary/social)
+- Palette tile
+- Swatch + hex
+- Font sample card
+- Moodboard item
+- Card base (media card)

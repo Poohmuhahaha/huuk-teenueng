@@ -1,0 +1,70 @@
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant App as App.vue
+  participant Auth as core/auth.ts
+  participant HTTP as api/http.ts
+  participant API as Axum handlers.rs
+  participant Store as Store
+
+  Note over App: onMounted -> restore()
+  App->>Auth: restore()
+  Auth->>Auth: token = localStorage["cp.token"] หรือใน memory
+  alt มี token
+    Auth->>HTTP: me(token) -> GET /api/auth/me
+    HTTP->>API: Authorization Bearer token
+    API->>Store: require_session(store, headers)
+    Store->>Store: session_key(token) = Blake2b256, ตรวจ expires
+    alt session ถูกต้อง
+      Store-->>API: email
+      API-->>HTTP: 200 { user, plan }
+      HTTP-->>Auth: { user }
+      Auth->>Auth: startSession(token, user) + notify()
+    else session หมดอายุ/ไม่พบ
+      API-->>HTTP: 401 + WWW-Authenticate: Bearer
+      HTTP->>HTTP: clearSession() (ลบ cp.token)
+      Auth-->>App: clearSession
+    else network/5xx
+      Auth->>Auth: เก็บ token ไว้ (ไม่ logout จาก server ล่ม)
+    end
+  else ไม่มี token
+    Auth->>Auth: clearSession()
+  end
+
+  App->>App: ready = restored && !setupPending
+  alt authRequired && !isLoggedIn
+    App-->>U: แสดง LoginPage เต็มจอ
+    U->>Auth: login(email, password)
+    Auth->>HTTP: POST /api/auth/login {email,password}
+    HTTP->>API: POST /api/auth/login
+    API->>Store: login_retry_after(email)
+    alt เกิน 10 ครั้งใน 15 นาที
+      Store-->>API: retry seconds
+      API-->>HTTP: 429 Too Many Requests
+      HTTP-->>U: error "too many attempts"
+    else ปกติ
+      API->>Store: verify_password (Argon2id)
+      alt ผิด
+        API->>Store: record_login_failure(email)
+        API-->>HTTP: 401
+      else ถูก
+        API->>Store: clear_login_failures + open_session(email)
+        Store->>Store: random 64-hex token, cap 20 sessions/account
+        API-->>HTTP: 200 { token, user }
+        Auth->>Auth: startSession -> setToken + notify (queryClient.clear())
+      end
+    end
+  end
+
+  Note over App: หลัง login สำเร็จ
+  App->>HTTP: GET /api/workspaces
+  alt workspaces.length == 0
+    App-->>U: WorkspaceSetupPage
+    U->>HTTP: POST /api/workspaces {name}
+    HTTP->>API: require_perm("platforms.manage")
+    API-->>HTTP: WorkspaceSummary
+    U->>Auth: setActiveWorkspace(id) (localStorage cp.workspace)
+    U->>App: invalidateQueries() -> router.replace("/")
+  else มี workspace
+    App-->>U: AppShell + ScreensDeck
+  end

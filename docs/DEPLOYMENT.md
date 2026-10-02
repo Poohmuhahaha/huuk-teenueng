@@ -25,7 +25,7 @@ Production domain: `huuk.teenueng.com` (main site: `teenueng.com`).
   origin (no CORS, no `VITE_API_URL` needed). The SPA uses hash routing, so every path serves
   `index.html`.
 - **proxy** — optional Caddy container that terminates TLS; it routes `/api/*` to `api` and
-  everything else to `web`. Enable with `./deploy.sh up --tls`.
+  everything else to `web`. Enable with `ops/scripts/deploy.sh up --tls`.
 
 ## Choose your path
 
@@ -105,17 +105,17 @@ your existing load balancer.
 ```sh
 git clone <repo> && cd content-planner
 
-./deploy.sh init          # creates ops/deploy/.env.production + generated secrets (mode 600)
+ops/scripts/deploy.sh init          # creates ops/deploy/.env.production + generated secrets (mode 600)
 $EDITOR ops/deploy/.env.production
 #   ADMIN_EMAIL        owner@yourdomain.com
 #   FRONTEND_URL / PUBLIC_URL / CORS_ORIGINS   https://app.yourdomain.com
 #   SITE_ADDRESS       app.yourdomain.com        (only for --tls)
 
-./deploy.sh up            # http://localhost:8080
+ops/scripts/deploy.sh up            # http://localhost:8080
 # or:
-./deploy.sh up --tls      # Caddy on 80/443 with automatic HTTPS
+ops/scripts/deploy.sh up --tls      # Caddy on 80/443 with automatic HTTPS
 
-./deploy.sh smoke         # run the smoke test against the deployment
+ops/scripts/deploy.sh smoke         # run the smoke test against the deployment
 ```
 
 `init` prints the generated Owner password and `ADMIN_TOKEN` once — store them safely and change
@@ -133,7 +133,7 @@ without one:
 podman network create cp-net
 
 podman build -t content-planner-api:1 -f server/Dockerfile server
-podman build -t content-planner-web:1 -f apps/app/Dockerfile app
+podman build -t content-planner-web:1 -f app/Dockerfile .
 
 podman run -d --name cp-api --network cp-net --network-alias api \
   -v cp-data:/app/data --env-file ops/deploy/.env.production \
@@ -144,7 +144,7 @@ podman run -d --name cp-web --network cp-net -p 8080:8080 content-planner-web:1
 ```
 
 The web container reaches the API by the name `api` (`--network-alias`), matching
-`app/nginx.conf`. Open `http://localhost:8080`. Day-2:
+`ops/nginx/nginx.conf`. Open `http://localhost:8080`. Day-2:
 
 ```sh
 podman logs -f cp-api
@@ -188,19 +188,19 @@ Provider callbacks must point at `PUBLIC_URL`:
 ## Day-2 operations
 
 ```sh
-./deploy.sh ps                  # container status + health
-./deploy.sh logs api            # follow API logs (also: web, proxy)
-./deploy.sh restart
-./deploy.sh update              # rebuild with fresh base images, roll forward
-./deploy.sh backup              # backups/content-planner-<timestamp>.json
-./deploy.sh restore backups/... # stop api, swap snapshot, start api
-./deploy.sh down                # stop, keep data
-./deploy.sh destroy             # stop and delete volumes (asks for confirmation)
+ops/scripts/deploy.sh ps                  # container status + health
+ops/scripts/deploy.sh logs api            # follow API logs (also: web, proxy)
+ops/scripts/deploy.sh restart
+ops/scripts/deploy.sh update              # rebuild with fresh base images, roll forward
+ops/scripts/deploy.sh backup              # backups/content-planner-<timestamp>.json
+ops/scripts/deploy.sh restore backups/... # stop api, swap snapshot, start api
+ops/scripts/deploy.sh down                # stop, keep data
+ops/scripts/deploy.sh destroy             # stop and delete volumes (asks for confirmation)
 ```
 
 **Backups.** The snapshot contains password hashes, sessions and unpublished content — store
 backups encrypted/off-host. The `backup` command is safe to run live because writes are atomic
-(you get a complete old or new file). For extra safety run it after `./deploy.sh down`.
+(you get a complete old or new file). For extra safety run it after `ops/scripts/deploy.sh down`.
 
 For a daily automatic snapshot, install the provided systemd units (substitute the repo path
 and the user that can run docker):
@@ -212,10 +212,10 @@ sudo cp ops/deploy/systemd/content-planner-backup.timer /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now content-planner-backup.timer
 ```
 
-**Updates / rollback.** `./deploy.sh update` rebuilds both images and recreates containers; a
+**Updates / rollback.** `ops/scripts/deploy.sh update` rebuilds both images and recreates containers; a
 final snapshot is flushed on shutdown. To roll back, `git checkout <previous tag>`, then
-`./deploy.sh update`; if the snapshot shape ever changes incompatibly, restore the matching
-backup with `./deploy.sh restore`.
+`ops/scripts/deploy.sh update`; if the snapshot shape ever changes incompatibly, restore the matching
+backup with `ops/scripts/deploy.sh restore`.
 
 ## Testing production (staging rehearsal)
 
@@ -223,7 +223,7 @@ Run the exact compose stack on a staging host with its own `web`, `ops/deploy/.e
 `DEMO_MODE`) and volume, then:
 
 ```sh
-./deploy.sh smoke https://staging.example.com owner@staging.example.com 'password' --write
+ops/scripts/deploy.sh smoke https://staging.example.com owner@staging.example.com 'password' --write
 ```
 
 What the smoke test checks:
@@ -242,7 +242,7 @@ Manual spot checks before cutover:
 - Sign in as the Owner, confirm nav shows Plan/Calendar/…/Content.
 - Sign in as a Client (created in staging), confirm only **Content** is shown and `/studio` works.
 - Publish an item and open its `/#/read/{slug}` link in a private window (no session).
-- Restart the stack (`./deploy.sh restart`) and confirm content is still there.
+- Restart the stack (`ops/scripts/deploy.sh restart`) and confirm content is still there.
 - Try 11 wrong passwords — the 11th request should return `429` (login lockout).
 - Optionally configure OAuth credentials and complete one provider login end-to-end; confirm the
   callback lands on `/#/profile?oauth=…&status=ok`.
@@ -258,16 +258,16 @@ wire them yourself: build with `cargo build --release` and `bun run build`, inst
 `__APP_DIR__`, `__ENV_FILE__`, `__DATA_DIR__`) with an environment file following the table above,
 including `STATIC_DIR=<dist path>`. The API serves the SPA itself; no nginx is required.
 
-If you do want nginx instead, `app/nginx.conf` is a ready-made server block (replace
+If you do want nginx instead, `ops/nginx/nginx.conf` is a ready-made server block (replace
 `proxy_pass http://api:8787` with `http://127.0.0.1:8787` and leave `STATIC_DIR` unset).
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| `api` is unhealthy | `./deploy.sh logs api` — usually a bad env file or a corrupt snapshot; the log names the file and exits instead of losing data |
-| Port 8080 already in use | Set another `WEB_PORT` in the env file and `./deploy.sh up` |
-| TLS profile can't get a certificate | DNS must point at the host and ports 80/443 must be free; check `./deploy.sh logs proxy` |
+| `api` is unhealthy | `ops/scripts/deploy.sh logs api` — usually a bad env file or a corrupt snapshot; the log names the file and exits instead of losing data |
+| Port 8080 already in use | Set another `WEB_PORT` in the env file and `ops/scripts/deploy.sh up` |
+| TLS profile can't get a certificate | DNS must point at the host and ports 80/443 must be free; check `ops/scripts/deploy.sh logs proxy` |
 | "no accounts exist and demo mode is off" warning | Set `ADMIN_EMAIL`/`ADMIN_PASSWORD` and restart, or set `ALLOW_REGISTRATION=true` temporarily |
 | Clients see the planner | They must hold the **Client** role (Settings → create account with role Client); roles come from the directory |
 | OAuth callback errors | `PUBLIC_URL` must match the provider's registered redirect base; the provider app must allow `PUBLIC_URL/api/oauth/<platform>/callback` |

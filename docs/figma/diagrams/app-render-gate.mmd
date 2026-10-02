@@ -1,0 +1,10 @@
+flowchart TD
+  Enter["App.vue"] --> Pub{"route.meta.public?"}
+  Pub -->|yes| RV1["RouterView (ไม่มี shell)<br/>/login /register /plans /read"]
+  Pub -->|no| Ready{"ready = restored && !setupPending?"}
+  Ready -->|no| Boot["boot loader"]
+  Ready -->|yes| NeedLogin{"authRequired && !isLoggedIn?"}
+  NeedLogin -->|yes| Login["LoginPage"]
+  NeedLogin -->|no| NeedsWs{"isLoggedIn && workspacesLoaded && workspaces.length == 0?"}
+  NeedsWs -->|yes| WsSetup["WorkspaceSetupPage"]
+  NeedsWs -->|no| Shell["AppShell > ErrorBoundary ><br/>standalone RouterView หรือ ScreensDeck"]

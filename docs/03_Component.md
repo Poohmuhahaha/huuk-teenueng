@@ -10,4 +10,4 @@
 | Auth UI | `app/src/components/overlays/PlatformLogin.vue`, `LoginModal.vue`, `SettingsPanel.vue` | login โซเชียลเต็มจอ + onboard client (Settings สร้าง account + รหัสชั่วคราว) |
 | State/data | `app/src/core/{queries,auth,session,oauth}.ts` | TanStack queries, token/session |
 | Backend core | `server/src/{lib,handlers,store,main}.rs` | Axum router/middleware, permission gates, seeded Store + snapshot ทุก 5s |
-| Desktop | `app/src-tauri/` + `app/scripts/desktop-sidecar.sh` | Tauri sidecar |
+| Desktop | `desktop/` + `app/scripts/desktop-sidecar.sh` | Tauri sidecar |
