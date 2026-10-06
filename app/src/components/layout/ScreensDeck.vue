@@ -6,6 +6,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { animate } from 'motion-v'
 import { screens } from '@/core/screens'
 import type { Screen } from '@/core/screens'
+import { previewScreen } from '@/core/subnav'
+import { deckFull } from '@/core/deck'
 import { currentRole } from '@/core/auth'
 import NotFoundPage from '@/pages/NotFoundPage.vue'
 
@@ -37,24 +39,19 @@ function pageProps(s: Screen): Record<string, unknown> {
 const track = ref<HTMLElement | null>(null)
 const index = ref(0)
 const full = ref(false)
+
+// Publish the full-page state so pages can reflow (e.g. calendar 2 columns).
+watch(full, (value) => { deckFull.value = value }, { immediate: true })
 let syncing = false
 let settle = 0
-
-function toggleFull(): void {
-  void setFull(!full.value)
-}
 
 function prefersReduced(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
-function activeCard(): HTMLElement | null {
-  return slides()[index.value]?.querySelector<HTMLElement>('.slide-card') ?? null
-}
-
-// Full-page toggle — the card grows/shrinks (animated width + left, content
-// reflows with it) while the other cards cross-fade at the same time.
-// The card is pinned as a fixed overlay so only its own content reflows.
+// Full-page toggle — only the container animates: its box grows from the deck
+// slot into the full page (and back) by animating left/width/height, so the
+// content reflows at its normal size and nothing inside is scaled.
 type FullAnim = ReturnType<typeof animate>
 let fullAnim: FullAnim | null = null
 let fullBusy = false
@@ -63,10 +60,10 @@ function raf(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()))
 }
 
-async function setFull(on: boolean): Promise<void> {
+async function setFull(on: boolean, fromIndex?: number): Promise<void> {
   if (fullBusy || full.value === on) return
   const el = track.value
-  const card = activeCard()
+  const card = slides()[fromIndex ?? index.value]?.querySelector<HTMLElement>('.slide-card') ?? null
   if (!el || !card || prefersReduced()) {
     full.value = on
     await nextTick()
@@ -81,38 +78,59 @@ async function setFull(on: boolean): Promise<void> {
   const first = card.getBoundingClientRect()
   const deckRect = el.getBoundingClientRect()
 
-  // Pin the card as an overlay at its current rect before anything moves.
-  card.style.position = 'fixed'
-  card.style.top = `${first.top}px`
-  card.style.left = `${first.left}px`
-  card.style.width = `${first.width}px`
-  card.style.height = `${first.height}px`
-  card.style.margin = '0'
-  card.style.zIndex = '20'
-  card.style.willChange = 'width, left'
+  const pin = (rect: { top: number; left: number; width: number; height: number }): void => {
+    card.style.position = 'fixed'
+    card.style.top = `${rect.top}px`
+    card.style.left = `${rect.left}px`
+    card.style.width = `${rect.width}px`
+    card.style.height = `${rect.height}px`
+    card.style.margin = '0'
+    card.style.zIndex = '20'
+    card.style.willChange = 'left, width, height'
+  }
+  const unpin = (): void => {
+    for (const prop of ['position', 'top', 'left', 'width', 'height', 'margin', 'z-index', 'will-change']) {
+      card.style.removeProperty(prop)
+    }
+  }
 
-  let target: { left: number; width: number }
+  // Pin the card as an overlay at its current rect before anything moves.
+  pin(first)
+
+  let target: { left: number; width: number; height: number }
   if (on) {
-    // Grow to the deck's viewport — exactly, with no leftover padding.
-    target = { left: deckRect.left, width: Math.max(1, deckRect.width) }
+    // Grow to the full-page card rect (edge to edge, full height).
+    target = {
+      left: deckRect.left,
+      width: Math.max(1, deckRect.width),
+      height: Math.max(1, deckRect.height),
+    }
     el.classList.add('fading') // other cards fade out while this one grows
   } else {
-    // Shrink back into the real paged slot: release the layout first, snap the
-    // deck instantly, then measure where the card actually sits.
+    // Reset to the deck slot first, then shrink the full page back into it.
     full.value = false
     await nextTick()
     scrollToIndex(index.value, false)
     await raf()
-    const slot = slides()[index.value]?.getBoundingClientRect()
-    target = slot
-      ? { left: slot.left, width: Math.max(1, slot.width) }
-      : { left: first.left, width: Math.max(1, first.width) }
+    // Measure the natural deck slot: unpin, read, re-pin (no paint in between).
+    unpin()
+    const slot = card.getBoundingClientRect()
+    pin(first)
+    target = {
+      left: slot.left,
+      width: Math.max(1, slot.width),
+      height: Math.max(1, slot.height),
+    }
   }
 
   await raf()
   const a = animate(
     card,
-    { left: [first.left, target.left], width: [first.width, target.width] },
+    {
+      left: [first.left, target.left],
+      width: [first.width, target.width],
+      height: [first.height, target.height],
+    },
     { duration: 0.56, ease: [0.22, 1, 0.36, 1] },
   )
   fullAnim = a
@@ -125,14 +143,7 @@ async function setFull(on: boolean): Promise<void> {
         await nextTick()
       }
       el.classList.remove('fading')
-      card.style.removeProperty('position')
-      card.style.removeProperty('top')
-      card.style.removeProperty('left')
-      card.style.removeProperty('width')
-      card.style.removeProperty('height')
-      card.style.removeProperty('margin')
-      card.style.removeProperty('z-index')
-      card.style.removeProperty('will-change')
+      unpin()
       fullBusy = false
     })
     .catch(() => {
@@ -272,66 +283,44 @@ watch(() => route.path, (p) => {
   routeApplied = true
 })
 
-// drag + touch. Pointer capture is deferred until the drag actually starts,
-// so plain clicks (buttons, tables, forms) keep their real target.
-let dragging = false
-let moved = false
-let startX = 0
-let startLeft = 0
-
-function onDown(e: PointerEvent): void {
-  // Touch scrolls natively (momentum + snap) — the custom drag is a
-  // mouse/pen-only enhancement. Hijacking touch kills momentum, fights the
-  // CSS snap, and dies on pointercancel, which made mobile sliding feel stuck.
-  if (e.pointerType === 'touch') return
-  if (e.button !== 0) return
-  const el = track.value
-  if (!el) return
-  dragging = true
-  moved = false
-  startX = e.clientX
-  startLeft = el.scrollLeft
-  el.classList.add('dragging')
-}
-
-function onMove(e: PointerEvent): void {
-  const el = track.value
-  if (!dragging || !el) return
-  const dx = e.clientX - startX
-  if (!moved && Math.abs(dx) > 8) {
-    moved = true
-    el.style.scrollBehavior = 'auto'
-    el.style.scrollSnapType = 'none'
-    try { el.setPointerCapture(e.pointerId) } catch { /* no-op */ }
-  }
-  if (moved) el.scrollLeft = startLeft - dx
-}
-
-function onUp(): void {
-  const el = track.value
-  if (!dragging || !el) return
-  dragging = false
-  el.classList.remove('dragging')
-  el.style.removeProperty('scroll-behavior')
-  el.style.removeProperty('scroll-snap-type')
-  if (!moved) return
-  const target = slides()[nearestIndex()]
-  if (target) el.scrollLeft = Math.max(0, target.offsetLeft - padOf(el))
-  commit()
-  window.setTimeout(() => { moved = false }, 0)
-}
-
-function onClickCapture(e: Event): void {
-  if (moved) {
-    e.preventDefault()
-    e.stopPropagation()
-    moved = false
-  }
-}
-
 function isEditable(el: HTMLElement): boolean {
   const tag = el.tagName
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+}
+
+// Expand the card under the button — works from peeking cards too: the card
+// is brought into the main slot (and the route follows) before going full.
+function onExpand(i: number): void {
+  if (full.value && i === index.value) {
+    void setFull(false)
+    return
+  }
+  if (i !== index.value) {
+    index.value = i
+    const s = visible.value[i]
+    if (s && !s.match.some((m) => route.path.startsWith(m))) {
+      router.replace({ path: s.to, query: route.query })
+    }
+  }
+  void setFull(true, i)
+}
+
+// Touchpad two-finger swipe (deltaX) and shift+wheel flip one card per
+// gesture. Runs in the capture phase so a horizontal swipe is picked up even
+// when the pointer is on top of a card; vertical wheel/touchpad is left
+// untouched so the card's own content keeps scrolling up and down.
+let wheelAt = 0
+function onWheel(e: WheelEvent): void {
+  if (full.value) return
+  const horizontal = Math.abs(e.deltaX) >= Math.abs(e.deltaY) || e.shiftKey
+  if (!horizontal) return
+  e.preventDefault()
+  const delta = e.deltaX || e.deltaY
+  if (Math.abs(delta) < 4) return
+  const now = Date.now()
+  if (now < wheelAt) return
+  wheelAt = now + 420
+  goTo(index.value + (delta > 0 ? 1 : -1))
 }
 
 function onKey(e: KeyboardEvent): void {
@@ -344,37 +333,32 @@ function onKey(e: KeyboardEvent): void {
   goTo(index.value + (e.key === 'ArrowRight' ? 1 : -1))
 }
 
-// Tap a peeking card to slide it fully into the main slot. Capture phase so
-// controls inside a peeking (non-active) card never fire on the way in.
-function onSlideClick(i: number, e: MouseEvent): void {
-  if (i === index.value) return
-  e.preventDefault()
-  e.stopPropagation()
-  const wantsFull = (e.target as HTMLElement | null)?.closest?.('.expand-btn') != null
-  if (wantsFull) {
-    index.value = i
-    scrollToIndex(i, false)
-    void setFull(true)
-  } else {
-    goTo(i)
-  }
-}
 </script>
 
 <template>
   <NotFoundPage v-if="notFound" />
   <div v-else>
     <div ref="track" class="deck" :class="{ full }" role="region" aria-label="Screens" tabindex="0"
-      @scroll.passive="onScroll" @pointerdown="onDown" @pointermove="onMove"
-      @pointerup="onUp" @pointercancel="onUp" @click.capture="onClickCapture" @keydown="onKey">
+      @scroll.passive="onScroll" @wheel.capture="onWheel" @keydown="onKey">
       <div class="slide spacer" aria-hidden="true" />
       <section v-for="(s, i) in visible" :key="s.path" class="slide"
         :class="{ active: i === index }"
-        @click.capture="onSlideClick(i, $event)">
+        @mouseenter="previewScreen(s.path)">
         <div class="slide-card">
-          <button class="expand-btn" :title="full && i === index ? 'Exit full page' : 'Go full page'"
-            @click.stop="toggleFull">
-            {{ full && i === index ? 'Exit full page' : 'Go full page' }}
+          <button
+            class="expand-btn"
+            :title="full && i === index ? 'Exit full page' : 'Go full page'"
+            :aria-label="full && i === index ? 'Exit full page' : 'Go full page'"
+            @click.stop="onExpand(i)"
+          >
+            <svg v-if="full && i === index" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"
+              fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 2h4v4M14 2h-4v4M2 14h4v-4M14 14h-4v-4" />
+            </svg>
+            <svg v-else viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"
+              fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" />
+            </svg>
           </button>
           <div class="card-scroll"><component :is="s.component" v-bind="pageProps(s)" /></div>
         </div>

@@ -55,7 +55,8 @@ describe('monthly plan set-up', () => {
     expect(rows[0].status).toBeTruthy()
     expect(rows[0].platforms.length).toBeGreaterThan(0)
 
-    // The new row is selected, so its editor opens for editing.
+    // The new row is selected, so its editor sheet opens.
+    expect(w.find('.p-drawer').exists()).toBe(true)
     expect(w.find('#post-topic').exists()).toBe(true)
     w.unmount()
   })
@@ -71,7 +72,7 @@ describe('monthly plan set-up', () => {
 
     await w.find('#post-topic').setValue('Songkran teaser')
     await w.find('#post-date').setValue('2026-07-05')
-    const save = w.findAll('button').find((b) => b.text().includes('Save row'))!
+    const save = w.find('button[aria-label="Save row"]')
     await save.trigger('click')
     await settle()
     await flushPromises()
@@ -90,7 +91,7 @@ describe('monthly plan set-up', () => {
     await settle()
     await flushPromises()
 
-    const duplicate = w.findAll('button').find((b) => b.text() === 'Duplicate')!
+    const duplicate = w.find('button[aria-label="Duplicate"]')
     await duplicate.trigger('click')
     await settle()
     await flushPromises()
@@ -100,7 +101,7 @@ describe('monthly plan set-up', () => {
     // window.confirm is not implemented in happy-dom; stub it for the delete.
     const originalConfirm = window.confirm
     window.confirm = () => true
-    const remove = w.findAll('button').find((b) => b.text() === 'Delete')!
+    const remove = w.find('button[aria-label="Delete"]')
     await remove.trigger('click')
     await settle()
     await flushPromises()

@@ -242,8 +242,8 @@ const audit = computed(() => view.value?.audit ?? [])
 
 <template>
   <div class="adspage">
-    <div class="row ads-head">
-      <h1 style="margin: 0;">{{ t('ads.title') }}<InfoTip :text="t('ads.subtitle')" /></h1>
+    <h1>{{ t('ads.title') }}<InfoTip :text="t('ads.subtitle')" /></h1>
+    <div class="tbl-tools">
       <span v-if="view?.fetchedAt" class="muted">{{ t('ads.synced') }} {{ new Date(view.fetchedAt * 1000).toLocaleString() }}</span>
       <button class="btn btn-primary ads-sync" :disabled="!mayManage || sync.isPending.value"
         :title="mayManage ? '' : t('auth.noPerm')" @click="run(() => sync.mutateAsync(), t('ads.syncedNow'))">
@@ -523,7 +523,7 @@ const audit = computed(() => view.value?.audit ?? [])
   gap: 12px;
 }
 .ads-sync {
-  margin-left: auto;
+  margin-left: 0;
 }
 .ads-manage {
   margin: 14px 0 6px;
@@ -534,7 +534,7 @@ const audit = computed(() => view.value?.audit ?? [])
   gap: 12px;
 }
 .ads-boost {
-  margin-left: auto;
+  margin-left: 0;
 }
 .ads-stats {
   display: grid;

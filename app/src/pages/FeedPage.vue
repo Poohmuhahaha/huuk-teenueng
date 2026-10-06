@@ -117,7 +117,7 @@ const monthLabel = computed(() => {
 
 <style scoped>
 .feedbar { margin-bottom: 10px; }
-.feed-tabs { gap: 6px; flex-wrap: wrap; }
+.feed-tabs { gap: 6px; flex-wrap: wrap; justify-content: center; }
 .feed-tab {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--radius-pill);

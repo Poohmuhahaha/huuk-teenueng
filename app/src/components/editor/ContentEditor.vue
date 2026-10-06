@@ -355,7 +355,7 @@ function formatStamp(stamp: string): string {
 
 <template>
   <div v-if="itemQ.isPending.value" class="muted">{{ t('studio.loading') }}</div>
-  <div v-else-if="itemQ.isError.value" class="card">
+  <div v-else-if="itemQ.isError.value" class="editor-error">
     <p class="muted">{{ itemQ.error.value?.message }}</p>
     <button class="btn" @click="() => itemQ.refetch()">{{ t('common.tryAgain') }}</button>
   </div>
@@ -433,7 +433,7 @@ function formatStamp(stamp: string): string {
     <p v-if="saveError" class="autherr" role="alert">{{ saveError }}</p>
     <p v-if="notice" class="muted" role="status">{{ notice }}</p>
 
-    <div v-if="status === 'published' && publishedUrl" class="card share">
+    <div v-if="status === 'published' && publishedUrl" class="share">
       <strong>{{ t('studio.live') }}</strong>
       <code class="share-url">{{ publishedUrl }}</code>
       <button class="btn" @click="copyLink">{{ copied ? t('studio.copied') : t('studio.copyLink') }}</button>
@@ -477,12 +477,12 @@ function formatStamp(stamp: string): string {
             @click="wrapSelection('`', '`', 'code')">&lt;/&gt;</button>
           <button type="button" class="toolbtn" :disabled="!canEdit" :title="t('studio.tool.link')"
             @click="insertLink">🔗</button>
-          <span class="muted" style="margin-left: auto; font-size: 12px;">
+          <span class="muted" style="font-size: 12px;">
             {{ wordCount }} {{ t('studio.words') }} · {{ readingMinutes }} {{ t('studio.minRead') }}
           </span>
         </div>
         <textarea id="studio-body" ref="bodyEl" v-model="draft.body" class="field editor-body"
-          :disabled="!canEdit" rows="18" :aria-label="t('studio.field.body')" />
+          :disabled="!canEdit" rows="7" :aria-label="t('studio.field.body')" />
 
         <div class="grid2">
           <div>
@@ -557,12 +557,14 @@ function formatStamp(stamp: string): string {
 </template>
 
 <style scoped>
-.editor { display: grid; gap: 10px; }
+.editor { display: grid; gap: 6px; }
 .editor-head { display: flex; gap: 10px; align-items: center; }
-.editor-title { font-size: 22px; font-weight: 700; }
+.editor-title { font-size: 18px; font-weight: 700; }
 .editor-head-right { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
 .editor-savestate { font-size: 12px; }
-.editor-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.editor-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
+/* Compact action buttons — the editor lives in a popup. */
+.editor-actions .btn { padding: 8px 14px; font-size: 12px; width: auto; }
 .spacer { flex: 1; }
 .viewtoggle { display: flex; gap: 4px; }
 .publish-wrap { position: relative; }
@@ -576,13 +578,17 @@ function formatStamp(stamp: string): string {
   display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
   border: 1px solid var(--warning); background: var(--warning-wash); border-radius: var(--radius-sm); padding: 8px 10px;
 }
-.share { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.editor-error { padding: 8px 0; display: grid; gap: 8px; justify-items: center; }
+.share {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  background: var(--wash); padding: 10px 12px; border-radius: var(--radius-sm);
+}
 .share-url { font-size: 12px; overflow-wrap: anywhere; }
-.editor-grid { display: grid; gap: 12px; align-items: start; }
+.editor-grid { display: grid; gap: 8px; align-items: start; }
 .editor-grid.mode-split { grid-template-columns: 1fr 1fr; }
 .editor-fields, .editor-preview { min-width: 0; }
 .editor-body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; line-height: 1.6; }
-.body-toolbar { display: flex; gap: 4px; align-items: center; margin: 8px 0 6px; }
+.body-toolbar { display: flex; gap: 4px; align-items: center; justify-content: center; margin: 8px 0 6px; }
 .toolbtn {
   font: inherit; min-width: 32px; padding: 3px 7px;
   border: 1px solid var(--faint); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer;
@@ -594,7 +600,7 @@ function formatStamp(stamp: string): string {
 .preview-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .preview-body {
   border: 1px solid var(--faint); border-radius: var(--radius);
-  padding: 16px 18px; background: var(--surface); min-height: 200px;
+  padding: 10px 12px; background: var(--surface); min-height: 140px;
 }
 .preview-excerpt { font-size: 15px; }
 .preview-hero { max-width: 100%; border-radius: 8px; }
@@ -609,4 +615,10 @@ function formatStamp(stamp: string): string {
 @media (max-width: 900px) {
   .editor-grid.mode-split { grid-template-columns: 1fr; }
 }
+/* In the full-page detail panel the editor reads left-aligned. */
+.deck.full .editor-head { flex-wrap: wrap; }
+.deck.full .editor-actions { justify-content: flex-start; }
+.deck.full .body-toolbar { justify-content: flex-start; }
+.deck.full .editor-grid { gap: 16px; }
+.deck.full .editor-error { justify-items: start; }
 </style>

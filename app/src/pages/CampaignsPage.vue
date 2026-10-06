@@ -9,6 +9,9 @@ import {
 import type { Campaign, CampaignMetric, CampaignStatus } from '@/mock/db'
 import DatePickerPopup from '@/components/ui/DatePickerPopup.vue'
 import InfoTip from '@/components/ui/InfoTip.vue'
+import Drawer from '@/components/overlays/Drawer.vue'
+import { deckFull } from '@/core/deck'
+import { useWidePane } from '@/composables/useWidePane'
 import { t } from '@/core/i18n'
 
 const route = useRoute()
@@ -23,6 +26,9 @@ const { can } = usePermission()
 
 const canWrite = computed(() => can('campaigns.write'))
 const canDelete = computed(() => can('campaigns.delete'))
+
+const root = ref<HTMLElement | null>(null)
+const { wide } = useWidePane(root, 'camp-scroll')
 
 const props = defineProps<{ id?: string; embedded?: boolean }>()
 const emit = defineEmits<{ 'update:id': [string] }>()
@@ -40,12 +46,15 @@ const draft = ref<Campaign | null>(null)
 const hashtagsText = ref('')
 const error = ref('')
 const saved = ref(false)
+// The campaign editor is a bottom sheet inside the card.
+const editorOpen = ref(false)
 
 const STATUSES: CampaignStatus[] = ['draft', 'active', 'paused', 'completed']
 const METRICS: CampaignMetric[] = ['views', 'likes', 'reach', 'posts']
 
 function select(id: string | null): void {
   selectedId.value = id
+  editorOpen.value = Boolean(id)
   if (props.embedded) {
     emit('update:id', id ?? '')
     return
@@ -72,6 +81,11 @@ watch(
   },
   { immediate: true },
 )
+
+// Deep links (?id=) open the sheet; closing it drops the selection so the
+// query is cleared and a refresh does not re-open it.
+watch(selectedId, (id) => { if (id) editorOpen.value = true })
+watch(editorOpen, (open) => { if (!open && selectedId.value) select(null) })
 
 const dirty = computed(() => {
   const current = campaigns.value?.find((c) => c.id === selectedId.value)
@@ -157,18 +171,19 @@ async function destroy(): Promise<void> {
 </script>
 
 <template>
-  <h1>{{ t('campaign.title') }}<InfoTip :text="t('campaign.hint')" /></h1>
+  <div class="camp-page" ref="root">
+    <h1>{{ t('campaign.title') }}<InfoTip :text="t('campaign.hint')" /></h1>
 
-  <div class="row mt">
-    <button class="btn btn-primary" :disabled="!canWrite || create.isPending.value" @click="newCampaign">
-      {{ t('campaign.new') }}
-    </button>
-    <span v-if="saved" class="muted">{{ t('campaign.saved') }}</span>
-    <span v-if="error" class="autherr" role="alert">{{ error }}</span>
-  </div>
+    <div class="camp-grid">
+      <aside class="camp-side">
+        <span v-if="saved" class="muted">{{ t('campaign.saved') }}</span>
+        <span v-if="error" class="autherr" role="alert">{{ error }}</span>
+        <button class="btn btn-primary" :disabled="!canWrite || create.isPending.value" @click="newCampaign">
+          {{ t('campaign.new') }}
+        </button>
+      </aside>
 
-  <div class="camp-grid mt">
-    <aside class="camp-list card">
+      <div class="camp-main camp-list">
       <div v-if="isPending" class="muted">{{ t('common.loading') }}</div>
       <button v-for="c in campaigns" v-else :key="c.id" type="button" class="camp-item"
         :class="{ active: c.id === selectedId }" @click="select(c.id)">
@@ -183,20 +198,18 @@ async function destroy(): Promise<void> {
         </span>
       </button>
       <p v-if="campaigns && !campaigns.length" class="muted">{{ t('campaign.empty') }}</p>
-    </aside>
-
-    <section v-if="draft" class="card camp-editor">
-      <div class="row">
-        <h2 style="margin: 0;">{{ draft.name || t('campaign.new') }}</h2>
-        <span style="flex: 1;" />
-        <button class="btn btn-primary" :disabled="!canWrite || !dirty || update.isPending.value" @click="save">
-          {{ t('common.save') }}
-        </button>
-        <button class="btn" :disabled="!canDelete || remove.isPending.value"
-          :title="canDelete ? '' : t('auth.noPerm')" @click="destroy">{{ t('common.delete') }}</button>
       </div>
 
-      <div class="grid2 mt">
+      <div v-if="(deckFull || wide) && !editorOpen" class="camp-detail">
+        <p class="muted">{{ t('campaign.pick') }}</p>
+        <p class="muted">{{ t('campaign.pickHint') }}</p>
+      </div>
+
+      <Drawer v-model="editorOpen" class="editor-sheet" :inline="deckFull || wide"
+        :side="deckFull ? 'right' : 'bottom'" :width="'480px'" contained
+        :title="draft?.name || t('campaign.new')">
+    <template v-if="draft">
+      <div class="grid2">
         <div>
           <label class="lbl" for="camp-name">{{ t('campaign.name') }}</label>
           <input id="camp-name" class="field" v-model="draft.name" :disabled="!canWrite" maxlength="200" />
@@ -300,6 +313,15 @@ async function destroy(): Promise<void> {
         </label>
         <p v-if="!(contentRows ?? []).length" class="muted">{{ t('campaign.noContent') }}</p>
       </div>
-    </section>
+    </template>
+    <template #footer>
+      <button class="btn btn-primary" :disabled="!canWrite || !dirty || update.isPending.value" @click="save">
+        {{ t('common.save') }}
+      </button>
+      <button class="btn" :disabled="!canDelete || remove.isPending.value"
+        :title="canDelete ? '' : t('auth.noPerm')" @click="destroy">{{ t('common.delete') }}</button>
+    </template>
+      </Drawer>
+    </div>
   </div>
 </template>

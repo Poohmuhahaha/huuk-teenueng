@@ -35,13 +35,6 @@ describe('MasterTable (TanStack Table v9)', () => {
     expect(w.findAll('tbody tr')[0].text()).toContain('Morning Vlog')
   })
 
-  it('filters rows by search text', async () => {
-    const w = mount(MasterTable, { props: { rows } })
-    await w.find('input[placeholder="Search topic"]').setValue('desk')
-    expect(w.findAll('tbody tr')).toHaveLength(1)
-    expect(w.find('tbody tr').text()).toContain('Desk Setup Tour')
-  })
-
   it('emits select with the clicked post', async () => {
     const w = mount(MasterTable, { props: { rows } })
     await w.findAll('tbody tr')[1].trigger('click')

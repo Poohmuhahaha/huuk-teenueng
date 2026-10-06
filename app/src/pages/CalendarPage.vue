@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import { usePosts, useSetup } from '@/core/queries'
 import { navDate } from '@/core/navdate'
 import { monthOfDate } from '@/core/deeplink'
+import { deckFull } from '@/core/deck'
 import { monthName } from '@/core/i18n'
 import type { Post } from '@/mock/db'
 
@@ -115,18 +116,18 @@ function goAdd(): void {
 </script>
 
 <template>
-  <div class="smartcal">
-    <!-- top: Today / Calendar toggle + add -->
+  <div class="smartcal" :class="{ split: deckFull }">
+    <!-- top: Today / Calendar toggle + add (toggle is redundant in full page) -->
     <div class="sc-top">
-      <div class="sc-seg" role="tablist">
+      <div v-if="!deckFull" class="sc-seg" role="tablist">
         <button type="button" :class="{ on: view === 'today' }" @click="view = 'today'">Today</button>
         <button type="button" :class="{ on: view === 'calendar' }" @click="view = 'calendar'">Calendar</button>
       </div>
       <button type="button" class="sc-add" aria-label="Add post" @click="goAdd">+</button>
     </div>
 
-    <!-- TODAY -->
-    <section v-if="view === 'today'" class="sc-today">
+    <!-- TODAY (always visible in full page, left column) -->
+    <section v-if="view === 'today' || deckFull" class="sc-today">
       <div class="sc-weekday">{{ weekday(todayISO) }}</div>
       <div class="sc-daterow">
         <div class="sc-bigdate">
@@ -168,8 +169,8 @@ function goAdd(): void {
       </div>
     </section>
 
-    <!-- CALENDAR -->
-    <section v-else class="sc-cal">
+    <!-- CALENDAR (always visible in full page, right column) -->
+    <section v-if="view === 'calendar' || deckFull" class="sc-cal">
       <div class="sc-month">
         <button type="button" class="sc-navtext" @click="shiftMonth(-1)">{{ prevMon }}</button>
         <strong>{{ shortMonths[month - 1] }}</strong>

@@ -4,6 +4,7 @@ import { screens } from '@/core/screens'
 import { t } from '@/core/i18n'
 
 const router = useRouter()
+const plannerTo = screens.find((s) => s.to === '/plan')?.to ?? '/plan'
 
 function goHome(): void {
   void router.replace('/')
@@ -16,7 +17,7 @@ function goHome(): void {
     <p class="muted">{{ t('notFound.message') }}</p>
     <div class="row mt">
       <button class="btn btn-primary" @click="goHome">{{ t('notFound.home') }}</button>
-      <RouterLink class="btn" :to="screens[1].to">{{ t('notFound.planner') }}</RouterLink>
+      <RouterLink class="btn" :to="plannerTo">{{ t('notFound.planner') }}</RouterLink>
     </div>
   </div>
 </template>

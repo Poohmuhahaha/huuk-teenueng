@@ -38,8 +38,8 @@ describe('hub registry', () => {
     expect(screenIndexOf('/settings')).toBe(screens.findIndex((s) => s.to === '/settings'))
   })
 
-  it('lands / on Home', () => {
-    expect(screens[0].to).toBe('/dashboard')
+  it('lands / on the front-most card — Brand Identity', () => {
+    expect(screens[0].to).toBe('/settings')
   })
 
   it('redirects legacy deep links into the owning hub + tab', async () => {

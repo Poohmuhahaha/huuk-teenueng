@@ -8,6 +8,7 @@ import LoginPage from '@/pages/LoginPage.vue'
 import RegisterPage from '@/pages/RegisterPage.vue'
 import PlansPage from '@/pages/PlansPage.vue'
 import WorkspaceSetupPage from '@/pages/WorkspaceSetupPage.vue'
+import ComponentsPage from '@/pages/ComponentsPage.vue'
 
 // One sheet, one route — routes derived from the hub registry (compact IA).
 // Legacy deep links (the old per-feature paths) redirect into the owning hub
@@ -61,6 +62,8 @@ const routes: RouteRecordRaw[] = [
   // Public published-content reader (no app shell).
   { path: '/read', component: ReadPage, meta: { standalone: true, public: true } },
   { path: '/read/:slug', component: ReadPage, meta: { standalone: true, public: true } },
+  // Design-system gallery (dev reference).
+  { path: '/components', component: ComponentsPage, meta: { standalone: true, public: true } },
   { path: '/:pathMatch(.*)*', component: NotFoundPage },
 ]
 

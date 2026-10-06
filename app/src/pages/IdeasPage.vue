@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useIdeas, useAddIdea, useToggleIdea, usePromoteIdea, usePermission } from '@/core/queries'
-import { MONTHS } from '@/mock/db'
 import type { Idea } from '@/mock/db'
 import { t } from '@/core/i18n'
+import { activeMonth } from '@/core/navdate'
+import MonthToggle from '@/components/ui/MonthToggle.vue'
 
 const { data: ideas, isPending } = useIdeas()
 const addIdea = useAddIdea()
 const toggleIdea = useToggleIdea()
-const promoteMonth = ref<number>(new Date().getMonth() + 1)
+const promoteMonth = activeMonth
 const promote = usePromoteIdea(promoteMonth)
 const { can } = usePermission()
 const canWrite = computed(() => can('ideas.write'))
@@ -93,11 +94,8 @@ async function onPromote(it: Idea): Promise<void> {
     <div><label class="lbl" for="idea-format">Format</label><input id="idea-format" class="field" v-model="format"
       :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')" /></div>
     <div>
-      <label class="lbl" for="idea-month">Promote to month</label>
-      <select id="idea-month" class="field" v-model.number="promoteMonth" :disabled="!canWrite"
-        :title="canWrite ? '' : t('auth.noPerm')">
-        <option v-for="mm in MONTHS" :key="mm" :value="mm">{{ mm }}</option>
-      </select>
+      <label class="lbl">Promote to month</label>
+      <MonthToggle v-model="promoteMonth" :disabled="!canWrite" />
     </div>
   </div>
   <label class="lbl" for="idea-idea">Idea</label><input id="idea-idea" class="field" v-model="idea" :disabled="!canWrite"

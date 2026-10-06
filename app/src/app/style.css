@@ -65,6 +65,12 @@ input[type="color"] { width: auto; }
 * { scrollbar-width: none; -ms-overflow-style: none; }
 *::-webkit-scrollbar { display: none; }
 
+/* Two-finger horizontal swipes must never trigger the browser's built-in
+   back/forward gesture — only the deck's own handler reacts to horizontal
+   scroll gestures, everywhere else nothing should happen. */
+html,
+body { overscroll-behavior-x: none; }
+
 body {
   margin: 0;
   font-family: var(--font);
@@ -113,7 +119,7 @@ button.wire { font-family: inherit; cursor: pointer; }
   border: 1px solid var(--accent-line); border-radius: var(--radius-pill);
   padding: 2px 9px; margin-left: 10px; width: 16ch; vertical-align: middle;
 }
-.links { display: flex; gap: 4px; flex: 1; min-width: 0; overflow: visible; }
+.links { display: flex; gap: 4px; flex: 1; min-width: 0; overflow: visible; justify-content: center; }
 .links::-webkit-scrollbar { display: none; }
 .navlink {
   font: inherit; text-decoration: none; font-size: 14.5px; font-weight: 550; padding: 8px 14px;
@@ -510,20 +516,18 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 /* screen deck — fixed 402px cards, one-step snap
    desktop: cards march left to right with the previous one peeking · phone: [card][peek] */
 .deck {
-  position: relative; display: flex; gap: 40px;
+  position: relative; display: flex; gap: 20px;
   overflow-x: auto; overflow-y: hidden;
-  margin: 24px 0 0;
+  margin: 20px 0 0;
   scroll-snap-type: x mandatory; scroll-behavior: smooth;
   scroll-padding-inline: 12.5vw;
-  padding: 0; cursor: grab; height: 100%; min-height: 0; min-width: 0;
+  padding: 0; height: 100%; min-height: 0; min-width: 0;
   scrollbar-width: none;
-  /* Native horizontal panning on touch (momentum + snap); the JS drag only
-     enhances mouse/pen. `pan-y` keeps vertical page/card scroll working. */
+  /* Native horizontal panning (touchpad swipe / touch) with momentum + snap;
+     `pan-y` keeps vertical page/card scroll working. */
   touch-action: pan-x pan-y;
 }
 .deck::-webkit-scrollbar { display: none; }
-.deck:active { cursor: grabbing; }
-.deck.dragging { cursor: grabbing; user-select: none; -webkit-user-select: none; }
 .deck.fading .slide:not(.active) { opacity: 0; }
 .deck:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .slide {
@@ -536,8 +540,9 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
   border: 1px solid var(--faint); border-radius: var(--radius-lg);
   background: var(--surface); overflow: hidden;
   box-shadow: var(--shadow-md);
-  /* Topbar + social bar + footer are chrome; the card fills the rest. */
-  height: calc(100vh - var(--shell-bars));
+  /* Topbar + social bar + footer are chrome; the card fills the rest.
+     Trimmed 50px so every card sits shorter than the viewport. */
+  height: calc(100vh - var(--shell-bars) - 50px);
   min-height: 420px;
 }
 .card-scroll {
@@ -546,16 +551,17 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 }
 .expand-btn {
   position: absolute; top: 12px; right: 12px; z-index: 2;
-  font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer;
-  border: 1px solid var(--faint); border-radius: var(--radius-pill);
+  width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  border: 1px solid var(--faint); border-radius: 50%;
   background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(4px);
-  color: var(--muted); padding: 4px 13px;
+  color: var(--muted); padding: 0;
   box-shadow: var(--shadow-xs);
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .expand-btn:hover { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .expand-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.slide:not(.active) .slide-card { cursor: pointer; }
 
 /* edge breathing room as real 100px slides (not container margin), so the
    inset scrolls naturally with the deck. Spacers never snap, never go full. */
@@ -564,9 +570,10 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
   scroll-snap-align: none; scroll-snap-stop: normal;
 }
 
-/* full-page mode — active card only, edge to edge. Height never changes, and
-   the reveal is a horizontal clip animation (no scaling up/down). */
-.deck.full { scroll-padding-inline: 0; gap: 0; }
+/* full-page mode — active card only, centred with a gutter (never edge to
+   edge). Height never changes, and the reveal is a horizontal clip animation
+   (no scaling up/down). The JS transition targets the same rect. */
+.deck.full { scroll-padding-inline: 0; gap: 0; padding: 0 24px; }
 .deck.full .slide {
   flex-basis: 0; opacity: 0; padding: 0; overflow: hidden;
   pointer-events: none;
@@ -574,6 +581,10 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 .deck.full .slide.active {
   flex-basis: 100%; opacity: 1; padding: 0; overflow: visible;
   pointer-events: auto;
+}
+.deck.full .slide.active .slide-card {
+  max-width: none;
+  margin: 0;
 }
 @media (max-width: 640px) {
   .deck { scroll-padding-inline: 0; }
@@ -936,7 +947,7 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
 }
 .infotip:hover { border-color: var(--accent); color: var(--accent); }
 .infotip-bubble {
-  position: absolute; top: calc(100% + 8px); left: 0; z-index: 40;
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
   width: max-content; max-width: min(280px, 72vw); padding: 10px 12px;
   background: var(--surface); border: 1px solid var(--faint); border-radius: var(--radius);
   box-shadow: var(--shadow-lg); font-size: 13px; font-weight: 400; color: var(--ink);
@@ -967,20 +978,22 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
 .dp-modal .actions .btn { flex: 1; min-width: 0; }
 
 /* ---- campaign manager ---- */
-.camp-grid { display: grid; gap: 16px; grid-template-columns: 300px minmax(0, 1fr); align-items: start; }
+.camp-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
 /* A narrow card stacks the list over the editor instead of squeezing it. */
 @container screen (max-width: 520px) {
   .camp-grid { grid-template-columns: minmax(0, 1fr); }
 }
-.camp-list { display: flex; flex-direction: column; gap: 8px; }
+.camp-list { display: flex; flex-direction: column; }
+/* Borderless rows — the hub card is the only frame (no card-in-card). */
 .camp-item {
   display: flex; flex-direction: column; gap: 3px; align-items: flex-start; text-align: left;
-  width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--surface); color: inherit; font: inherit; cursor: pointer;
+  width: 100%; padding: 10px 4px; border: 0; border-bottom: 1px solid var(--faint);
+  border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: pointer;
+  align-items: center; text-align: center;
 }
-.camp-item:hover { border-color: var(--accent-line); background: var(--wash); }
-.camp-item.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-wash); }
-.camp-item-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; width: 100%; }
+.camp-item:hover { background: var(--wash); }
+.camp-item.active { background: var(--wash); box-shadow: inset 2px 0 0 var(--ink); }
+.camp-item-head { display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; }
 .camp-status {
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
   border-radius: var(--radius-pill); padding: 2px 8px; border: 1px solid var(--line); color: var(--muted);
@@ -1041,6 +1054,9 @@ h3 { font-size: 16px; line-height: 1.2; }
 .btn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
 .btn-primary, .lp-submit { background: var(--ink); border: 1.5px solid var(--ink); color: #fff; }
 .btn-primary:hover, .lp-submit:hover { background: #222; border-color: #222; color: #fff; }
+/* `a.btn { color: inherit }` out-specifies `.btn-primary`; keep link-buttons
+   that use the primary tone white-on-black like real buttons. */
+a.btn-primary, a.btn-primary:hover { color: #fff; }
 .btn:active { transform: none; }
 .menubtn { text-transform: none; letter-spacing: 0; border: 0; border-radius: 0; padding: 9px 10px; }
 .tab { padding: 8px 16px; }
@@ -1082,8 +1098,225 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .navlink { border-radius: var(--radius-pill); }
 .navlink.active { background: transparent; color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
 
-/* inverted island stays black-on-paper */
-.footer { background: var(--ink); color: #fff; }
+/* footer reads as part of the paper, not an inverted island */
+.footer { background: var(--surface); color: var(--muted); }
+
+/* =========================================================================
+   Brand Identity card — minimal layout (match the reference):
+   centered narrow column · huge serif uppercase title · borderless sections ·
+   label + underline fields · generous whitespace · pill actions.
+   ========================================================================= */
+.brandpage {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 932px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 44px 32px 0;
+}
+.brandpage .brand-head {
+  text-align: center;
+  margin: 0 0 24px;
+}
+.brandpage .brand-step {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.brandpage h1 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  text-align: center;
+  font-size: clamp(36px, 7vw, 54px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.brandpage .brand-note {
+  border: 1px solid var(--line);
+  padding: 12px 14px;
+  margin: 0 0 22px;
+  font-size: 14px;
+}
+.brandpage .brand-prompt {
+  font-size: 15px;
+  color: var(--ink);
+  margin: 0 0 28px;
+}
+.brandpage .brand-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.brandpage .brand-body .field {
+  width: 100%;
+}
+.brandpage .brand-nav {
+  margin-top: auto;
+  display: flex;
+  gap: 12px;
+  padding: 18px 0 calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+}
+.brandpage .brand-nav .btn {
+  flex: 1 1 auto;
+  width: 100%;
+}
+.brandpage h2 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  text-align: center;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+  margin: 52px 0 18px;
+  border: 0;
+}
+.brandpage .grid2,
+.brandpage .grid3,
+.brandpage .grid4,
+.brandpage .grid6 {
+  grid-template-columns: 1fr !important;
+  gap: 26px;
+}
+.brandpage .lbl {
+  display: block;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--ink);
+  margin: 0 0 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.brandpage .field,
+.brandpage input.field {
+  width: 100%;
+  padding: 18px 2px;
+  margin-bottom: 26px;
+  font-size: 16px;
+}
+.brandpage .panel {
+  border: 0 !important;
+  padding: 0 !important;
+  background: transparent;
+}
+.brandpage .row { gap: 16px; }
+.brandpage .logo-preview,
+.brandpage .mood-item img {
+  border: 1px solid var(--line);
+}
+.brandpage .logo-remove {
+  background: var(--ink);
+  color: #fff;
+  border: 0;
+  border-radius: var(--radius-pill);
+  width: 24px;
+  height: 24px;
+  line-height: 1;
+}
+.brandpage .palette-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; }
+.brandpage .font-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.brandpage .font-choice { border: 1px solid var(--line); border-radius: 0; padding: 14px; }
+.brandpage .font-choice.active { background: var(--ink); color: #fff; }
+.brandpage .font-choice.active .font-sample,
+.brandpage .font-choice.active .font-name { color: #fff; }
+.brandpage .style-segmented button { border-radius: 0; }
+.brandpage .style-segmented button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.brandpage .mood-add {
+  border: 1px dashed var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: var(--muted);
+}
+.brandpage .btn,
+.brandpage label.btn {
+  justify-content: center;
+}
+
+/* =========================================================================
+   Minimal redesign — serif uppercase display · pill buttons · underline
+   fields · monochrome · whitespace. Overrides the skin only; layout intact.
+   ========================================================================= */
+body { background: var(--surface); color: var(--ink); }
+
+h1, h2, h3, h4, .modal h3, .lp-card h1, .guide-head strong, .plans-card h1 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+}
+h1 { font-size: clamp(28px, 3.6vw, 44px); line-height: 1.05; }
+h2 { font-size: clamp(18px, 1.5vw, 22px); line-height: 1.12; margin: 28px 0 10px; }
+h3 { font-size: 16px; line-height: 1.2; }
+.modal h3 { font-size: 18px; }
+
+/* buttons → pill, uppercase */
+.btn, a.btn, .menubtn, .tab, .toolbtn, .lp-submit, .switchlink, .chipbtn {
+  font-family: var(--font);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  font-size: 12.5px;
+  border-radius: var(--radius-pill);
+  padding: 12px 22px;
+}
+.btn { background: transparent; border: 1.5px solid var(--ink); color: var(--ink); }
+.btn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn-primary, .lp-submit { background: var(--ink); border: 1.5px solid var(--ink); color: #fff; }
+.btn-primary:hover, .lp-submit:hover { background: #222; border-color: #222; color: #fff; }
+/* `a.btn { color: inherit }` out-specifies `.btn-primary`; keep link-buttons
+   that use the primary tone white-on-black like real buttons. */
+a.btn-primary, a.btn-primary:hover { color: #fff; }
+.btn:active { transform: none; }
+.menubtn { text-transform: none; letter-spacing: 0; border: 0; border-radius: 0; padding: 9px 10px; }
+.tab { padding: 8px 16px; }
+.toolbtn { padding: 6px 10px; letter-spacing: 0; }
+
+/* fields → underline only */
+.field, select.field, input.field, textarea.field, .ads-input, .palette-hex,
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="file"]),
+select {
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid var(--ink);
+  border-radius: 0;
+  padding: 10px 2px;
+  color: var(--ink);
+}
+.field::placeholder, input::placeholder, textarea::placeholder { color: var(--muted); }
+.field:focus, input:focus, select:focus, textarea:focus {
+  outline: none; box-shadow: none; border-bottom-color: var(--ink);
+}
+textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; padding: 12px; }
+
+/* surfaces → flat, hairline, square */
+.card, .panel, .lp-card, .plans-card, .plogin-card, .modal, .guide-panel,
+.camp-editor, .camp-list, .camp-item, .plan-card, .style-panel,
+.linkitem, .member-row, .ads-stat, .livecard, .slide-card, .read-article {
+  border-radius: 0;
+  box-shadow: none;
+}
+.card, .panel, .slide-card { border: 1px solid var(--line); }
+.plans-card, .plogin-card, .modal, .guide-panel, .lp-card { border: 1px solid var(--line); }
+
+/* chips / badges → pill outline */
+.chip, .badge-success, .badge-warning, .badge-danger, .feature-tag, .statuschip,
+.plan-badge, .conn-btn, .socialmini { border-radius: var(--radius-pill); }
+
+/* navbar + nav */
+.topbar { background: rgba(255, 255, 255, 0.92); border-bottom: 1px solid var(--line); backdrop-filter: blur(10px); }
+.navlink { border-radius: var(--radius-pill); }
+.navlink.active { background: transparent; color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
+
+/* footer reads as part of the paper, not an inverted island */
+.footer { background: var(--surface); color: var(--muted); }
 
 /* =========================================================================
    Brand Identity card — minimal layout (match the reference):
@@ -1271,4 +1504,377 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .smartcal .sc-event {
   border: 1px solid currentColor; border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; font-weight: 600;
   background: transparent; color: currentColor; cursor: pointer; white-space: nowrap;
+}
+
+/* =========================================================================
+   Center-first alignment — every element inside hub cards/pages sits on the
+   centre axis (headings, toggles, metrics, panels, tables).
+   ========================================================================= */
+.card-scroll,
+.hubpage {
+  text-align: center;
+}
+.card-scroll .tbl th,
+.card-scroll .tbl td,
+.hubpage .tbl th,
+.hubpage .tbl td,
+.card-scroll .tbl .num,
+.hubpage .tbl .num {
+  text-align: center;
+}
+
+/* =========================================================================
+   Full-page composition + row actions.
+   - Full-page cards keep a readable centred column instead of stretching.
+   - Buttons sitting in a flex row size to their label (the global `button`
+     rule makes standalone/form buttons full-width).
+   ========================================================================= */
+/* Content column — no effect on narrow deck cards, keeps wide (full-page)
+   cards readable without snapping mid-animation. */
+.card-scroll > * {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.row > .btn,
+.row > button {
+  width: auto;
+}
+
+/* =========================================================================
+   Single-column cards — hub cards never lay content out side by side.
+   (Functional grids keep their shape: calendar, date picker, palettes.)
+   ========================================================================= */
+.card-scroll .grid2,
+.card-scroll .grid3,
+.card-scroll .grid4,
+.card-scroll .grid6,
+.card-scroll .steps,
+.card-scroll .cards,
+.card-scroll .feed,
+.card-scroll .camp-grid,
+.card-scroll .plogin-actions {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Popups: compact multi-column forms + auto-width footer actions. */
+.p-dialog .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.p-dialog .grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.p-dialog-foot > .btn,
+.p-dialog-foot > button { width: auto; }
+
+/* Table toolbar: row actions (search lives in the ⌘K command palette). */
+.tbl-tools {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.tbl-tools .btn,
+.tbl-tools button {
+  width: auto;
+  flex: none;
+}
+.tbl-tools .field {
+  width: auto;
+  flex: 0 1 auto;
+}
+
+/* Ghost button — borderless tertiary action for toolbars. */
+.ghostbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--muted, #6b6b6b);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.ghostbtn:hover {
+  background: var(--wash, #f6f6f6);
+  color: var(--ink, #000);
+}
+.ghostbtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* =========================================================================
+   Full-page calendar: Today (left) + Calendar (right) side by side.
+   ========================================================================= */
+.smartcal.split {
+  max-width: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+.smartcal.split .sc-top { grid-column: 1 / -1; }
+.smartcal.split .sc-add { margin-left: 0; }
+.smartcal.split .sc-today { grid-column: 1; }
+.smartcal.split .sc-cal { grid-column: 2; }
+@media (max-width: 900px) {
+  .smartcal.split { grid-template-columns: minmax(0, 1fr); }
+  .smartcal.split .sc-today,
+  .smartcal.split .sc-cal { grid-column: 1; }
+}
+
+/* =========================================================================
+   Centre everything — sheets inherit the card's centred alignment.
+   ========================================================================= */
+.editor-sheet.p-drawer-backdrop .p-drawer-body { text-align: center; }
+.editor-sheet.p-drawer-backdrop .p-drawer-foot { justify-content: center; }
+.editor-sheet .chiprow,
+.editor-sheet .row { justify-content: center; }
+
+/* =========================================================================
+   Uniform rhythm — every flow element carries a 20px margin.
+   ========================================================================= */
+.card-scroll > *,
+.hubpage > *,
+.planner-page > *,
+.studio-page > *,
+.adspage > *,
+.memberspage > *,
+.smartcal:not(.split) > *,
+.p-drawer-body > *,
+.editor > * {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+/* =========================================================================
+   Expanded card — true full-screen app layout.
+   Edge-to-edge frame, full-width content, title left, row actions top-right.
+   ========================================================================= */
+.deck.full { gap: 0; padding: 0; }
+.deck.full .slide.active .slide-card {
+  max-width: none; margin: 0;
+  border: 0; border-radius: 0; box-shadow: none;
+}
+.deck.full .card-scroll {
+  position: relative;
+  padding: 44px 32px 28px;
+  text-align: left;
+}
+.deck.full .card-scroll .hubpage { text-align: left; }
+/* Full-width composition (drop the centred 1100px column). */
+.deck.full .card-scroll > * {
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+/* Header: page title left; row actions pinned to the top right. */
+.deck.full .card-scroll > h1,
+.deck.full .slide.active :is(.hubpage, .adspage, .memberspage, .planner-page, .studio-page, .dash-page) > h1 {
+  padding-right: 220px;
+  text-align: left;
+}
+.deck.full .card-scroll > .tbl-tools,
+.deck.full .slide.active :is(.hubpage, .adspage, .memberspage, .planner-page, .studio-page) > .tbl-tools {
+  position: absolute;
+  top: 44px;
+  right: 52px;
+  margin: 0;
+  justify-content: flex-end;
+}
+/* Content Studio: configs | items | detail — only the items column scrolls.
+   `studio-scroll` is set on the card's scroll container by StudioPage. */
+.card-scroll.studio-scroll {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 44px 32px 28px;
+  text-align: left;
+}
+.card-scroll.studio-scroll > .hubpage,
+.card-scroll.studio-scroll .studio-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0;
+}
+.card-scroll.studio-scroll > .hubpage { max-width: none; margin-left: 0; margin-right: 0; }
+.card-scroll.studio-scroll .studio-page > h1 { text-align: left; padding-right: 220px; }
+.card-scroll.studio-scroll .studio {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px 340px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+.card-scroll.studio-scroll .studio-side {
+  align-content: start;
+  overflow: hidden;
+}
+.card-scroll.studio-scroll .studio-main {
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 100%;
+  overscroll-behavior: contain;
+}
+.card-scroll.studio-scroll .studio-detail {
+  border-left: 1px solid var(--line);
+  padding-left: 28px;
+  min-height: 0;
+  overflow: hidden;
+}
+/* Data reads left-aligned in the wide layout. */
+.deck.full .card-scroll .tbl th,
+.deck.full .card-scroll .tbl td { text-align: left; }
+.card-scroll.studio-scroll .studio-item { text-align: left; justify-items: start; }
+.card-scroll.studio-scroll .studio-item-top { justify-content: flex-start; }
+
+/* =========================================================================
+   Campaigns / Planner / Performance — the same wide master–detail pattern
+   as the Content Studio (configs | items [| detail]); only the middle pane
+   scrolls. The classes are set by the pages themselves, keyed to the card's
+   real width, so the layout aligns while the card expands.
+   ========================================================================= */
+.card-scroll.planner-scroll,
+.card-scroll.camp-scroll,
+.card-scroll.perf-scroll {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 44px 32px 28px;
+  text-align: left;
+}
+.card-scroll.planner-scroll > .hubpage,
+.card-scroll.camp-scroll > .hubpage,
+.card-scroll.perf-scroll > .hubpage {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+.card-scroll.planner-scroll .planner-page,
+.card-scroll.camp-scroll .camp-page,
+.card-scroll.perf-scroll .perf-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0;
+}
+.card-scroll.planner-scroll .planner-page > h1,
+.card-scroll.camp-scroll .camp-page > h1,
+.card-scroll.perf-scroll .perf-page > h1 {
+  text-align: left;
+  padding-right: 220px;
+}
+.card-scroll.planner-scroll .planner-grid,
+.card-scroll.camp-scroll .camp-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px 340px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+.card-scroll.perf-scroll .perf-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 28px;
+  align-items: stretch;
+}
+.card-scroll.planner-scroll .planner-side,
+.card-scroll.camp-scroll .camp-side,
+.card-scroll.perf-scroll .perf-side {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  overflow: hidden;
+}
+.card-scroll.planner-scroll .planner-main,
+.card-scroll.camp-scroll .camp-main,
+.card-scroll.perf-scroll .perf-main {
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 100%;
+  overscroll-behavior: contain;
+}
+.card-scroll.planner-scroll .planner-detail,
+.card-scroll.camp-scroll .camp-detail,
+.card-scroll.planner-scroll .planner-grid > .p-drawer,
+.card-scroll.camp-scroll .camp-grid > .p-drawer {
+  border-left: 1px solid var(--line);
+  padding-left: 28px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Dashboard — sidebar (month / quick actions / alerts) + scrolling content,
+   mirroring the Studio pattern so the home screen behaves like the rest. */
+.card-scroll.dash-scroll {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 44px 32px 28px;
+  text-align: left;
+}
+.card-scroll.dash-scroll > .dash-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0;
+}
+.card-scroll.dash-scroll .dash-page > h1 {
+  text-align: left;
+  padding-right: 220px;
+}
+.card-scroll.dash-scroll .dash-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 28px;
+  align-items: stretch;
+}
+.card-scroll.dash-scroll .dash-side {
+  align-content: start;
+  overflow: hidden;
+}
+.card-scroll.dash-scroll .dash-main {
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 100%;
+  overscroll-behavior: contain;
+}
+
+/* Dashboard KPI grid — the global single-column hub rule stacks every grid;
+   a data summary reads better compact, so the KPI row keeps its columns at
+   every card width. */
+.card-scroll .dash-page .grid6 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@container screen (min-width: 720px) {
+  .card-scroll .dash-page .grid6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container screen (min-width: 1100px) {
+  .card-scroll .dash-page .grid6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
 }

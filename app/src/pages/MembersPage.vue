@@ -167,6 +167,6 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
   font-size: 12.5px;
 }
 .member-remove {
-  margin-left: auto;
+  margin-left: 0;
 }
 </style>

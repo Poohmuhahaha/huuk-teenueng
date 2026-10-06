@@ -47,23 +47,25 @@ describe('ScreensDeck keyboard handling', () => {
     expect(activeIndex(w)).toBe(1)
   })
 
-  it('lets touch scroll natively instead of starting the mouse drag', async () => {
+  it('scrolls natively without starting a pointer drag (touch or mouse)', async () => {
     const w = mount(ScreensDeck)
     const deck = w.find('.deck')
-    await deck.trigger('pointerdown', { pointerType: 'touch', button: 0, clientX: 100 })
-    expect(deck.classes()).not.toContain('dragging')
-    await deck.trigger('pointermove', { pointerType: 'touch', clientX: 40 })
-    await deck.trigger('pointerup', { pointerType: 'touch', clientX: 40 })
+    for (const pointerType of ['touch', 'mouse']) {
+      await deck.trigger('pointerdown', { pointerType, button: 0, clientX: 100 })
+      expect(deck.classes()).not.toContain('dragging')
+      await deck.trigger('pointermove', { pointerType, clientX: 40 })
+      await deck.trigger('pointerup', { pointerType, clientX: 40 })
+    }
     expect(replace).not.toHaveBeenCalled()
   })
 
-  it('still starts the drag for mouse pointers', async () => {
+  it('flips one card per horizontal touchpad gesture, ignores vertical scroll', async () => {
     const w = mount(ScreensDeck)
     const deck = w.find('.deck')
-    await deck.trigger('pointerdown', { button: 0, clientX: 100 })
-    expect(deck.classes()).toContain('dragging')
-    await deck.trigger('pointerup', { button: 0, clientX: 100 })
-    expect(deck.classes()).not.toContain('dragging')
+    await deck.trigger('wheel', { deltaX: 1, deltaY: 40 })
+    expect(replace).not.toHaveBeenCalled()
+    await deck.trigger('wheel', { deltaX: 40, deltaY: 2 })
+    expect(replace).toHaveBeenCalledWith(expect.objectContaining({ path: '/b' }))
   })
 
   it('no longer renders the deck meta row or the dots', () => {

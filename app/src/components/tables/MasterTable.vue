@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue'
 import {
   FlexRender, tableFeatures, useTable,
   rowSortingFeature, createSortedRowModel, sortFn_alphanumeric,
-  columnFilteringFeature, createFilteredRowModel, filterFn_includesString,
 } from '@tanstack/vue-table'
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { Post } from '@/mock/db'
@@ -16,9 +15,6 @@ const features = tableFeatures({
   rowSortingFeature,
   sortedRowModel: createSortedRowModel(),
   sortFns: { alphanumeric: sortFn_alphanumeric },
-  columnFilteringFeature,
-  filteredRowModel: createFilteredRowModel(),
-  filterFns: { includesString: filterFn_includesString },
 })
 
 const columns: ColumnDef<typeof features, Post, unknown>[] = [
@@ -35,12 +31,6 @@ const columns: ColumnDef<typeof features, Post, unknown>[] = [
 
 const data = computed(() => props.rows)
 const table = useTable({ features, columns, data })
-
-const search = ref('')
-function onSearch(e: Event): void {
-  search.value = (e.target as HTMLInputElement).value
-  table.getColumn('topic')?.setFilterValue(search.value)
-}
 
 const checked = ref<Set<string>>(new Set())
 const visibleIds = computed(() => table.getRowModel().rows.map((r) => r.original.id))
@@ -90,8 +80,9 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
 
 <template>
   <div>
-    <input class="field" style="margin-bottom: 8px;" placeholder="Search topic" aria-label="Search topic"
-      :value="search" @input="onSearch" />
+    <div class="tbl-tools">
+      <slot name="actions" />
+    </div>
     <div v-if="loading" class="muted">Loading rows…</div>
     <div class="tblwrap">
       <table class="tbl">

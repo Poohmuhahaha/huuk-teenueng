@@ -21,6 +21,8 @@ import LoginModal from '@/components/overlays/LoginModal.vue'
 import PlatformLogin from '@/components/overlays/PlatformLogin.vue'
 import ProfilePanel from '@/components/overlays/ProfilePanel.vue'
 import SettingsPanel from '@/components/overlays/SettingsPanel.vue'
+import Subnavbar from './Subnavbar.vue'
+import { previewScreen } from '@/core/subnav'
 
 const route = useRoute()
 const router = useRouter()
@@ -351,7 +353,8 @@ function isActive(l: NavLink): boolean {
       <nav class="links">
         <RouterLink v-for="l in navLinks" :key="l.to" :to="l.to" class="navlink"
           :class="{ active: isActive(l) }"
-          :aria-current="isActive(l) ? 'page' : undefined">
+          :aria-current="isActive(l) ? 'page' : undefined"
+          @mouseenter="previewScreen(l.to)">
           {{ l.label }}
         </RouterLink>
       </nav>
@@ -429,6 +432,7 @@ function isActive(l: NavLink): boolean {
         </div>
       </div>
     </header>
+    <Subnavbar />
     <div v-if="notice" class="oauth-banner">
       <span>{{ notice }}</span>
       <button class="btn" @click="notice = ''">{{ t('common.close') }}</button>
