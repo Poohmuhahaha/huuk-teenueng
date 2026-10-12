@@ -11,39 +11,22 @@ watchEffect(() => {
 </script>
 
 <template>
-  <label class="p-check" :class="{ disabled }">
+  <label class="group inline-flex items-center gap-2 cursor-pointer text-sm text-ink select-none" :class="{ 'opacity-50 cursor-not-allowed': disabled }">
     <input
       ref="box"
       type="checkbox"
+      class="peer sr-only"
       :checked="model"
       :disabled="disabled"
       @change="model = ($event.target as HTMLInputElement).checked"
     />
-    <span class="p-check-mark" aria-hidden="true">✓</span>
-    <span v-if="label || $slots.default" class="p-check-label"><slot>{{ label }}</slot></span>
+    <span
+      class="inline-flex items-center justify-center w-[18px] h-[18px] shrink-0 border border-line bg-surface text-transparent text-xs rounded-none transition-colors peer-checked:bg-ink peer-checked:text-surface peer-checked:border-ink peer-indeterminate:bg-ink peer-indeterminate:text-surface peer-indeterminate:border-ink peer-focus-visible:outline-2 peer-focus-visible:outline-ink peer-focus-visible:outline-offset-2"
+      aria-hidden="true"
+    >
+      <span v-if="indeterminate" class="text-xs leading-none font-bold text-surface">–</span>
+      <span v-else class="text-xs leading-none">✓</span>
+    </span>
+    <span v-if="label || $slots.default"><slot>{{ label }}</slot></span>
   </label>
 </template>
-
-<style scoped>
-.p-check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--ink, #000); }
-.p-check.disabled { opacity: 0.5; cursor: not-allowed; }
-.p-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.p-check-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border: 1px solid var(--line, #d9d9d9);
-  background: var(--paper, #fff);
-  font-size: 12px;
-  color: transparent;
-  flex: none;
-  transition: background 0.1s, color 0.1s;
-}
-.p-check input:checked + .p-check-mark { background: var(--ink, #000); color: var(--paper, #fff); border-color: var(--ink, #000); }
-.p-check input:indeterminate + .p-check-mark { background: var(--ink, #000); color: var(--paper, #fff); border-color: var(--ink, #000); }
-.p-check input:indeterminate + .p-check-mark::after { content: '–'; }
-.p-check input:indeterminate + .p-check-mark { font-size: 0; }
-.p-check input:focus-visible + .p-check-mark { outline: 2px solid var(--ink, #000); outline-offset: 2px; }
-</style>

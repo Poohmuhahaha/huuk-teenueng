@@ -88,7 +88,7 @@ describe('workspace members page', () => {
 
     const shell = mountShell()
     await vi.waitFor(() => {
-      expect(navLabels(shell)).toContain('Settings')
+      expect(navLabels(shell)).toContain('Branding')
     }, { timeout: 8000 })
     shell.unmount()
   })

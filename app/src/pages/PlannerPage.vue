@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   usePosts, useUpdatePost, useAddPost, useDeletePost, useSetup, useLockPost, useUnlockPost,
@@ -18,7 +18,6 @@ import MonthToggle from '@/components/ui/MonthToggle.vue'
 import StatusFunnel from '@/components/ui/StatusFunnel.vue'
 import CopyBar from '@/components/ui/CopyBar.vue'
 import Drawer from '@/components/overlays/Drawer.vue'
-import CommandPalette from '@/components/overlays/CommandPalette.vue'
 import ProtectedModal from '@/components/overlays/ProtectedModal.vue'
 import Chip from '@/components/ui/Chip.vue'
 import IconButton from '@/components/ui/IconButton.vue'
@@ -202,33 +201,6 @@ function pick(p: Post): void {
   editorOpen.value = true
 }
 
-// Topic finder — a search popup opened with Ctrl/⌘ + K (the toolbar button
-// shows the same affordance). Picking a result opens that row's editor.
-const searchOpen = ref(false)
-const searchItems = computed(() =>
-  (posts.value ?? []).map((p) => ({ id: p.id, label: p.topic, group: p.date ?? undefined })),
-)
-
-function onSearchSelect(id: string): void {
-  const post = (posts.value ?? []).find((p) => p.id === id)
-  if (post) pick(post)
-}
-
-function onSearchKey(e: KeyboardEvent): void {
-  // Search is a full-page tool: the Plan hub must be current and expanded.
-  if (!route.path.startsWith('/plan') || !deckFull.value) return
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-    e.preventDefault()
-    searchOpen.value = true
-  }
-}
-
-watch(deckFull, (value) => {
-  if (!value) searchOpen.value = false
-})
-
-onMounted(() => window.addEventListener('keydown', onSearchKey))
-onBeforeUnmount(() => window.removeEventListener('keydown', onSearchKey))
 
 function goMonth(value: string | number): void {
   const next = validMonth(value)
@@ -301,11 +273,11 @@ watch(
 
   <div class="planner-grid">
     <aside class="planner-side">
-      <MonthToggle :model-value="m" @update:model-value="goMonth" />
-      <button class="btn btn-primary planner-add" :disabled="!canWrite || busy"
-        :title="canWrite ? '' : t('auth.noPerm')" @click="addRow">
-        {{ addPost.isPending.value ? t('planner.adding') : t('planner.addTopic') }}
-      </button>
+      <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center [&>*]:min-w-0">
+        <MonthToggle :model-value="m" @update:model-value="goMonth" />
+        <button class="btn btn-primary btn-icon ml-0" :disabled="!canWrite || busy"
+          :title="canWrite ? t('planner.addTopic') : t('auth.noPerm')" aria-label="Add new topic" @click="addRow">{{ busy || addPost.isPending.value ? '…' : '+' }}</button>
+      </div>
     </aside>
 
     <div class="planner-main">
@@ -314,19 +286,8 @@ watch(
         <p class="muted">Could not load posts: {{ loadError?.message }}</p>
         <button class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
       </div>
-      <MasterTable v-else-if="(posts ?? []).length" :rows="posts ?? []" @select="pick">
-        <template #actions>
-          <button v-if="deckFull" type="button" class="ghostbtn searchbtn" title="Search topics (Ctrl/⌘ K)" @click="searchOpen = true">
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
-              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="7" cy="7" r="4.5" />
-              <path d="M10.5 10.5 14 14" />
-            </svg>
-            <kbd>⌘K</kbd>
-          </button>
-        </template>
-      </MasterTable>
-      <div v-else class="card planner-empty">
+      <MasterTable v-else-if="(posts ?? []).length" :rows="posts ?? []" @select="pick" />
+      <div v-else class="card planner-empty flex flex-col items-start gap-2.5">
         <p class="muted">{{ t('planner.empty') }}</p>
         <button class="btn btn-primary" :disabled="!canWrite || busy"
           :title="canWrite ? '' : t('auth.noPerm')" @click="addRow">{{ t('planner.addTopic') }}</button>
@@ -469,21 +430,6 @@ watch(
   </div>
   <ProtectedModal :open="guardOpen" field="assembled Copy-Paste"
     @cancel="guardOpen = false" @confirm="guardOpen = false" />
-  <CommandPalette v-model="searchOpen" :items="searchItems" placeholder="Search topics…" @select="onSearchSelect" />
   </div>
 </template>
 
-<style scoped>
-.planner-add { margin-left: 0; }
-.searchbtn kbd {
-  font-family: var(--mono, ui-monospace, Menlo, monospace);
-  font-size: 11px;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 1px 5px;
-}
-.planner-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.btn.danger { color: var(--danger); border-color: var(--danger); }
-.btn.danger:hover { background: var(--danger-wash); }
-</style>

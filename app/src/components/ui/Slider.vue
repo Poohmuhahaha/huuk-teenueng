@@ -4,21 +4,15 @@ withDefaults(defineProps<{ min?: number; max?: number; step?: number; showValue?
 </script>
 
 <template>
-  <div class="p-slider">
-    <input v-model.number="model" type="range" :min="min" :max="max" :step="step" />
-    <span v-if="showValue" class="p-slider-val">{{ model }}</span>
+  <div class="flex items-center gap-3 w-full">
+    <input
+      v-model.number="model"
+      type="range"
+      class="w-full h-[22px] accent-ink cursor-pointer"
+      :min="min"
+      :max="max"
+      :step="step"
+    />
+    <span v-if="showValue" class="min-w-[3ch] text-right text-[13px] font-semibold text-ink tabular-nums">{{ model }}</span>
   </div>
 </template>
-
-<style scoped>
-.p-slider { display: flex; align-items: center; gap: 12px; width: 100%; }
-.p-slider input { accent-color: var(--ink, #000); width: 100%; height: 22px; }
-.p-slider-val {
-  min-width: 3ch;
-  text-align: right;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink, #000);
-  font-variant-numeric: tabular-nums;
-}
-</style>

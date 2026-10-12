@@ -46,8 +46,22 @@ watch(
   { immediate: true },
 )
 
-function confirmed(message: string): boolean {
-  return typeof window === 'undefined' || window.confirm(message)
+// Double-click confirm arming state (replaces native window.confirm): the first
+// click arms the button (its label flips to "Confirm?"), the second executes.
+// Arming resets after 3s.
+const confirmId = ref<string | null>(null)
+let confirmTimer: number | undefined
+
+async function confirmRemove(id: string, fn: () => Promise<void>): Promise<void> {
+  if (confirmId.value !== id) {
+    confirmId.value = id
+    if (confirmTimer) clearTimeout(confirmTimer)
+    confirmTimer = window.setTimeout(() => { confirmId.value = null }, 3000)
+    return
+  }
+  if (confirmTimer) clearTimeout(confirmTimer)
+  confirmId.value = null
+  await fn()
 }
 
 async function saveYear(): Promise<void> {
@@ -128,7 +142,6 @@ async function addUsr(): Promise<void> {
 
 async function removeUsr(name: string): Promise<void> {
   if (!canManage.value) return
-  if (!confirmed(`Remove “${name}” from the team?`)) return
   try {
     await removeUser.mutateAsync(name)
   } catch {
@@ -215,7 +228,6 @@ async function addRl(): Promise<void> {
 
 async function removeRl(name: string): Promise<void> {
   if (!canManage.value) return
-  if (!confirmed(`Remove the role “${name}”?`)) return
   try {
     await removeRole.mutateAsync(name)
   } catch {
@@ -225,7 +237,6 @@ async function removeRl(name: string): Promise<void> {
 
 async function removeAcc(account: { name: string; email: string }): Promise<void> {
   if (!canManage.value || account.name === currentUser.value?.name) return
-  if (!confirmed(`Delete the sign-in account ${account.email}? All its sessions will be revoked.`)) return
   try {
     await removeAccount.mutateAsync(account.email)
   } catch {
@@ -304,21 +315,21 @@ const setupError = computed(() => {
     <div class="grid2">
       <div class="panel">
         <label class="lbl" for="setup-year" style="margin-top: 0;">{{ t('setup.year') }}</label>
-        <input id="setup-year" class="field" type="number" v-model.number="yearDraft" :disabled="!canSetup"
+        <input id="setup-year" class="field" type="number" v-model.number="yearDraft" :disabled="!canSetup || saveSetup.isPending.value"
           min="1970" max="9999" :title="canSetup ? '' : t('auth.noPerm')" @change="saveYear" />
       </div>
       <div class="panel">
         <label class="lbl" for="setup-owner" style="margin-top: 0;">{{ t('setup.owner') }}</label>
-        <input id="setup-owner" class="field" v-model="ownerDraft" :disabled="!canSetup"
+        <input id="setup-owner" class="field" v-model="ownerDraft" :disabled="!canSetup || saveSetup.isPending.value"
           :title="canSetup ? '' : t('auth.noPerm')" @change="saveOwner" />
       </div>
       <div class="panel">
         <label class="lbl" for="setup-workspace" style="margin-top: 0;">{{ t('setup.workspace') }}</label>
-        <input id="setup-workspace" class="field" v-model="workspaceDraft" :disabled="!canSetup"
+        <input id="setup-workspace" class="field" v-model="workspaceDraft" :disabled="!canSetup || saveSetup.isPending.value"
           maxlength="80" :title="canSetup ? '' : t('auth.noPerm')" @change="saveWorkspace" />
       </div>
     </div>
-    <h2>{{ t('setup.optionLists') }}</h2>
+    <h2 style="line-height: 1.6;">{{ t('setup.optionLists') }}</h2>
     <div class="grid2">
       <div v-for="l in LISTS" :key="l.key" class="panel">
         <strong>{{ t(l.labelKey) }}</strong>
@@ -332,16 +343,16 @@ const setupError = computed(() => {
         </div>
       </div>
     </div>
-    <h2>{{ t('setup.options') }}</h2>
-    <label class="muted"><input type="checkbox" v-model="colorsDraft" :disabled="!canSetup"
+    <h2 style="line-height: 1.6;">{{ t('setup.options') }}</h2>
+    <label class="muted"><input type="checkbox" v-model="colorsDraft" :disabled="!canSetup || saveSetup.isPending.value"
       :title="canSetup ? '' : t('auth.noPerm')" @change="saveColors" /> {{ t('setup.showEditableColors') }}</label>
-    <h2>{{ t('setup.users') }}</h2>
+    <h2 style="line-height: 1.6;">{{ t('setup.users') }}</h2>
     <div class="panel">
       <div v-for="u in setup.users" :key="u.name" class="row" style="justify-content: space-between;">
         <span>{{ u.name }} <span class="muted">· {{ u.role }}</span></span>
         <button class="btn" :disabled="setup.users.length <= 1 || !canManage || removeUser.isPending.value"
           :title="canManage ? 'Remove user' : t('auth.noPerm')" :aria-label="`Remove user ${u.name}`"
-          @click="removeUsr(u.name)">×</button>
+          @click="confirmRemove(`user:${u.name}`, () => removeUsr(u.name))">{{ confirmId === `user:${u.name}` ? 'Confirm?' : '×' }}</button>
       </div>
       <div class="row mt">
         <input class="field" style="flex: 1;" v-model="newName" placeholder="new user" aria-label="New user name"
@@ -358,14 +369,14 @@ const setupError = computed(() => {
       </p>
     </div>
     <template v-if="canManage">
-      <h2>{{ t('setup.accounts') }}</h2>
+      <h2 style="line-height: 1.6;">{{ t('setup.accounts') }}</h2>
       <div class="panel">
         <p class="muted" style="margin: 0 0 8px;">{{ t('setup.accountsHint') }}</p>
         <div v-for="a in accountsQ.data.value ?? []" :key="a.email" class="row" style="justify-content: space-between;">
           <span>{{ a.name }} · {{ a.email }} · {{ a.sessions }} {{ t('setup.sessions') }}</span>
           <button class="btn" :disabled="!canManage || a.name === currentUser?.name || removeAccount.isPending.value"
             :title="a.name === currentUser?.name ? 'You cannot delete your own account' : t('setup.removeAccount')"
-            :aria-label="`Remove account ${a.email}`" @click="removeAcc(a)">×</button>
+            :aria-label="`Remove account ${a.email}`" @click="confirmRemove(`account:${a.email}`, () => removeAcc(a))">{{ confirmId === `account:${a.email}` ? 'Confirm?' : '×' }}</button>
         </div>
         <p v-if="accountsQ.error.value || removeAccount.error.value" class="autherr" role="alert">
           {{ (accountsQ.error.value ?? removeAccount.error.value)?.message }}
@@ -401,17 +412,17 @@ const setupError = computed(() => {
           </button>
         </div>
         <p v-if="accError" class="autherr" role="alert">{{ accError }}</p>
-        <div v-if="tempPassword" class="card" style="margin-top: 8px; background: var(--wash);">
+        <div v-if="tempPassword" role="status" class="card" style="margin-top: 8px; background: var(--wash);">
           <strong>{{ t('setup.tempPassword') }}</strong>
           <code style="display: block; margin: 6px 0; overflow-wrap: anywhere;">{{ tempPassword }}</code>
           <button class="btn" @click="copyTempPassword">{{ copiedTemp ? t('studio.copied') : t('setup.copyPassword') }}</button>
         </div>
       </div>
     </template>
-    <h2>{{ t('auth.perms') }}</h2>
+    <h2 style="line-height: 1.6;">{{ t('auth.perms') }}</h2>
     <div class="panel">
       <label class="muted">
-        <input type="checkbox" v-model="authDraft" :disabled="!canManage"
+        <input type="checkbox" v-model="authDraft" :disabled="!canManage || saveSetup.isPending.value"
           :title="canManage ? '' : t('auth.noPerm')" @change="saveAuthRequired" />
         {{ t('auth.require') }}
       </label>
@@ -420,13 +431,13 @@ const setupError = computed(() => {
         <table class="tbl">
           <thead>
             <tr>
-              <th>{{ t('auth.perms') }}</th>
-              <th v-for="r in roleDraft" :key="r.name">
+              <th scope="col">{{ t('auth.perms') }}</th>
+              <th scope="col" v-for="r in roleDraft" :key="r.name">
                 {{ r.name }}
                 <button class="btn" style="margin-left: 6px;"
                   :disabled="!canManage || roleDraft.length <= 1 || roleInUse(r.name) || removeRole.isPending.value"
                   :title="canManage ? (roleInUse(r.name) ? 'Role is in use' : '') : t('auth.noPerm')"
-                  :aria-label="`Remove role ${r.name}`" @click="removeRl(r.name)">×</button>
+                  :aria-label="`Remove role ${r.name}`" @click="confirmRemove(`role:${r.name}`, () => removeRl(r.name))">{{ confirmId === `role:${r.name}` ? 'Confirm?' : '×' }}</button>
               </th>
             </tr>
           </thead>

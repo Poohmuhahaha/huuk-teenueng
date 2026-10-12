@@ -1,0 +1,43 @@
+{
+  "kind": "collectionType",
+  "collectionName": "doc_pages",
+  "info": {
+    "singularName": "doc-page",
+    "pluralName": "doc-pages",
+    "displayName": "Doc Page",
+    "description": "Docs site content — markdown body, served live to docs-web"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "section": {
+      "type": "enumeration",
+      "enum": ["start", "workflows", "authoring", "reference", "templates", "examples"],
+      "default": "start",
+      "required": true
+    },
+    "sectionLabel": {
+      "type": "string"
+    },
+    "order": {
+      "type": "integer",
+      "default": 0
+    },
+    "summary": {
+      "type": "text"
+    },
+    "body": {
+      "type": "text"
+    }
+  }
+}

@@ -3,14 +3,10 @@ withDefaults(defineProps<{ ratio?: number }>(), { ratio: 16 / 9 })
 </script>
 
 <template>
-  <div class="p-ar" :style="{ aspectRatio: String(ratio) }">
+  <div
+    class="w-full overflow-hidden bg-wash [&_img]:w-full [&_img]:h-full [&_img]:object-cover [&_img]:block [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_video]:block [&_canvas]:w-full [&_canvas]:h-full [&_canvas]:object-cover [&_canvas]:block"
+    :style="{ aspectRatio: String(ratio) }"
+  >
     <slot />
   </div>
 </template>
-
-<style scoped>
-.p-ar { width: 100%; overflow: hidden; background: var(--wash, #f6f6f6); }
-.p-ar :deep(img),
-.p-ar :deep(video),
-.p-ar :deep(canvas) { width: 100%; height: 100%; object-fit: cover; display: block; }
-</style>

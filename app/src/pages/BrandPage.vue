@@ -675,7 +675,7 @@ async function addDont(): Promise<void> {
             <div v-for="slot in PALETTE_SLOTS" :key="slot" class="palette-card"
               :class="{ 'is-primary': slot === '1' }">
               <label class="palette-tile-label" :title="t('brand.palettePick')">
-                <input type="color" :value="paletteDraft[Number(slot) - 1] || '#4f46e5'"
+                <input type="color" :value="paletteDraft[Number(slot) - 1] || '#0a0a0a'"
                   :disabled="!canWrite || busy" :aria-label="`Color ${slot}`"
                   @input="paletteDraft[Number(slot) - 1] = ($event.target as HTMLInputElement).value"
                   @change="savePalette" />
@@ -684,7 +684,7 @@ async function addDont(): Promise<void> {
                   <span class="palette-tile-role">{{ t(PALETTE_ROLES[slot]) }}</span>
                   <span v-if="slot === '1'" class="palette-tile-star" aria-hidden="true">★</span>
                   <span class="palette-tile-sample"
-                    :style="{ color: readableOn(paletteDraft[Number(slot) - 1] || '#4f46e5') }">Aa</span>
+                    :style="{ color: readableOn(paletteDraft[Number(slot) - 1] || '#0a0a0a') }">Aa</span>
                 </span>
               </label>
               <div class="palette-meta">
@@ -692,7 +692,7 @@ async function addDont(): Promise<void> {
                 <div class="palette-stats">
                   <label class="palette-field">
                     <input class="field palette-hex" v-model="paletteDraft[Number(slot) - 1]"
-                      :disabled="!canWrite || busy" placeholder="#4f46e5" :aria-label="`Color hex ${slot}`"
+                      :disabled="!canWrite || busy" placeholder="#0a0a0a" :aria-label="`Color hex ${slot}`"
                       @change="savePalette" />
                   </label>
                   <button type="button" class="palette-copy" :disabled="!paletteDraft[Number(slot) - 1]"

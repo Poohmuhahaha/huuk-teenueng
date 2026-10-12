@@ -4,17 +4,10 @@ defineProps<{ items?: { label: string; value: string | number }[] }>()
 </script>
 
 <template>
-  <div class="p-stats">
-    <div v-for="s in items ?? []" :key="s.label" class="p-stat">
-      <span class="p-stat-label">{{ s.label }}</span>
-      <span class="p-stat-value">{{ s.value }}</span>
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3 w-full">
+    <div v-for="s in items ?? []" :key="s.label" class="border border-line p-3 flex flex-col gap-1 rounded-none bg-surface">
+      <span class="text-[11px] tracking-[0.1em] uppercase text-muted">{{ s.label }}</span>
+      <span class="font-display text-xl font-bold text-ink">{{ s.value }}</span>
     </div>
   </div>
 </template>
-
-<style scoped>
-.p-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; width: 100%; }
-.p-stat { border: 1px solid var(--line, #e4e4e4); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
-.p-stat-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted, #6b6b6b); }
-.p-stat-value { font-family: var(--font-display, Georgia, serif); font-size: 20px; font-weight: 700; color: var(--ink, #000); }
-</style>

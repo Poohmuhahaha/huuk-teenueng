@@ -24,6 +24,11 @@ const filtered = computed(() => {
   return props.items.filter((item) => item.label.toLowerCase().includes(q))
 })
 
+const activeId = computed(() => {
+  const item = filtered.value[index.value]
+  return item ? `cmd-${item.id}` : undefined
+})
+
 watch(open, async (value) => {
   if (!value) return
   query.value = ''
@@ -54,92 +59,48 @@ function onKeydown(event: KeyboardEvent): void {
   } else if (event.key === 'Enter') {
     const item = filtered.value[index.value]
     if (item) pick(item)
+  } else if (event.key === 'Escape') {
+    open.value = false
   }
 }
 </script>
 
 <template>
-  <div v-if="open" class="p-cmd-backdrop" @click.self="open = false">
-    <div class="p-cmd" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div v-if="open" class="fixed inset-0 z-[1000] bg-black/40 flex items-start justify-center pt-[12vh] p-4" @click.self="open = false">
+    <div class="w-[90%] max-w-[560px] bg-surface border border-line shadow-[0_12px_40px_rgba(0,0,0,0.08)] overflow-hidden rounded-none" role="dialog" aria-modal="true" aria-label="Command palette">
       <input
         ref="input"
         v-model="query"
-        class="p-cmd-input"
+        class="w-full border-0 border-b border-line bg-transparent text-ink font-sans text-[15px] p-3.5 px-4 outline-none rounded-none focus:outline-none focus-visible:outline-2 focus-visible:outline-ink focus-visible:-outline-offset-2"
         :placeholder="placeholder"
+        role="combobox"
+        aria-label="Command palette"
+        aria-expanded="true"
+        aria-controls="cmd-listbox"
+        :aria-activedescendant="activeId"
         @keydown="onKeydown"
       />
-      <div class="p-cmd-list">
+      <div id="cmd-listbox" role="listbox" class="max-h-[320px] overflow-y-auto p-1.5">
         <button
           v-for="(item, i) in filtered"
           :key="item.id"
+          :id="'cmd-' + item.id"
           type="button"
-          class="p-cmd-item"
-          :class="{ active: i === index }"
+          role="option"
+          :aria-selected="i === index"
+          class="flex items-center justify-between gap-3 w-full bg-transparent border-0 font-sans text-[13px] p-2.5 px-2.5 rounded-none cursor-pointer text-left transition-colors"
+          :class="i === index ? 'bg-ink text-surface' : 'text-ink hover:bg-wash'"
           @mouseenter="index = i"
           @click="pick(item)"
         >
           <span>
-            <span v-if="item.group" class="p-cmd-group">{{ item.group }}</span>
+            <span v-if="item.group" class="text-[11px] uppercase tracking-[0.06em] opacity-60 mr-2">{{ item.group }}</span>
             {{ item.label }}
           </span>
-          <kbd v-if="item.shortcut" class="p-cmd-kbd">{{ item.shortcut }}</kbd>
+          <kbd v-if="item.shortcut" class="font-mono text-[10px] border border-current rounded-none px-1 py-0.5">{{ item.shortcut }}</kbd>
         </button>
-        <p v-if="!filtered.length" class="p-cmd-empty">No results</p>
+        <p v-if="!filtered.length" role="status" class="m-2.5 text-xs text-muted">No results</p>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.p-cmd-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 12vh;
-}
-.p-cmd {
-  width: 90%;
-  max-width: 560px;
-  background: var(--paper, #fff);
-  border: 1px solid var(--line, #e4e4e4);
-  border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-}
-.p-cmd-input {
-  width: 100%;
-  border: 0;
-  border-bottom: 1px solid var(--line, #e4e4e4);
-  background: transparent;
-  color: var(--ink, #000);
-  font: inherit;
-  font-size: 15px;
-  padding: 14px 16px;
-}
-.p-cmd-input:focus { outline: none; }
-.p-cmd-list { max-height: 320px; overflow-y: auto; padding: 6px; }
-.p-cmd-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  background: transparent;
-  border: 0;
-  color: var(--ink, #000);
-  font: inherit;
-  font-size: 13px;
-  padding: 9px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: left;
-}
-.p-cmd-item.active { background: var(--ink, #000); color: var(--paper, #fff); }
-.p-cmd-group { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.6; margin-right: 8px; }
-.p-cmd-kbd { font-family: var(--mono, ui-monospace, Menlo, monospace); font-size: 10px; border: 1px solid currentColor; border-radius: 4px; padding: 1px 5px; }
-.p-cmd-empty { margin: 10px; font-size: 12px; color: var(--muted, #6b6b6b); }
-</style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { changePassword } from '@/core/auth'
 import { t } from '@/core/i18n'
 
@@ -18,22 +18,29 @@ const confirmPassword = ref('')
 const busy = ref(false)
 const error = ref('')
 const done = ref(false)
+const oldField = ref<HTMLInputElement | null>(null)
 
 watch(
   () => props.open,
-  (open) => {
+  async (open) => {
     if (!open) return
     oldPassword.value = ''
     newPassword.value = ''
     confirmPassword.value = ''
     error.value = ''
     done.value = false
+    await nextTick()
+    oldField.value?.focus()
   },
 )
 
 async function submit(): Promise<void> {
   if (busy.value) return
   error.value = ''
+  if (!newPassword.value) {
+    error.value = t('auth.passwordsNoMatch')
+    return
+  }
   if (newPassword.value !== confirmPassword.value) {
     error.value = t('auth.passwordsNoMatch')
     return
@@ -54,20 +61,20 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <div v-if="open" class="backdrop" @click.self="emit('close')">
-    <div class="modal" role="dialog" aria-modal="true">
-      <h3>{{ t('auth.change') }}</h3>
+  <div v-if="open" class="backdrop" @click.self="!busy && emit('close')">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cp-title">
+      <h3 id="cp-title">{{ t('auth.change') }}</h3>
       <form @submit.prevent="submit">
         <label class="lbl" for="cp-old">{{ t('auth.oldPassword') }}</label>
-        <input id="cp-old" v-model="oldPassword" class="field" type="password" autocomplete="current-password" />
+        <input id="cp-old" ref="oldField" v-model="oldPassword" class="field" type="password" autocomplete="current-password" required minlength="8" />
         <label class="lbl" for="cp-new">{{ t('auth.newPassword') }}</label>
-        <input id="cp-new" v-model="newPassword" class="field" type="password" autocomplete="new-password" />
+        <input id="cp-new" v-model="newPassword" class="field" type="password" autocomplete="new-password" required minlength="8" />
         <label class="lbl" for="cp-confirm">{{ t('auth.confirmNew') }}</label>
-        <input id="cp-confirm" v-model="confirmPassword" class="field" type="password" autocomplete="new-password" />
-        <p v-if="error" class="autherr">{{ error }}</p>
-        <p v-if="done" class="autherr ok">{{ t('auth.passwordChanged') }}</p>
+        <input id="cp-confirm" v-model="confirmPassword" class="field" type="password" autocomplete="new-password" required minlength="8" />
+        <p v-if="error" class="mt-2.5 text-sm font-bold text-danger" role="alert">{{ error }}</p>
+        <p v-if="done" class="mt-2.5 text-sm font-bold text-success" role="status">{{ t('auth.passwordChanged') }}</p>
         <div class="actions">
-          <button type="button" class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
+          <button type="button" class="btn" :disabled="busy" @click="emit('close')">{{ t('common.cancel') }}</button>
           <button v-if="done" type="button" class="btn btn-primary" @click="emit('close')">
             {{ t('common.close') }}
           </button>
@@ -79,12 +86,3 @@ async function submit(): Promise<void> {
     </div>
   </div>
 </template>
-
-<style scoped>
-.autherr {
-  margin: 10px 0 0;
-  font-size: 14px;
-  font-weight: 700;
-}
-.autherr.ok { color: var(--success); }
-</style>

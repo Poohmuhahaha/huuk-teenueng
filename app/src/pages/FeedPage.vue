@@ -82,21 +82,29 @@ const monthLabel = computed(() => {
 </script>
 
 <template>
-  <h1>{{ t('feed.title') }}</h1>
+  <h1 class="text-2xl font-bold mb-4">{{ t('feed.title') }}</h1>
   <SocialMediaBar v-if="!isClient" />
   <div v-if="isError" class="card">
     <p class="muted">Could not load posts: {{ loadError?.message }}</p>
     <button class="btn" @click="() => refetch()">Try again</button>
   </div>
-  <div v-if="setup" class="feedbar">
-    <div class="row feed-tabs" role="tablist" :aria-label="t('feed.platform')">
-      <button v-for="tab in platformTabs" :key="tab.name" type="button" class="feed-tab"
-        role="tab" :aria-selected="platform === tab.name" :class="{ active: platform === tab.name }"
+  <div v-if="setup" class="mb-2.5">
+    <div class="row flex-wrap justify-center gap-1.5" role="tablist" :aria-label="t('feed.platform')">
+      <button v-for="tab in platformTabs" :key="tab.name" type="button"
+        class="feed-tab inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-[13.5px] font-semibold cursor-pointer transition"
+        :class="platform === tab.name
+          ? 'active bg-accent border-accent text-accent-ink'
+          : 'bg-surface border-line text-muted hover:bg-wash hover:text-ink'"
+        role="tab" :aria-selected="platform === tab.name"
         @click="choosePlatform(tab.name)">
-        {{ tab.name }} <span class="feed-tab-count">{{ tab.count }}</span>
+        {{ tab.name }}
+        <span class="feed-tab-count px-1.5 rounded-full text-[11.5px] font-bold"
+          :class="platform === tab.name ? 'bg-white/25 text-inherit' : 'bg-wash text-muted'">
+          {{ tab.count }}
+        </span>
       </button>
     </div>
-    <div class="grid2 feed-controls">
+    <div class="grid2 max-w-[620px] mt-2">
       <div><label class="lbl" for="feed-upto">{{ t('feed.upto') }}</label>
         <input id="feed-upto" class="field" type="date" v-model="upto" /></div>
       <div><label class="lbl" for="feed-size">{{ t('feed.size') }}</label>
@@ -111,25 +119,6 @@ const monthLabel = computed(() => {
   <p class="muted">{{ t('feed.canvas') }} {{ size.w }} × {{ size.h }} px · {{ size.ratio }} · {{ meta.name }}
     <span v-if="monthLabel"> · {{ t('feed.uptoMonth') }} {{ monthLabel }}</span>
     <span> · {{ preview.length }} {{ t('feed.posts') }}</span></p>
-  <div class="mt" v-if="!isPending"><FeedGrid :posts="preview" :platform="platformId" :variant="variantIndex" /></div>
+  <div class="mt-4" v-if="!isPending"><FeedGrid :posts="preview" :platform="platformId" :variant="variantIndex" /></div>
   <LiveSection variant="grid" :limit="6" />
 </template>
-
-<style scoped>
-.feedbar { margin-bottom: 10px; }
-.feed-tabs { gap: 6px; flex-wrap: wrap; justify-content: center; }
-.feed-tab {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--radius-pill);
-  background: var(--surface); color: var(--muted); font: inherit; font-size: 13.5px;
-  font-weight: 600; cursor: pointer;
-}
-.feed-tab:hover { background: var(--wash); color: var(--ink); }
-.feed-tab.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.feed-tab-count {
-  padding: 0 6px; border-radius: 999px; background: var(--wash); color: var(--muted);
-  font-size: 11.5px; font-weight: 700;
-}
-.feed-tab.active .feed-tab-count { background: rgba(255, 255, 255, 0.25); color: inherit; }
-.feed-controls { max-width: 620px; }
-</style>

@@ -3,7 +3,7 @@
 // - OAuth-configured providers: hand the browser to the provider (redirect).
 // - Otherwise: link the account's public profile URL/handle, which makes the
 //   social bar entry a real link to the owner's account.
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useConnectPlatform, useDisconnectPlatform, usePlatforms, useSyncPlatform, usePermission } from '@/core/queries'
 import { PLATFORM_META, profileUrl, validProfileHandle } from '@/core/platforms'
 import type { PlatformId } from '@/core/platforms'
@@ -32,6 +32,7 @@ const statusReady = ref(false)
 const mode = ref<OauthMode>('mock')
 const authorizeHost = ref('')
 const oauthError = ref('')
+const handleInput = ref<HTMLInputElement | null>(null)
 
 const HANDLE_HINTS: Record<PlatformId, string> = {
   meta: 'https://www.facebook.com/profile.php?id=… or https://facebook.com/yourpage',
@@ -73,6 +74,13 @@ watch(
 // Prefill the field with the current handle once the connection is known.
 watch(conn, (c) => {
   if (c?.handle && !manualHandle.value) manualHandle.value = c.handle
+})
+
+// Autofocus the handle input once the mock branch is ready.
+watch(statusReady, async (ready) => {
+  if (!ready || mode.value !== 'mock') return
+  await nextTick()
+  handleInput.value?.focus()
 })
 
 function onEscape(e: KeyboardEvent): void {
@@ -144,12 +152,12 @@ async function onSync(): Promise<void> {
 
 <template>
   <div v-if="platform && meta" class="plogin" role="dialog" aria-modal="true"
-    :aria-label="`${meta.name} — ${t('social.manage')}`" @click.self="emit('close')">
+    :aria-label="`${meta.name} — ${t('social.manage')}`" aria-labelledby="plogin-title" @click.self="busy ? null : emit('close')">
     <div class="plogin-body">
       <div class="plogin-card">
-        <button class="plogin-close" :aria-label="t('common.close')" :title="t('common.close')"
+        <button class="plogin-close" style="width: auto; min-width: 32px;" :aria-label="t('common.close')" :title="t('common.close')"
           :disabled="busy" @click="emit('close')">×</button>
-        <div class="plogin-brand">{{ meta.name }}</div>
+        <h2 id="plogin-title" class="plogin-brand">{{ meta.name }}</h2>
 
         <p v-if="!mayManage" class="plogin-note">{{ t('auth.noPerm') }}</p>
 
@@ -174,7 +182,7 @@ async function onSync(): Promise<void> {
           <p class="muted mt">{{ meta.constraint }}</p>
           <p v-if="mode === 'mock'" class="muted">{{ t('slogin.unverifiedNote') }}</p>
           <p v-if="oauthError" class="muted">{{ oauthError }}</p>
-          <p v-if="sync.error.value || disconnect.error.value" class="muted">
+          <p v-if="sync.error.value || disconnect.error.value" class="autherr" role="alert">
             {{ (sync.error.value ?? disconnect.error.value)?.message }}
           </p>
           <div class="plogin-actions mt">
@@ -202,7 +210,7 @@ async function onSync(): Promise<void> {
           <h3 class="plogin-title">{{ t('slogin.connectTitle') }} · {{ meta.name }}</h3>
           <p class="muted">{{ t('slogin.connectHint') }}</p>
           <label class="lbl" for="plogin-handle">{{ t('slogin.profile') }}</label>
-          <input id="plogin-handle" class="field" v-model="manualHandle" :placeholder="handleHint"
+          <input id="plogin-handle" ref="handleInput" class="field" v-model="manualHandle" :placeholder="handleHint"
             :disabled="!mayManage" @keyup.enter="connectManual" />
           <div class="row mt">
             <button class="btn btn-primary" style="width: 100%;"

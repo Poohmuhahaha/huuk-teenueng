@@ -22,16 +22,7 @@ async function onAdd(groupId: string, tag: string): Promise<void> {
     <p class="muted">Could not load hashtag groups: {{ loadError?.message }}</p>
     <button class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
   </div>
-  <fieldset v-else class="permfield" :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')">
+  <fieldset v-else class="border-0 p-0 m-0 min-w-0" :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')">
     <HashtagGroups :groups="groups ?? []" :add="onAdd" />
   </fieldset>
 </template>
-
-<style scoped>
-.permfield {
-  border: 0;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
-}
-</style>

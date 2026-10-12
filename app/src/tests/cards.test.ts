@@ -90,9 +90,10 @@ describe('compact navbar', () => {
     const w = mountShell()
     try {
       const labels = w.findAll('.navlink').map((l) => l.text())
-      for (const name of ['Home', 'Plan', 'Content', 'Promote', 'Analyze', 'Settings']) {
+      for (const name of ['Branding', 'Dashboard', 'Plan', 'Content', 'Promote', 'Analyze']) {
         expect(labels).toContain(name)
       }
+      expect(labels[0]).toBe('Branding')
       expect(w.findAll('.navdrop')).toHaveLength(0)
     } finally {
       w.unmount()

@@ -1,7 +1,8 @@
-// Hub sub-navigation: tab metadata (single source of truth) plus the hover
-// preview state used by the subnavbar. Pages read the active tab from here —
-// no per-page tab lists.
-import { computed, ref } from 'vue'
+// Hub sub-navigation: tab metadata (single source of truth). Pages read the
+// active tab from here — no per-page tab lists. The subnavbar follows the
+// route only: nothing previews on hover, a hub's tabs appear when it is
+// actually opened.
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 export interface HubTab {
@@ -60,11 +61,4 @@ export function useHubTab(path: string) {
     return tabs.value[0]?.id ?? ''
   })
   return { tabs, active }
-}
-
-// Subnavbar hover preview; `null` = follow the route.
-export const previewedScreen = ref<string | null>(null)
-
-export function previewScreen(path: string | null): void {
-  previewedScreen.value = path
 }

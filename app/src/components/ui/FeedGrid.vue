@@ -20,37 +20,14 @@ const tileStyle = computed(() => ({ aspectRatio: `${size.value.w} / ${size.value
 
 <template>
   <div class="feed" :class="{ wide }">
-    <div v-for="p in posts" :key="p.id" class="cell" :style="tileStyle" :title="p.topic">
-      <span class="badge">{{ platformName }}</span>
-      <span class="letter">{{ (p.topic || '?').slice(0, 1).toUpperCase() }}</span>
-      <span class="size">{{ size.w }}×{{ size.h }}</span>
-      <span v-if="p.date" class="size">{{ p.date }}</span>
+    <div class="grid gap-2 grid-cols-[repeat(auto-fill,minmax(120px,1fr))] [grid-auto-flow:dense]" role="list">
+      <div v-for="p in posts" :key="p.id" role="listitem" tabindex="0" :aria-label="p.topic" class="cell bg-surface-2 border border-faint text-muted text-center rounded-none flex justify-center items-center p-1 text-xl leading-[1.6] font-bold overflow-hidden relative flex-col gap-[2px]" :class="wide ? 'col-span-2' : ''" :style="tileStyle" :title="p.topic">
+        <span class="absolute top-1 left-1 px-1.5 py-[1px] rounded-full bg-ink/60 text-accent-ink text-[9.5px] font-bold tracking-[0.02em]">{{ platformName }}</span>
+        <span class="uppercase">{{ (p.topic || '?').slice(0, 1).toUpperCase() }}</span>
+        <span class="text-[10px] font-semibold text-muted">{{ size.w }}×{{ size.h }}</span>
+        <span v-if="p.date" class="text-[10px] font-semibold text-muted">{{ p.date }}</span>
+      </div>
     </div>
   </div>
-  <p v-if="!posts.length" class="muted">Nothing scheduled in range.</p>
+  <p v-if="!posts.length" role="status" class="text-muted text-sm">Nothing scheduled in range.</p>
 </template>
-
-<style scoped>
-/* Adapt the global square .feed grid to per-platform canvas ratios. */
-.feed {
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  grid-auto-flow: dense;
-}
-.feed.wide .cell {
-  grid-column: span 2;
-}
-.cell {
-  flex-direction: column;
-  gap: 2px;
-}
-.cell .badge {
-  position: absolute; top: 4px; left: 4px; padding: 1px 6px;
-  border-radius: 999px; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 9.5px;
-  font-weight: 700; letter-spacing: 0.02em;
-}
-.cell .size {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted);
-}
-</style>

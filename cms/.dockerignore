@@ -1,0 +1,8 @@
+node_modules/
+.tmp/
+dist/
+build/
+.cache/
+seed-dev/
+*.log
+.env

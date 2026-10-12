@@ -35,11 +35,17 @@ export const screens: Screen[] = [
   { path: '/analyze', to: '/analyze', label: 'Analyze', match: ['/analyze'], component: AnalyzePage, sheet: 'Analyze', access: 'semi-computed', tabs: HUB_TABS['/analyze'] },
 ]
 
+/** Segment match: '/plan' matches '/plan' and '/plan/…', never '/plans'. */
+export function matchPrefix(m: string, path: string): boolean {
+  if (m === '/') return path === '/'
+  return path === m || path.startsWith(m + '/')
+}
+
 export function screenIndexOf(path: string): number {
-  const i = screens.findIndex((s) => s.match.some((m) => path.startsWith(m)))
+  const i = screens.findIndex((s) => s.match.some((m) => matchPrefix(m, path)))
   return i < 0 ? 0 : i
 }
 
 export function screenOf(path: string): Screen | undefined {
-  return screens.find((s) => s.match.some((m) => path.startsWith(m)))
+  return screens.find((s) => s.match.some((m) => matchPrefix(m, path)))
 }

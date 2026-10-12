@@ -12,27 +12,21 @@ function go(page: number): void {
 </script>
 
 <template>
-  <div v-if="visible" class="p-pagination">
-    <span class="p-pageinfo">Page <strong>{{ currentPage }}</strong> of <strong>{{ totalPages }}</strong></span>
-    <div class="p-pagebtns">
-      <button type="button" class="btn" :disabled="currentPage <= 1" @click="go(currentPage - 1)">‹ Prev</button>
-      <button type="button" class="btn" :disabled="currentPage >= totalPages" @click="go(currentPage + 1)">Next ›</button>
+  <div v-if="visible" class="flex items-center justify-between gap-4 mt-5 py-3.5 border-t border-line w-full">
+    <span class="text-[13px] text-muted">Page <strong class="text-ink">{{ currentPage }}</strong> of <strong class="text-ink">{{ totalPages }}</strong></span>
+    <div class="flex gap-2.5">
+      <button
+        type="button"
+        class="w-auto px-3.5 py-2 border border-line bg-surface text-ink text-sm font-semibold rounded-none cursor-pointer transition-colors hover:bg-wash disabled:opacity-50 disabled:cursor-not-allowed"
+        :disabled="currentPage <= 1"
+        @click="go(currentPage - 1)"
+      >‹ Prev</button>
+      <button
+        type="button"
+        class="w-auto px-3.5 py-2 border border-line bg-surface text-ink text-sm font-semibold rounded-none cursor-pointer transition-colors hover:bg-wash disabled:opacity-50 disabled:cursor-not-allowed"
+        :disabled="currentPage >= totalPages"
+        @click="go(currentPage + 1)"
+      >Next ›</button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.p-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 20px;
-  padding: 14px 0;
-  border-top: 1px solid var(--line, #e4e4e4);
-}
-.p-pageinfo { font-size: 13px; color: var(--muted, #6b6b6b); }
-.p-pageinfo strong { color: var(--ink, #000); }
-.p-pagebtns { display: flex; gap: 10px; }
-.p-pagebtns .btn { width: auto; }
-</style>

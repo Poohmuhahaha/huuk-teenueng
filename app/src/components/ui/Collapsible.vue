@@ -4,35 +4,22 @@ defineProps<{ title?: string }>()
 </script>
 
 <template>
-  <div class="p-collapse">
-    <button type="button" class="p-collapse-trigger" :aria-expanded="open" @click="open = !open">
+  <div class="w-full">
+    <button
+      type="button"
+      class="flex items-center gap-2 w-auto bg-transparent border-0 text-ink font-sans text-sm font-semibold py-1 px-0 cursor-pointer text-left rounded-none"
+      :aria-expanded="open"
+      @click="open = !open"
+    >
       <slot name="trigger">{{ title }}</slot>
-      <span class="p-collapse-caret" :class="{ open }" aria-hidden="true">▸</span>
+      <span
+        class="text-muted transition-transform duration-150 inline-block"
+        :class="{ 'rotate-90': open }"
+        aria-hidden="true"
+      >▸</span>
     </button>
-    <div v-show="open" class="p-collapse-body">
+    <div v-show="open" class="pt-2 pl-5 text-[13px] text-muted">
       <slot />
     </div>
   </div>
 </template>
-
-<style scoped>
-.p-collapse { width: 100%; }
-.p-collapse-trigger {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: auto;
-  background: transparent;
-  border: 0;
-  color: var(--ink, #000);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 4px 0;
-  cursor: pointer;
-  text-align: left;
-}
-.p-collapse-caret { color: var(--muted, #6b6b6b); transition: transform 0.15s; }
-.p-collapse-caret.open { transform: rotate(90deg); }
-.p-collapse-body { padding: 8px 0 0 20px; font-size: 13px; color: var(--muted, #6b6b6b); }
-</style>

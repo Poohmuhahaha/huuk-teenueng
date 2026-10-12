@@ -4,38 +4,21 @@ defineProps<{ label?: string; disabled?: boolean }>()
 </script>
 
 <template>
-  <label class="p-switchrow" :class="{ disabled }">
+  <label class="inline-flex items-center gap-2.5 cursor-pointer text-sm text-ink" :class="{ 'opacity-50 cursor-not-allowed': disabled }">
     <button
       type="button"
-      class="p-switch"
-      :class="{ on: model }"
+      class="w-[38px] h-[22px] shrink-0 border border-ink p-0.5 inline-flex items-center transition-colors rounded-none focus-visible:outline-2 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:cursor-not-allowed"
+      :class="model ? 'bg-ink' : 'bg-surface'"
       role="switch"
       :aria-checked="model"
       :disabled="disabled"
       @click="model = !model"
     >
-      <span class="p-switch-knob" />
+      <span
+        class="w-3.5 h-3.5 transition-all duration-150 rounded-none"
+        :class="model ? 'bg-surface translate-x-4' : 'bg-ink translate-x-0'"
+      />
     </button>
-    <span v-if="label || $slots.default" class="p-switch-label"><slot>{{ label }}</slot></span>
+    <span v-if="label || $slots.default" class="text-sm"><slot>{{ label }}</slot></span>
   </label>
 </template>
-
-<style scoped>
-.p-switchrow { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--ink, #000); }
-.p-switchrow.disabled { opacity: 0.5; cursor: not-allowed; }
-.p-switch {
-  width: 38px;
-  height: 22px;
-  flex: none;
-  border: 1px solid var(--ink, #000);
-  background: var(--paper, #fff);
-  padding: 2px;
-  display: inline-flex;
-  align-items: center;
-  transition: background 0.15s;
-}
-.p-switch.on { background: var(--ink, #000); }
-.p-switch-knob { width: 14px; height: 14px; background: var(--ink, #000); transition: transform 0.15s, background 0.15s; }
-.p-switch.on .p-switch-knob { background: var(--paper, #fff); transform: translateX(16px); }
-.p-switch:focus-visible { outline: 2px solid var(--ink, #000); outline-offset: 2px; }
-</style>

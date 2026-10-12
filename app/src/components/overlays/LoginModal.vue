@@ -60,9 +60,9 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <div v-if="open" class="backdrop" @click.self="emit('close')">
-    <div class="modal" role="dialog" aria-modal="true">
-      <h3>{{ mode === 'login' ? t('auth.login') : t('auth.registerTitle') }}</h3>
+  <div v-if="open" class="backdrop" @click.self="!busy && emit('close')">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <h3 id="auth-title">{{ mode === 'login' ? t('auth.login') : t('auth.registerTitle') }}</h3>
       <form @submit.prevent="submit">
         <template v-if="mode === 'register'">
           <label class="lbl" for="auth-name">{{ t('auth.name') }}</label>
@@ -73,14 +73,14 @@ async function submit(): Promise<void> {
           autocomplete="email" required />
         <input v-else id="auth-email" v-model="email" class="field" type="email" autocomplete="email" required />
         <label class="lbl" for="auth-password">{{ t('auth.password') }}</label>
-        <input id="auth-password" v-model="password" class="field" type="password"
+        <input id="auth-password" v-model="password" class="field" type="password" required minlength="8"
           :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" />
-        <p v-if="error" class="autherr">{{ error }}</p>
-        <button type="button" class="switchlink" @click="toggleMode">
+        <p v-if="error" class="mt-2.5 text-sm font-bold text-danger" role="alert">{{ error }}</p>
+        <button type="button" class="inline-block mt-2.5 p-0 border-0 bg-transparent text-sm underline cursor-pointer text-ink hover:text-muted" @click="toggleMode">
           {{ mode === 'login' ? t('auth.noAccount') : t('auth.haveAccount') }}
         </button>
         <div class="actions">
-          <button type="button" class="btn" @click="emit('close')">{{ t('common.cancel') }}</button>
+          <button type="button" class="btn" :disabled="busy" @click="emit('close')">{{ t('common.cancel') }}</button>
           <button type="submit" class="btn btn-primary" :disabled="busy">
             {{ mode === 'login' ? t('auth.login') : t('auth.register') }}
           </button>
@@ -89,23 +89,3 @@ async function submit(): Promise<void> {
     </div>
   </div>
 </template>
-
-<style scoped>
-.autherr {
-  margin: 10px 0 0;
-  font-size: 14px;
-  font-weight: 700;
-}
-.switchlink {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 14px;
-  color: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-}
-</style>

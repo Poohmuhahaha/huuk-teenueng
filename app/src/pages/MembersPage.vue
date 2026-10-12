@@ -77,17 +77,17 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
 </script>
 
 <template>
-  <div class="memberspage">
-    <h1 style="margin: 0;">{{ t('members.title') }}<InfoTip :text="t('members.subtitle')" /></h1>
+  <div class="mt-2">
+    <h1 class="m-0 flex items-center gap-1.5 text-2xl font-bold">{{ t('members.title') }}<InfoTip :text="t('members.subtitle')" /></h1>
 
-    <p v-if="isError" class="card muted">{{ loadError?.message }}</p>
-    <p v-else-if="workspacesPending" class="muted">{{ t('common.loading') }}</p>
+    <p v-if="isError" class="card text-muted">{{ loadError?.message }}</p>
+    <p v-else-if="workspacesPending" class="text-muted">{{ t('common.loading') }}</p>
 
-    <p v-else-if="!isOwner" class="muted members-only">{{ t('members.onlyOwner') }}</p>
+    <p v-else-if="!isOwner" class="text-muted mt-4.5">{{ t('members.onlyOwner') }}</p>
 
     <template v-else>
-      <form class="row members-add" @submit.prevent="submitAdd">
-        <input v-model="email" class="field" type="text" inputmode="email" autocomplete="email"
+      <form class="members-add flex items-center flex-wrap mt-3.5 gap-2" @submit.prevent="submitAdd">
+        <input v-model="email" class="field flex-1 max-w-[340px]" type="text" inputmode="email" autocomplete="email"
           maxlength="254" :placeholder="t('members.emailPlaceholder')"
           :aria-label="t('members.emailPlaceholder')" :disabled="addMember.isPending.value" />
         <button type="submit" class="btn btn-primary"
@@ -97,76 +97,28 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
         <InfoTip :text="t('members.hint')" />
       </form>
 
-      <p v-if="actionError" class="autherr" role="alert">{{ actionError }}</p>
-      <p v-else-if="notice" class="oknote" role="status">{{ notice }}</p>
+      <p v-if="actionError" class="autherr text-xs text-danger" role="alert">{{ actionError }}</p>
+      <p v-else-if="notice" class="oknote text-xs text-success" role="status">{{ notice }}</p>
 
-      <p v-if="isPending" class="muted">{{ t('common.loading') }}</p>
+      <p v-if="isPending" class="text-muted">{{ t('common.loading') }}</p>
       <template v-else>
-        <ul class="members-list">
-          <li v-for="m in rows" :key="m.email" class="panel member-row">
-            <div class="member-id">
-              <strong>{{ m.name || m.email }}</strong>
-              <span class="muted">{{ m.email }}</span>
+        <ul class="list-none mt-4 p-0 flex flex-col gap-2">
+          <li v-for="m in rows" :key="m.email" class="panel member-row flex items-center gap-2.5 p-3 rounded-lg border border-faint bg-surface">
+            <div class="flex flex-col min-w-0 mr-auto">
+              <strong class="text-sm font-semibold">{{ m.name || m.email }}</strong>
+              <span class="text-muted text-[12.5px]">{{ m.email }}</span>
             </div>
             <span v-if="m.role" class="chip">{{ m.role }}</span>
             <span v-if="isOwnerRow(m)" class="badge badge-success">{{ t('members.owner') }}</span>
             <span v-if="isYou(m)" class="chip dark">{{ t('members.you') }}</span>
-            <button v-if="!isOwnerRow(m)" class="btn member-remove"
+            <button v-if="!isOwnerRow(m)" class="btn member-remove ml-0"
               :disabled="removeMember.isPending.value" @click="onRemove(m)">
               {{ t('members.remove') }}
             </button>
           </li>
         </ul>
-        <p v-if="!(members?.members.length)" class="muted">{{ t('members.empty') }}</p>
+        <p v-if="!(members?.members.length)" class="text-muted mt-2">{{ t('members.empty') }}</p>
       </template>
     </template>
   </div>
 </template>
-
-<style scoped>
-.memberspage {
-  margin-top: 8px;
-}
-.members-add {
-  margin: 14px 0 0;
-  gap: 8px;
-}
-.members-add .field {
-  flex: 1;
-  max-width: 340px;
-}
-.members-hint {
-  margin: 6px 0 0;
-  font-size: 12.5px;
-}
-.members-only {
-  margin-top: 18px;
-}
-.members-list {
-  list-style: none;
-  margin: 16px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.member-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.member-id {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.member-id strong {
-  font-size: 14px;
-}
-.member-id .muted {
-  font-size: 12.5px;
-}
-.member-remove {
-  margin-left: 0;
-}
-</style>

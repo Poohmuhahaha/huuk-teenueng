@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, useId } from 'vue'
+import { t } from '@/core/i18n'
+
 const open = defineModel<boolean>({ default: false })
-withDefaults(
+const props = withDefaults(
   defineProps<{
     side?: 'right' | 'left' | 'bottom'
     title?: string
@@ -9,133 +12,146 @@ withDefaults(
     contained?: boolean
     /** Render as a plain in-flow panel (wide master–detail layouts). */
     inline?: boolean
+    /** Allow backdrop click / ESC to dismiss. */
+    dismissable?: boolean
   }>(),
-  { side: 'right', width: '360px' },
+  { side: 'right', width: '360px', dismissable: true },
 )
+
+const uid = useId()
+const titleId = `${uid}-title`
+
+function onKey(e: KeyboardEvent): void {
+  if (e.key === 'Escape' && open.value) open.value = false
+}
+onMounted(() => window.addEventListener('keydown', onKey))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <aside v-if="inline && open" class="p-drawer inline" :class="side" role="region">
-    <header class="p-drawer-head">
-      <h3 v-if="title" class="p-drawer-title">{{ title }}</h3>
-      <button type="button" class="p-drawer-x" aria-label="Close" @click="open = false">×</button>
+  <aside
+    v-if="inline && open"
+    class="p-drawer inline static w-full max-w-none min-h-0 bg-transparent border-0 shadow-none overflow-hidden flex flex-col"
+    role="region"
+    :aria-label="title"
+    :aria-labelledby="title ? titleId : undefined"
+  >
+    <header class="flex items-center justify-between gap-3 p-3.5 px-4 border-b border-line">
+      <h3 v-if="title" :id="titleId" class="m-0 text-lg font-display text-ink truncate">{{ title }}</h3>
+      <button type="button" class="p-drawer-x w-auto bg-transparent border-0 text-[22px] leading-none text-muted cursor-pointer p-0 hover:text-ink" :aria-label="t('common.close')" @click="open = false">×</button>
     </header>
-    <div class="p-drawer-body"><slot /></div>
-    <footer v-if="$slots.footer" class="p-drawer-foot"><slot name="footer" /></footer>
+    <div class="flex-1 overflow-y-auto p-4"><slot /></div>
+    <footer v-if="$slots.footer" class="flex justify-end gap-2.5 p-3 px-4 border-t border-line"><slot name="footer" /></footer>
   </aside>
 
-  <div v-else-if="open" class="p-drawer-backdrop" :class="{ contained }" @click.self="open = false">
-    <aside
-      class="p-drawer"
-      :class="side"
-      :style="side === 'bottom' ? undefined : { width }"
-      role="dialog"
-      aria-modal="true"
+  <Transition name="p-drawer-anim" :duration="280">
+    <div
+      v-if="!inline && open"
+      class="p-drawer-backdrop z-[1000] bg-black/45 backdrop-blur-[2px] flex flex-col justify-end overflow-hidden"
+      :class="[
+        contained ? 'absolute inset-0' : 'fixed inset-0',
+        side === 'bottom' ? 'pt-3' : '',
+        `p-drawer-side-${side}`,
+      ]"
+      @click.self="dismissable ? open = false : null"
     >
-      <header class="p-drawer-head">
-        <h3 v-if="title" class="p-drawer-title">{{ title }}</h3>
-        <button type="button" class="p-drawer-x" aria-label="Close" @click="open = false">×</button>
-      </header>
-      <div class="p-drawer-body"><slot /></div>
-      <footer v-if="$slots.footer" class="p-drawer-foot"><slot name="footer" /></footer>
-    </aside>
-  </div>
+      <aside
+        class="p-drawer flex flex-col bg-surface border border-line shadow-[0_-12px_40px_rgba(0,0,0,0.22)] overflow-hidden"
+        :class="[
+          side === 'right' ? 'ml-auto h-full rounded-l-2xl max-w-[94vw]' : '',
+          side === 'left' ? 'mr-auto h-full rounded-r-2xl max-w-[94vw]' : '',
+          side === 'bottom'
+            ? 'w-full max-w-none rounded-t-[20px] h-[calc(100%-12px)] max-h-[calc(100%-12px)] border-b-0'
+            : '',
+        ]"
+        :style="side === 'bottom' ? undefined : { width }"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="title ? titleId : undefined"
+      >
+        <!-- Pull / drag handle indicator at top of bottom sheet -->
+        <div v-if="side === 'bottom'" class="w-10 h-1 bg-muted/40 rounded-full mx-auto mt-2.5 mb-1 flex-none" />
+        <header class="flex items-center justify-between gap-3 p-3.5 px-4 border-b border-line">
+          <h3 v-if="title" :id="titleId" class="m-0 text-lg font-display text-ink truncate">{{ title }}</h3>
+          <button type="button" class="p-drawer-x w-auto bg-transparent border-0 text-[22px] leading-none text-muted cursor-pointer p-0 hover:text-ink" :aria-label="t('common.close')" @click="open = false">×</button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4"><slot /></div>
+        <footer v-if="$slots.footer" class="flex justify-end gap-2.5 p-3 px-4 border-t border-line"><slot name="footer" /></footer>
+      </aside>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
-.p-drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
+/* Backdrop fade */
+.p-drawer-anim-enter-active,
+.p-drawer-anim-leave-active {
+  transition: opacity 0.28s ease-out;
 }
-/* Contained: cover just the card it lives in (nearest positioned ancestor). */
-.p-drawer-backdrop.contained {
-  position: absolute;
+.p-drawer-anim-leave-active {
+  transition: opacity 0.2s ease-in;
 }
-/* Inline: a plain panel that flows in its parent (no overlay, no chrome). */
-.p-drawer.inline {
-  position: static;
-  width: 100%;
-  max-width: none;
-  min-height: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  animation: none;
-  overflow: hidden;
+.p-drawer-anim-enter-from,
+.p-drawer-anim-leave-to {
+  opacity: 0;
 }
-.p-drawer {
-  display: flex;
-  flex-direction: column;
-  background: var(--paper, #fff);
-  border: 1px solid var(--line, #e4e4e4);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-  max-width: 94vw;
+.p-drawer-anim-enter-to,
+.p-drawer-anim-leave-from {
+  opacity: 1;
 }
-.p-drawer.right {
-  margin-left: auto;
-  border-radius: 12px 0 0 12px;
-  animation: sheet-in-right 0.18s ease-out;
+
+/* Base sheet: permanent GPU compositing to eliminate subpixel raster snaps */
+.p-drawer:not(.inline) {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
 }
-.p-drawer.left {
-  margin-right: auto;
-  border-radius: 0 12px 12px 0;
-  animation: sheet-in-left 0.18s ease-out;
+
+/* Base sheet slide transition: clean ease-out slide with zero bounce or overshoot */
+.p-drawer-anim-enter-active .p-drawer {
+  transition: transform 0.28s ease-out;
+  will-change: transform;
 }
-.p-drawer.bottom {
-  margin-top: auto;
-  width: 100%;
-  max-width: none;
-  max-height: 80vh;
-  border-radius: 12px 12px 0 0;
-  animation: sheet-in-up 0.2s ease-out;
+.p-drawer-anim-leave-active .p-drawer {
+  transition: transform 0.22s ease-in;
+  will-change: transform;
 }
-/* Contained bottom sheet fills the card completely. */
-.p-drawer-backdrop.contained .p-drawer.bottom {
-  max-height: none;
-  height: 100%;
-  border-radius: 0;
+
+/* Bottom Sheet: slides UP from translateY(100%) to translateY(0) */
+.p-drawer-anim-enter-from.p-drawer-side-bottom .p-drawer,
+.p-drawer-anim-leave-to.p-drawer-side-bottom .p-drawer {
+  transform: translate3d(0, 100%, 0);
 }
-@keyframes sheet-in-right {
-  from { transform: translateX(100%); }
-  to { transform: none; }
+.p-drawer-anim-enter-to.p-drawer-side-bottom .p-drawer,
+.p-drawer-anim-leave-from.p-drawer-side-bottom .p-drawer {
+  transform: translate3d(0, 0, 0);
 }
-@keyframes sheet-in-left {
-  from { transform: translateX(-100%); }
-  to { transform: none; }
+
+/* Right Drawer: slides from translateX(100%) */
+.p-drawer-anim-enter-from.p-drawer-side-right .p-drawer,
+.p-drawer-anim-leave-to.p-drawer-side-right .p-drawer {
+  transform: translate3d(100%, 0, 0);
 }
-@keyframes sheet-in-up {
-  from { transform: translateY(100%); }
-  to { transform: none; }
+.p-drawer-anim-enter-to.p-drawer-side-right .p-drawer,
+.p-drawer-anim-leave-from.p-drawer-side-right .p-drawer {
+  transform: translate3d(0, 0, 0);
 }
-.p-drawer-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line, #e4e4e4);
+
+/* Left Drawer: slides from translateX(-100%) */
+.p-drawer-anim-enter-from.p-drawer-side-left .p-drawer,
+.p-drawer-anim-leave-to.p-drawer-side-left .p-drawer {
+  transform: translate3d(-100%, 0, 0);
 }
-.p-drawer-title { margin: 0; font-size: 18px; font-family: var(--font-display, Georgia, serif); }
-.p-drawer-x {
-  width: auto;
-  background: transparent;
-  border: 0;
-  font-size: 22px;
-  line-height: 1;
-  color: var(--muted, #6b6b6b);
-  cursor: pointer;
-  padding: 0;
+.p-drawer-anim-enter-to.p-drawer-side-left .p-drawer,
+.p-drawer-anim-leave-from.p-drawer-side-left .p-drawer {
+  transform: translate3d(0, 0, 0);
 }
-.p-drawer-x:hover { color: var(--ink, #000); }
-.p-drawer-body { flex: 1; overflow-y: auto; padding: 16px; }
-.p-drawer-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--line, #e4e4e4);
+
+@media (prefers-reduced-motion: reduce) {
+  .p-drawer-anim-enter-active,
+  .p-drawer-anim-leave-active,
+  .p-drawer-anim-enter-active .p-drawer,
+  .p-drawer-anim-leave-active .p-drawer {
+    transition: none !important;
+  }
 }
 </style>

@@ -18,44 +18,24 @@ function toggle(id: string): void {
 </script>
 
 <template>
-  <div class="p-acc">
-    <div v-for="it in items" :key="it.id" class="p-acc-item">
+  <div class="border border-line w-full rounded-none">
+    <div v-for="it in items" :key="it.id" class="border-t border-line first:border-t-0">
       <button
         type="button"
-        class="p-acc-head"
+        class="flex items-center justify-between w-full bg-surface border-0 text-ink font-sans text-sm font-semibold p-3 px-3.5 cursor-pointer text-left transition-colors hover:bg-wash rounded-none"
         :aria-expanded="isOpen(it.id)"
         @click="toggle(it.id)"
       >
         <span>{{ it.title }}</span>
-        <span class="p-acc-caret" :class="{ open: isOpen(it.id) }" aria-hidden="true">＋</span>
+        <span
+          class="transition-transform duration-150 text-muted text-[13px] inline-block"
+          :class="{ 'rotate-45': isOpen(it.id) }"
+          aria-hidden="true"
+        >＋</span>
       </button>
-      <div v-show="isOpen(it.id)" class="p-acc-body">
+      <div v-show="isOpen(it.id)" class="px-3.5 pb-3.5 text-[13px] text-muted">
         <slot :item="it" />
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.p-acc { border: 1px solid var(--line, #d9d9d9); width: 100%; }
-.p-acc-item + .p-acc-item { border-top: 1px solid var(--line, #d9d9d9); }
-.p-acc-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  background: var(--paper, #fff);
-  border: 0;
-  color: var(--ink, #000);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 12px 14px;
-  cursor: pointer;
-  text-align: left;
-}
-.p-acc-head:hover { background: var(--wash, #f6f6f6); }
-.p-acc-caret { transition: transform 0.15s; color: var(--muted, #6b6b6b); font-size: 13px; }
-.p-acc-caret.open { transform: rotate(45deg); }
-.p-acc-body { padding: 0 14px 14px; font-size: 13px; color: var(--muted, #6b6b6b); }
-</style>

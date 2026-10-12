@@ -19,6 +19,7 @@ watch(name, () => {
 
 function save(): void {
   if (!isLoggedIn.value || !changed.value) return
+  if (!name.value.trim()) return
   updateProfile.mutate(name.value.trim())
 }
 </script>
@@ -27,14 +28,14 @@ function save(): void {
   <div>
     <label class="lbl" for="profile-name" style="margin-top: 0;">{{ t('profile.title') }}</label>
     <template v-if="isLoggedIn">
-      <input id="profile-name" class="field" v-model="name" @keyup.enter="save" />
+      <input id="profile-name" class="field" v-model="name" maxlength="80" autocomplete="nickname" @keyup.enter="save" />
       <div class="row mt">
-        <button class="btn btn-primary" :disabled="!changed || updateProfile.isPending.value" @click="save">
+        <button class="btn btn-primary" :disabled="!changed || !name.trim() || updateProfile.isPending.value" @click="save">
           {{ t('profile.save') }}
         </button>
-        <span v-if="updateProfile.isSuccess.value" class="muted">{{ t('profile.saved') }}</span>
+        <span v-if="updateProfile.isSuccess.value" role="status" class="muted">{{ t('profile.saved') }}</span>
       </div>
-      <p v-if="updateProfile.error.value" class="muted" style="margin: 6px 0 0;">
+      <p v-if="updateProfile.error.value" class="autherr" role="alert" style="margin: 6px 0 0;">
         {{ updateProfile.error.value?.message }}
       </p>
     </template>

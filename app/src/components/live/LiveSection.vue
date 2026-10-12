@@ -2,7 +2,7 @@
 // Live mirror of the connected platforms: real posts + engagement pulled from
 // Meta by the server (apps/server/src/live.rs) and refreshed on demand with Sync.
 // Read-only — the planner stays the place where content is authored.
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useLive, usePlatforms, useSyncPlatform, usePermission, useAds } from '@/core/queries'
 import { beginOAuth } from '@/core/oauth'
 import { t } from '@/core/i18n'
@@ -38,15 +38,37 @@ const posts = computed(() => {
   return props.limit > 0 ? all.slice(0, props.limit) : all
 })
 
-/** Ad campaigns that promote this post (matched by the ad's story id). */
-function boostedBy(postId: string): number {
+/** Ad campaigns promoting each post, memoized so the template does a Map lookup
+ * instead of a posts×ads join on every render. */
+const boostMap = computed(() => {
   const campaigns = adsView.value?.campaigns ?? []
   const adsets = adsView.value?.adsets ?? []
   const ads = adsView.value?.ads ?? []
-  const ids = new Set(
-    ads.filter((a) => a.storyId === postId).map((a) => adsets.find((s) => s.id === a.adsetId)?.campaignId),
-  )
-  return campaigns.filter((c) => ids.has(c.id)).length
+  const byPost = new Map<string, Set<string>>()
+  for (const a of ads) {
+    if (!a.storyId) continue
+    const campaignId = adsets.find((s) => s.id === a.adsetId)?.campaignId
+    if (!campaignId) continue
+    let set = byPost.get(a.storyId)
+    if (!set) {
+      set = new Set<string>()
+      byPost.set(a.storyId, set)
+    }
+    set.add(campaignId)
+  }
+  const valid = new Set(campaigns.map((c) => c.id))
+  const out = new Map<string, number>()
+  for (const [postId, set] of byPost) {
+    let n = 0
+    for (const id of set) if (valid.has(id)) n++
+    out.set(postId, n)
+  }
+  return out
+})
+
+/** Ad campaigns that promote this post (matched by the ad's story id). */
+function boostedBy(postId: string): number {
+  return boostMap.value.get(postId) ?? 0
 }
 
 /** "Like 186 · Love 24" — reaction breakdown, empty when none. */
@@ -71,14 +93,28 @@ function platformLabel(id: string): string {
   return id === 'instagram' ? 'Instagram' : 'Meta'
 }
 
-function fmt(n: number): string {
-  return n.toLocaleString('en-US')
+function fmt(n: number | null | undefined): string {
+  return (n ?? 0).toLocaleString('en-US')
 }
+
+/** Never throws: missing stamps render as an em dash. */
+function dateOf(stamp: string | null | undefined): string {
+  return String(stamp ?? '').slice(0, 10) || '—'
+}
+
+// Ticking clock for the "synced x min ago" label — without it the label is
+// frozen at the fetched render time.
+const now = ref(Date.now())
+let nowTimer: number | undefined
+onMounted(() => {
+  nowTimer = window.setInterval(() => { now.value = Date.now() }, 30000)
+})
+onUnmounted(() => window.clearInterval(nowTimer))
 
 /** Relative "synced" label from a Unix-seconds stamp. */
 function syncedLabel(stamp: number | null | undefined): string {
   if (!stamp) return t('live.never')
-  const secs = Math.max(0, Math.floor(Date.now() / 1000) - stamp)
+  const secs = Math.max(0, Math.floor(now.value / 1000) - stamp)
   if (secs < 60) return t('live.justNow')
   if (secs < 3600) return `${Math.floor(secs / 60)} ${t('live.minAgo')}`
   if (secs < 86400) return `${Math.floor(secs / 3600)} ${t('live.hourAgo')}`
@@ -102,17 +138,17 @@ async function onReconnect(): Promise<void> {
 </script>
 
 <template>
-  <section class="livesec">
-    <div class="row live-head">
+  <section class="mt-6">
+    <div class="flex items-center flex-wrap gap-3">
       <h2 style="margin: 0;">{{ t('live.title') }}</h2>
-      <span class="muted live-stamp">{{ t('live.synced') }} {{ syncedLabel(live?.fetchedAt) }}</span>
-      <button class="btn live-sync" :disabled="!mayManage || sync.isPending.value"
+      <span class="text-muted text-[13px]">{{ t('live.synced') }} {{ syncedLabel(live?.fetchedAt) }}</span>
+      <button class="btn live-sync ml-auto" :disabled="!mayManage || sync.isPending.value"
         :title="mayManage ? '' : t('auth.noPerm')" @click="onSync">
         {{ sync.isPending.value ? t('live.syncing') : t('live.sync') }}
       </button>
     </div>
 
-    <div v-if="metaAccount || igAccount" class="row live-accounts">
+    <div v-if="metaAccount || igAccount" class="flex items-center gap-2 flex-wrap my-2 mb-3">
       <span v-if="metaAccount" class="chip">
         Meta · {{ metaAccount.username }} · {{ fmt(metaAccount.followers) }} {{ t('live.followers') }}
         <template v-if="metaAccount.engagements">· {{ fmt(metaAccount.engagements) }} {{ t('live.engagements') }}</template>
@@ -125,12 +161,14 @@ async function onReconnect(): Promise<void> {
       </span>
     </div>
 
-    <p v-if="isError" class="card muted">
+    <!-- Independent error blocks: concurrent failures (load + sync + stale)
+      must all surface instead of masking each other. -->
+    <p v-if="isError" class="card muted" role="alert">
       {{ loadError?.message }}
     </p>
-    <p v-else-if="reconnectError" class="autherr" role="alert">{{ reconnectError }}</p>
-    <p v-else-if="sync.error.value" class="autherr" role="alert">{{ sync.error.value.message }}</p>
-    <div v-else-if="live?.error" class="live-empty">
+    <p v-if="reconnectError" class="autherr" role="alert">{{ reconnectError }}</p>
+    <p v-if="sync.error.value" class="autherr" role="alert">{{ sync.error.value.message }}</p>
+    <div v-if="live?.error" class="live-empty flex flex-col items-start gap-2.5" role="alert">
       <p class="muted">{{ t('live.stale') }} — {{ live.error }}</p>
       <button v-if="tokenProblem && mayManage" class="btn" :disabled="reconnecting" @click="onReconnect">
         {{ reconnecting ? t('slogin.connecting') : t('live.reconnect') }}
@@ -138,7 +176,7 @@ async function onReconnect(): Promise<void> {
     </div>
 
     <p v-if="isPending" class="muted">{{ t('common.loading') }}</p>
-    <div v-else-if="!posts.length" class="live-empty">
+    <div v-else-if="!posts.length" class="live-empty flex flex-col items-start gap-2.5">
       <p class="muted">
         {{ needsReconnect || tokenProblem ? t('live.reconnectNeeded')
           : metaConnected ? t('live.emptyConnected') : t('live.emptyDisconnected') }}
@@ -151,19 +189,19 @@ async function onReconnect(): Promise<void> {
     </div>
 
     <!-- card / grid layouts -->
-    <div v-else-if="variant !== 'table'" class="livegrid" :class="`livegrid-${variant}`">
-      <a v-for="p in posts" :key="p.id" class="livecard" :href="p.permalink || undefined"
-        target="_blank" rel="noopener noreferrer">
-        <div class="livemedia">
+    <div v-else-if="variant !== 'table'" class="grid gap-3 mt-3"
+      :class="variant === 'grid' ? 'grid-cols-[repeat(auto-fill,minmax(160px,1fr))]' : 'grid-cols-[repeat(auto-fill,minmax(220px,1fr))]'">
+      <article v-for="p in posts" :key="p.id" class="livecard flex flex-col overflow-hidden text-inherit no-underline bg-surface border border-faint rounded-[var(--radius,12px)] hover:border-accent transition">
+        <div class="relative aspect-square grid place-items-center bg-wash overflow-hidden">
           <img v-if="p.thumbnailUrl || p.mediaUrl" :src="p.thumbnailUrl || p.mediaUrl"
-            :alt="p.caption" loading="lazy" />
-          <span v-else class="liveletter">{{ (p.caption || platformLabel(p.platform)).slice(0, 1).toUpperCase() }}</span>
-          <span class="livekind">{{ platformLabel(p.platform) }} · {{ p.kind }}</span>
-          <span v-if="boostedBy(p.id)" class="liveboosted">{{ t('live.boosted') }}</span>
+            :alt="p.caption" loading="lazy" class="w-full h-full object-cover" />
+          <span v-else class="text-[40px] font-bold text-muted">{{ (p.caption || platformLabel(p.platform)).slice(0, 1).toUpperCase() }}</span>
+          <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[11px] bg-black/60 text-white rounded-full">{{ platformLabel(p.platform) }} · {{ p.kind }}</span>
+          <span v-if="boostedBy(p.id)" class="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-[11px] bg-accent text-white rounded-full">{{ t('live.boosted') }}</span>
         </div>
-        <div class="livebody">
-          <p class="livecaption">{{ p.caption || p.attachmentTitle || '—' }}</p>
-          <div class="livestats muted">
+        <div class="flex flex-col gap-1.5 p-2.5">
+          <p class="m-0 text-[13px] line-clamp-2">{{ p.caption || p.attachmentTitle || '—' }}</p>
+          <div class="flex flex-wrap gap-2 text-xs text-muted">
             <span>{{ t('live.likes') }} {{ fmt(p.likes) }}</span>
             <span>{{ t('live.comments') }} {{ fmt(p.comments) }}</span>
             <span v-if="p.shares">{{ t('live.shares') }} {{ fmt(p.shares) }}</span>
@@ -174,12 +212,14 @@ async function onReconnect(): Promise<void> {
             <span v-if="p.saves">{{ t('live.saves') }} {{ fmt(p.saves) }}</span>
             <span v-if="p.videoAvgWatchTime">{{ t('live.avgWatch') }} {{ mmss(p.videoAvgWatchTime) }}</span>
           </div>
-          <span v-if="reactionLabel(p.reactions)" class="muted live-date">{{ reactionLabel(p.reactions) }}</span>
-          <a v-if="p.linkUrl" class="muted live-date" :href="p.linkUrl" target="_blank"
-            rel="noopener noreferrer">{{ p.linkUrl }}</a>
-          <span class="muted live-date">{{ p.createdAt.slice(0, 10) }}</span>
+          <span v-if="reactionLabel(p.reactions)" class="text-xs text-muted">{{ reactionLabel(p.reactions) }}</span>
+          <a v-if="p.linkUrl" class="text-xs text-muted" :href="p.linkUrl" target="_blank"
+            rel="noopener noreferrer" @click.stop>{{ p.linkUrl }}</a>
+          <span class="text-xs text-muted">{{ dateOf(p.createdAt) }}</span>
+          <a v-if="p.permalink" class="btn liveopen" :href="p.permalink" target="_blank"
+            rel="noopener noreferrer">{{ t('live.open') }}</a>
         </div>
-      </a>
+      </article>
     </div>
 
     <!-- compact table layout -->
@@ -187,6 +227,9 @@ async function onReconnect(): Promise<void> {
       <table class="tbl">
         <thead>
           <tr>
+            <!-- TODO(i18n): t('live.platform')/t('live.post')/t('live.date') have no
+              core/i18n keys — literals until the keys land (t() would render
+              the raw key and break the header). -->
             <th>Platform</th><th>Post</th><th>Date</th>
             <th class="num">{{ t('live.likes') }}</th>
             <th class="num">{{ t('live.comments') }}</th>
@@ -201,8 +244,8 @@ async function onReconnect(): Promise<void> {
         <tbody>
           <tr v-for="p in posts" :key="p.id" style="cursor: default;">
             <td>{{ platformLabel(p.platform) }}</td>
-            <td class="live-caption">{{ p.caption || '—' }}</td>
-            <td>{{ p.createdAt.slice(0, 10) }}</td>
+            <td class="max-w-[360px] truncate">{{ p.caption || '—' }}</td>
+            <td>{{ dateOf(p.createdAt) }}</td>
             <td class="num">{{ fmt(p.likes) }}</td>
             <td class="num">{{ fmt(p.comments) }}</td>
             <td class="num">{{ fmt(p.shares) }}</td>
@@ -220,121 +263,3 @@ async function onReconnect(): Promise<void> {
     </div>
   </section>
 </template>
-
-<style scoped>
-.livesec {
-  margin-top: 24px;
-}
-.live-head {
-  align-items: center;
-  gap: 12px;
-}
-.live-stamp {
-  font-size: 13px;
-}
-.live-sync {
-  margin-left: auto;
-}
-.live-accounts {
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 8px 0 12px;
-}
-.livegrid {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
-}
-.livegrid-cards {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-}
-.livegrid-grid {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-}
-.livecard {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  color: inherit;
-  text-decoration: none;
-  background: var(--surface, #fff);
-  border: 1px solid var(--faint, #e6e6e6);
-  border-radius: var(--radius, 12px);
-}
-.livecard:hover {
-  border-color: var(--accent, #0b7a75);
-}
-.livemedia {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  display: grid;
-  place-items: center;
-  background: var(--wash, #f2f3f5);
-  overflow: hidden;
-}
-.livemedia img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.liveletter {
-  font-size: 40px;
-  font-weight: 700;
-  color: var(--muted, #999);
-}
-.liveboosted {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  padding: 2px 6px;
-  font-size: 11px;
-  background: var(--accent, #0b7a75);
-  color: #fff;
-  border-radius: 6px;
-}
-.livekind {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  padding: 2px 6px;
-  font-size: 11px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  border-radius: 6px;
-}
-.livebody {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-}
-.livecaption {
-  margin: 0;
-  font-size: 13px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.livestats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 12px;
-}
-.live-date {
-  font-size: 12px;
-}
-.live-caption {
-  max-width: 360px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.live-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-}
-</style>

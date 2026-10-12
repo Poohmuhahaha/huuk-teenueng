@@ -15,10 +15,11 @@ function onMove(event: PointerEvent): void {
 </script>
 
 <template>
-  <div ref="root" class="p-resizable" :class="{ dragging }">
-    <div class="p-resize-pane" :style="{ width: `${pct}%` }"><slot name="a" /></div>
+  <div ref="root" class="flex items-stretch w-full border border-line rounded-none select-none">
+    <div class="min-w-0 overflow-auto p-3" :style="{ width: `${pct}%` }"><slot name="a" /></div>
     <div
-      class="p-resize-handle"
+      class="w-1.5 shrink-0 cursor-col-resize bg-wash border-x border-line transition-colors hover:bg-ink"
+      :class="{ 'bg-ink': dragging }"
       role="separator"
       aria-orientation="vertical"
       @pointerdown="dragging = true"
@@ -26,21 +27,6 @@ function onMove(event: PointerEvent): void {
       @pointerup="dragging = false"
       @pointercancel="dragging = false"
     />
-    <div class="p-resize-pane p-resize-b"><slot name="b" /></div>
+    <div class="flex-1 min-w-0 overflow-auto p-3"><slot name="b" /></div>
   </div>
 </template>
-
-<style scoped>
-.p-resizable { display: flex; align-items: stretch; width: 100%; border: 1px solid var(--line, #d9d9d9); }
-.p-resize-pane { min-width: 0; overflow: auto; padding: 12px; }
-.p-resize-b { flex: 1; border-left: 0; }
-.p-resize-handle {
-  width: 6px;
-  flex: none;
-  cursor: col-resize;
-  background: var(--wash, #f6f6f6);
-  border-left: 1px solid var(--line, #d9d9d9);
-  border-right: 1px solid var(--line, #d9d9d9);
-}
-.p-resize-handle:hover, .p-resizable.dragging .p-resize-handle { background: var(--ink, #000); }
-</style>

@@ -10,19 +10,15 @@ import {
 import { activeWorkspaceId, setActiveWorkspace } from '@/core/workspace'
 import { currentRole, currentUser, logout, logoutAll } from '@/core/auth'
 import { t } from '@/core/i18n'
-import { plannerPathForDate } from '@/core/deeplink'
-import { navDate } from '@/core/navdate'
 import { PLATFORM_META, PLATFORMS } from '@/core/platforms'
 import type { PlatformId } from '@/core/platforms'
 import ChangePasswordModal from '@/components/overlays/ChangePasswordModal.vue'
-import DatePickerPopup from '@/components/ui/DatePickerPopup.vue'
 import GuideHero from '@/components/ui/GuideHero.vue'
 import LoginModal from '@/components/overlays/LoginModal.vue'
 import PlatformLogin from '@/components/overlays/PlatformLogin.vue'
 import ProfilePanel from '@/components/overlays/ProfilePanel.vue'
 import SettingsPanel from '@/components/overlays/SettingsPanel.vue'
 import Subnavbar from './Subnavbar.vue'
-import { previewScreen } from '@/core/subnav'
 
 const route = useRoute()
 const router = useRouter()
@@ -213,15 +209,6 @@ const authOpen = ref(false)
 const authMode = ref<'login' | 'register'>('login')
 const changeOpen = ref(false)
 
-// ---- navbar date chooser ----
-// A global date pick jumps to the Monthly Planner at that month; the Smart
-// Calendar follows the same date via the shared navDate ref.
-function goToDate(value: string | null): void {
-  navDate.value = value
-  const path = plannerPathForDate(value)
-  if (path) void router.push(path)
-}
-
 // ---- connect section (avatar toggle) ----
 // The social connect/manage entry lives in the profile toggle, next to the
 // workspace switcher — never loose in the navbar. The dialog itself enforces
@@ -323,20 +310,23 @@ interface NavLink {
 const isClient = computed(() => currentRole.value === 'Client')
 
 // Compact navbar: one link per hub (the compact IA). Clients only get Content.
+// Branding leads: it is the workspace foundation and the deck's front card.
 const navLinks = computed<NavLink[]>(() =>
   isClient.value
     ? [{ to: '/content', label: t('nav.content') }]
     : [
+        { to: '/settings', label: t('nav.branding') },
         { to: '/dashboard', label: t('nav.home') },
         { to: '/plan', label: t('nav.plan') },
         { to: '/content', label: t('nav.content') },
         { to: '/promote', label: t('nav.promote') },
         { to: '/analyze', label: t('nav.analyze') },
-        { to: '/settings', label: t('nav.settings') },
       ],
 )
 
 function isActive(l: NavLink): boolean {
+  // Segment match: '/plan' must not match '/plans'. '/' matches only itself.
+  if (l.to === '/') return route.path === '/'
   return route.path === l.to || route.path.startsWith(l.to + '/')
 }
 
@@ -351,21 +341,19 @@ function isActive(l: NavLink): boolean {
         </RouterLink>
       </div>
       <nav class="links">
-        <RouterLink v-for="l in navLinks" :key="l.to" :to="l.to" class="navlink"
-          :class="{ active: isActive(l) }"
-          :aria-current="isActive(l) ? 'page' : undefined"
-          @mouseenter="previewScreen(l.to)">
-          {{ l.label }}
-        </RouterLink>
+        <div class="nav-toggle-group">
+          <RouterLink v-for="l in navLinks" :key="l.to" :to="l.to" class="navlink"
+            :class="{ active: isActive(l) }"
+            :aria-current="isActive(l) ? 'page' : undefined">
+            {{ l.label }}
+          </RouterLink>
+        </div>
       </nav>
       <div class="side">
         <template v-if="!currentUser">
           <button class="btn btn-primary" @click="openLogin('register')">{{ t('auth.signup') }}</button>
           <button class="btn" @click="openLogin('login')">{{ t('auth.login') }}</button>
         </template>
-        <span v-if="!isClient" class="navdate">
-          <DatePickerPopup :model-value="navDate" :title="t('calendar.title')" @update:model-value="goToDate" />
-        </span>
         <div class="avatar-wrap">
           <button class="avatar" title="Owner menu" aria-label="Owner menu" aria-haspopup="dialog"
             :aria-expanded="profileOpen" @click.stop="profileOpen = !profileOpen">
@@ -433,7 +421,7 @@ function isActive(l: NavLink): boolean {
       </div>
     </header>
     <Subnavbar />
-    <div v-if="notice" class="oauth-banner">
+    <div v-if="notice" class="oauth-banner" role="status" aria-live="polite">
       <span>{{ notice }}</span>
       <button class="btn" @click="notice = ''">{{ t('common.close') }}</button>
     </div>
@@ -462,7 +450,7 @@ function isActive(l: NavLink): boolean {
       </div>
     </div>
     <main class="main">
-      <div class="shellgrid" :class="{ wide: route.meta.wide }"><slot /></div>
+      <div class="shellgrid"><slot /></div>
     </main>
     <footer class="footer">
       Huuk by Teeneung v0.1(Beta)

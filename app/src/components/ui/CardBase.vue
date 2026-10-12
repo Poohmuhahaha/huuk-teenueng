@@ -5,12 +5,12 @@ defineProps<{ title: string; meta?: string; coverLabel?: string }>()
 </script>
 
 <template>
-  <div class="pcard">
-    <div v-if="coverLabel !== undefined" class="cover">{{ coverLabel }}</div>
-    <div class="body">
-      <strong>{{ title }}</strong>
-      <div class="muted"><slot /></div>
-      <div v-if="meta" class="muted">{{ meta }}</div>
+  <div class="border border-line rounded-none overflow-hidden cursor-pointer bg-surface shadow-sm transition-all duration-150 hover:shadow-md hover:-translate-y-px hover:border-ink">
+    <div v-if="coverLabel !== undefined" class="h-[90px] bg-surface-2 border-b border-line flex items-center justify-center text-2xl font-bold text-muted">{{ coverLabel }}</div>
+    <div class="p-3 pb-3.5 text-sm">
+      <strong class="text-ink font-semibold block">{{ title }}</strong>
+      <div class="text-muted text-[13px]"><slot /></div>
+      <div v-if="meta" class="text-muted text-[13px] mt-0.5">{{ meta }}</div>
     </div>
   </div>
 </template>

@@ -14,62 +14,41 @@ function shift(delta: number): void {
 </script>
 
 <template>
-  <div class="month-toggle" :class="{ disabled }" role="group" aria-label="Month">
-    <button type="button" class="mt-btn" :disabled="disabled || modelValue <= 1" aria-label="Previous month" @click="shift(-1)">‹</button>
-    <span class="mt-label" aria-live="polite">{{ monthName(modelValue) }}</span>
-    <button type="button" class="mt-btn" :disabled="disabled || modelValue >= 12" aria-label="Next month" @click="shift(1)">›</button>
+  <div
+    class="month-toggle flex items-center justify-between w-full h-[44px] p-1 border border-line rounded-full bg-surface shadow-xs transition-colors"
+    :class="disabled ? 'opacity-60 pointer-events-none' : ''"
+    role="group"
+    aria-label="Month"
+  >
+    <button
+      type="button"
+      class="w-[34px] h-[34px] flex-none inline-flex items-center justify-center p-0 border-0 rounded-full bg-transparent text-muted hover:text-ink hover:bg-wash active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted"
+      :disabled="disabled || modelValue <= 1"
+      aria-label="Previous month"
+      :title="modelValue <= 1 ? 'Already at January' : 'Previous month'"
+      @click="shift(-1)"
+    >
+      <svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10 12L6 8l4-4" />
+      </svg>
+    </button>
+    <span
+      class="flex-1 min-w-0 px-2 text-center text-sm font-semibold tracking-wide text-ink select-none truncate"
+      aria-live="polite"
+    >
+      {{ monthName(modelValue) }}
+    </span>
+    <button
+      type="button"
+      class="w-[34px] h-[34px] flex-none inline-flex items-center justify-center p-0 border-0 rounded-full bg-transparent text-muted hover:text-ink hover:bg-wash active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted"
+      :disabled="disabled || modelValue >= 12"
+      aria-label="Next month"
+      :title="modelValue >= 12 ? 'Already at December' : 'Next month'"
+      @click="shift(1)"
+    >
+      <svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6 4l4 4-4 4" />
+      </svg>
+    </button>
   </div>
 </template>
-
-<style scoped>
-/* Compact pill: circular ghost arrows hugging a fixed-width label so the
-   control never jumps as month names grow/shrink. */
-.month-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 4px;
-  margin: 2px 0 20px;
-  border: 1px solid var(--line, #e4e4e4);
-  border-radius: var(--radius-pill, 999px);
-  background: var(--surface, #fff);
-}
-.mt-btn {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--muted, #6b6b6b);
-  font: inherit;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.mt-btn:hover:not(:disabled) {
-  background: var(--wash, #f6f6f6);
-  color: var(--ink, #000);
-}
-.mt-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-.mt-label {
-  min-width: 128px;
-  padding: 0 8px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--ink, #000);
-}
-.month-toggle.disabled {
-  opacity: 0.6;
-}
-</style>

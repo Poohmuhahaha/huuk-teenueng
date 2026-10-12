@@ -591,7 +591,7 @@ const PAGES: [string, string, string][] = [
         <div class="gitem"><select class="field"><option>Option A</option><option>Option B</option></select><span class="gcap">select.field</span></div>
         <div class="gitem"><textarea class="field" rows="2" placeholder="Textarea"></textarea><span class="gcap">textarea.field</span></div>
         <div class="gitem"><label class="btn">Upload<input type="file" hidden /></label><span class="gcap">file upload</span></div>
-        <div class="gitem"><input class="field palette-hex" placeholder="#4f46e5" /><span class="gcap">palette-hex</span></div>
+        <div class="gitem"><input class="field palette-hex" placeholder="#0a0a0a" /><span class="gcap">palette-hex</span></div>
         <div class="gitem"><input class="field style-num" type="number" value="12" /><span class="gcap">style-num</span></div>
         <div class="gitem"><label class="lbl">Label</label><input class="field" placeholder="with label" /><span class="gcap">lbl + field</span></div>
       </div>
@@ -882,7 +882,7 @@ const PAGES: [string, string, string][] = [
         <div class="gitem"><Popover v-model="demoPop"><template #trigger><button class="btn">Open popover</button></template><strong>Filters</strong><p class="muted" style="margin:4px 0 0">Anchored panel content.</p></Popover><span class="gcap">Popover</span></div>
         <div class="gitem"><Tooltip text="Duplicate"><button class="btn">Hover me</button></Tooltip><span class="gcap">Tooltip</span></div>
         <div class="gitem"><HoverCard><template #trigger><span class="wire">@pooh</span></template><strong>Pooh</strong><p class="muted" style="margin:4px 0 0">Creator · 12 workspaces</p></HoverCard><span class="gcap">HoverCard</span></div>
-        <div class="gitem"><DropdownMenu v-model="demoMenu" :items="menuItems"><template #trigger><button class="btn">Actions ▾</button></template></DropdownMenu><span class="gcap">DropdownMenu</span></div>
+        <div class="gitem"><DropdownMenu v-model="demoMenu" :items="menuItems"><template #trigger><span class="btn">Actions ▾</span></template></DropdownMenu><span class="gcap">DropdownMenu</span></div>
         <div class="gitem"><ContextMenu :items="menuItems"><div style="border:1px dashed var(--line);padding:18px;text-align:center;font-size:13px;color:var(--muted)">Right-click here</div></ContextMenu><span class="gcap">ContextMenu</span></div>
         <div class="gitem"><button class="btn" @click="demoCmd = true">⌘K Command</button><span class="gcap">CommandPalette</span></div>
         <div class="gitem"><button class="btn" @click="demoDialog = true">Open dialog</button><span class="gcap">Dialog</span></div>

@@ -10,8 +10,10 @@ import { useWidePane } from '@/composables/useWidePane'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
 import KpiCard from '@/components/ui/KpiCard.vue'
 import BarChart from '@/components/ui/BarChart.vue'
+import LineChart from '@/components/ui/LineChart.vue'
 import LiveSection from '@/components/live/LiveSection.vue'
 import ProtectedModal from '@/components/overlays/ProtectedModal.vue'
+import { monthName } from '@/core/i18n'
 
 const router = useRouter()
 // The deck works on one month: this is the shared value every card follows.
@@ -81,15 +83,126 @@ const adsAlerts = computed(() => {
   return rows.slice(0, 4)
 })
 
-const pillarBars = computed(() =>
-  stats.value ? Object.entries(stats.value.pillarCounts).map(([label, value]) => ({ label, value })) : [],
-)
-const platformBars = computed(() =>
-  stats.value ? Object.entries(stats.value.platformCounts).map(([label, value]) => ({ label, value })) : [],
-)
-const statusBars = computed(() =>
-  stats.value ? Object.entries(stats.value.statusCounts).map(([label, value]) => ({ label, value })) : [],
-)
+const pillarBars = computed(() => {
+  if (!stats.value) return []
+  const rows = postsQ.data.value ?? []
+  const total = rows.length
+  return Object.entries(stats.value.pillarCounts).map(([label, value]) => {
+    const pillarRows = rows.filter((r) => r.pillar === label)
+    const posted = pillarRows.filter((r) => r.status === 'Done').length
+    const pending = pillarRows.filter((r) => r.status === 'Start').length
+    const wip = pillarRows.filter((r) => r.status === 'Design' || r.status === 'Dev').length
+    return {
+      label: label || 'Unassigned',
+      value,
+      total,
+      posted,
+      pending,
+      wip,
+      sublabel: `${posted} posted · ${pending} pending · ${wip} WIP`,
+    }
+  })
+})
+
+const platformBars = computed(() => {
+  if (!stats.value) return []
+  const rows = postsQ.data.value ?? []
+  const total = rows.length
+  return Object.entries(stats.value.platformCounts).map(([label, value]) => {
+    const plRows = rows.filter((r) => r.platforms.includes(label))
+    const posted = plRows.filter((r) => r.status === 'Done').length
+    const remaining = plRows.length - posted
+    return {
+      label: label || 'Direct',
+      value,
+      total,
+      posted,
+      pending: remaining,
+      sublabel: `${posted} posted · ${remaining} in progress`,
+    }
+  })
+})
+
+const statusBars = computed(() => {
+  if (!stats.value) return []
+  const rows = postsQ.data.value ?? []
+  const total = rows.length
+  const descriptions: Record<string, string> = {
+    Start: 'In queue · awaiting production',
+    Design: 'Creative design & visuals',
+    Dev: 'Copywriting & media drafting',
+    Done: 'Published & completed',
+  }
+  return Object.entries(stats.value.statusCounts)
+    .filter(([_, count]) => count > 0)
+    .map(([label, value]) => ({
+      label,
+      value,
+      total,
+      sublabel: descriptions[label] ?? `${value} topics`,
+    }))
+})
+
+// Daily engagement and post volume timeline across the month
+const trendData = computed(() => {
+  const posts = postsQ.data.value ?? []
+  const mets = metricsQ.data.value ?? []
+
+  const postMetrics = new Map<string, { views: number; likes: number }>()
+  for (const m of mets) {
+    const cur = postMetrics.get(m.postId) ?? { views: 0, likes: 0 }
+    cur.views += m.views
+    cur.likes += m.likes
+    postMetrics.set(m.postId, cur)
+  }
+
+  const year = new Date().getFullYear()
+  const daysInMonth = new Date(year, month.value, 0).getDate()
+
+  const dailyViews = new Array(daysInMonth).fill(0)
+  const dailyLikes = new Array(daysInMonth).fill(0)
+  const dailyTotal = new Array(daysInMonth).fill(0)
+  const dailyPosted = new Array(daysInMonth).fill(0)
+  const dailyPending = new Array(daysInMonth).fill(0)
+  const dailyWip = new Array(daysInMonth).fill(0)
+
+  for (const p of posts) {
+    let day = 0
+    if (p.date) {
+      const parts = p.date.split('-')
+      day = parseInt(parts[2] ?? '0', 10)
+    }
+    const idx = day >= 1 && day <= daysInMonth ? day - 1 : 0
+    dailyTotal[idx]++
+    if (p.status === 'Done') dailyPosted[idx]++
+    else if (p.status === 'Start') dailyPending[idx]++
+    else if (p.status === 'Design' || p.status === 'Dev') dailyWip[idx]++
+
+    const pm = postMetrics.get(p.id)
+    if (pm) {
+      dailyViews[idx] += pm.views
+      dailyLikes[idx] += pm.likes
+    }
+  }
+
+  const labels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`)
+
+  return {
+    labels,
+    series: [
+      { label: 'Views', values: dailyViews, area: true },
+      { label: 'Likes', values: dailyLikes },
+    ],
+    sparks: {
+      total: dailyTotal,
+      posted: dailyPosted,
+      pending: dailyPending,
+      wip: dailyWip,
+      views: dailyViews,
+      likes: dailyLikes,
+    },
+  }
+})
 
 function askEdit(): void {
   if (guardSuppressed()) {
@@ -109,17 +222,22 @@ function goMaster(): void {
     <h1>Dashboard</h1>
 
     <div class="dash-grid">
-      <aside class="dash-side">
-        <MonthToggle v-model="month" />
-        <div class="dash-quick">
-          <RouterLink class="btn btn-primary" to="/plan?tab=monthly">+ New topic</RouterLink>
-          <RouterLink class="btn" to="/analyze?tab=performance">Import metrics</RouterLink>
+      <aside class="grid gap-2.5 content-start">
+        <div class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 items-center [&>*]:min-w-0">
+          <MonthToggle v-model="month" />
+          <RouterLink class="btn btn-icon" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
+            </svg>
+          </RouterLink>
+          <RouterLink class="btn btn-primary btn-icon" to="/plan?tab=monthly" title="New topic" aria-label="New topic">+</RouterLink>
         </div>
-        <div v-if="attention.length" class="dash-attention">
-          <h3>Needs attention</h3>
-          <ul>
+        <div v-if="attention.length" class="border-t border-line pt-3">
+          <h3 class="m-0 mb-2 text-[11.5px] font-bold tracking-wider uppercase text-muted">Needs attention</h3>
+          <ul class="m-0 p-0 list-none grid gap-2">
             <li v-for="a in attention" :key="a.text">
-              <RouterLink :to="a.to">{{ a.text }}</RouterLink>
+              <RouterLink :to="a.to" class="text-[13px] leading-relaxed underline underline-offset-3 decoration-faint hover:decoration-ink transition">{{ a.text }}</RouterLink>
             </li>
           </ul>
         </div>
@@ -133,23 +251,36 @@ function goMaster(): void {
         <template v-else>
           <template v-if="section === 'overview'">
             <div class="grid6">
-              <KpiCard label="Total" :value="stats.total" hint="topics this month" to="/plan?tab=monthly" />
-              <KpiCard label="Posted" :value="stats.posted" :hint="`${postedPct}% of all`" to="/plan?tab=monthly" />
-              <KpiCard label="Pending" :value="stats.pending" hint="to start" to="/plan?tab=monthly" />
-              <KpiCard label="WIP" :value="stats.wip" hint="in design or dev" to="/plan?tab=monthly" />
-              <KpiCard label="Views" :value="stats.views.toLocaleString('en-US')" hint="this month" to="/analyze?tab=performance" />
-              <KpiCard label="Likes" :value="stats.likes.toLocaleString('en-US')" hint="this month" to="/analyze?tab=performance" />
+              <KpiCard label="Total" :value="stats.total" hint="topics this month" :spark="trendData.sparks.total" to="/plan?tab=monthly" />
+              <KpiCard label="Posted" :value="stats.posted" :hint="`${postedPct}% of all`" :spark="trendData.sparks.posted" to="/plan?tab=monthly" />
+              <KpiCard label="Pending" :value="stats.pending" hint="to start" :spark="trendData.sparks.pending" to="/plan?tab=monthly" />
+              <KpiCard label="WIP" :value="stats.wip" hint="in design or dev" :spark="trendData.sparks.wip" to="/plan?tab=monthly" />
+              <KpiCard label="Views" :value="stats.views.toLocaleString('en-US')" hint="this month" :spark="trendData.sparks.views" to="/analyze?tab=performance" />
+              <KpiCard label="Likes" :value="stats.likes.toLocaleString('en-US')" hint="this month" :spark="trendData.sparks.likes" to="/analyze?tab=performance" />
             </div>
-            <h2>Planned vs posted · by pillar</h2>
-            <BarChart :items="pillarBars" />
-            <div class="grid2 mt">
+
+            <!-- Views & Engagement Line Chart -->
+            <div class="mt-6">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="m-0 text-[15px] font-bold tracking-tight">Views & Engagement Growth</h2>
+                <span class="text-xs text-muted font-medium">{{ monthName(month) }} Daily Timeline</span>
+              </div>
+              <LineChart :labels="trendData.labels" :series="trendData.series" :height="160" />
+            </div>
+
+            <div class="mt-6">
+              <h2 class="mb-2 text-[15px] font-bold tracking-tight">Planned vs posted · by pillar</h2>
+              <BarChart :items="pillarBars" unit="topics" />
+            </div>
+
+            <div class="grid2 mt-5">
               <div>
-                <h2 style="margin-top: 0;">By platform</h2>
-                <BarChart :items="platformBars" />
+                <h2 class="mb-2 text-[15px] font-bold tracking-tight" style="margin-top: 0;">By platform</h2>
+                <BarChart :items="platformBars" unit="posts" />
               </div>
               <div>
-                <h2 style="margin-top: 0;">By status</h2>
-                <BarChart :items="statusBars" />
+                <h2 class="mb-2 text-[15px] font-bold tracking-tight" style="margin-top: 0;">By status</h2>
+                <BarChart :items="statusBars" unit="topics" />
               </div>
             </div>
           </template>
@@ -162,10 +293,10 @@ function goMaster(): void {
             <section class="ads-glance">
               <div class="row">
                 <h2 style="margin: 0;">{{ t('ads.active') }}</h2>
-                <RouterLink class="btn ads-open" to="/ads">{{ t('ads.open') }}</RouterLink>
+                <RouterLink class="btn ml-0" to="/ads">{{ t('ads.open') }}</RouterLink>
               </div>
               <template v-if="activeCampaigns.length || adsAlerts.length">
-                <ul v-if="adsAlerts.length" class="ads-alerts">
+                <ul v-if="adsAlerts.length" class="mt-2.5 pl-4.5 text-warning text-[13.5px]">
                   <li v-for="(a, i) in adsAlerts" :key="i">{{ a }}</li>
                 </ul>
                 <div class="tblwrap mt">
@@ -208,53 +339,3 @@ function goMaster(): void {
     <ProtectedModal :open="guardOpen" field="Top-5 views cell" @cancel="guardOpen = false" @confirm="goMaster" />
   </div>
 </template>
-
-<style scoped>
-.dash-side {
-  display: grid;
-  gap: 10px;
-  align-content: start;
-}
-.dash-quick {
-  display: grid;
-  gap: 8px;
-}
-.dash-attention {
-  border-top: 1px solid var(--line);
-  padding-top: 12px;
-}
-.dash-attention h3 {
-  margin: 0 0 8px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.dash-attention ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 8px;
-}
-.dash-attention a {
-  font-size: 13px;
-  line-height: 1.45;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--faint);
-}
-.dash-attention a:hover {
-  text-decoration-color: var(--ink);
-}
-.ads-open {
-  margin-left: 0;
-}
-.ads-alerts {
-  margin: 10px 0 0;
-  padding-left: 18px;
-  color: var(--warning, #b26a00);
-  font-size: 13.5px;
-}
-</style>

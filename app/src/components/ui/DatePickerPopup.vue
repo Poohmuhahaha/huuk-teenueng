@@ -12,6 +12,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ 'update:modelValue': [v: string | null] }>()
 
+// Short DOW headers by design (single letters); full i18n via t() later.
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 const open = ref(false)
@@ -89,29 +90,29 @@ function clear(): void {
 </script>
 
 <template>
-  <button type="button" class="field dp-field" :id="id" :disabled="disabled" @click="show">
-    <span :class="{ muted: !modelValue }">{{ modelValue ?? t('campaign.pickDate') }}</span>
-    <span class="dp-caret" aria-hidden="true">▾</span>
+  <button type="button" class="dp-field w-full flex justify-between items-center gap-2 text-left cursor-pointer bg-transparent text-ink border-0 border-b-[1.5px] border-b-ink rounded-none px-0.5 py-2.5 disabled:opacity-55 disabled:cursor-default" :id="id" :disabled="disabled" @click="show">
+    <span :class="!modelValue ? 'text-muted text-sm' : ''">{{ modelValue ?? t('campaign.pickDate') }}</span>
+    <span class="flex-none text-muted text-xs" aria-hidden="true">▾</span>
   </button>
   <Teleport to="body">
-  <div v-if="open" class="backdrop" @click.self="close">
-    <div class="modal dp-modal" role="dialog" aria-modal="true" :aria-label="title ?? t('campaign.pickDate')">
-      <div class="dp-head">
-        <button type="button" class="btn dp-nav" aria-label="Previous month" @click="step(-1)">‹</button>
-        <strong>{{ monthName(viewM) }} {{ viewY }}</strong>
-        <button type="button" class="btn dp-nav" aria-label="Next month" @click="step(1)">›</button>
+  <div v-if="open" class="backdrop fixed inset-0 z-50 flex justify-center items-center p-4 bg-backdrop backdrop-blur-[4px]" @click.self="close">
+    <div class="dp-modal w-full max-w-[340px] bg-surface border border-line rounded-none shadow-none p-5.5" role="dialog" aria-modal="true" :aria-label="title ?? t('campaign.pickDate')">
+      <div class="dp-head flex justify-between items-center gap-2">
+        <button type="button" class="dp-nav w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default leading-[1.2]" aria-label="Previous month" @click="step(-1)">‹</button>
+        <strong class="text-base">{{ monthName(viewM) }} {{ viewY }}</strong>
+        <button type="button" class="dp-nav w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default leading-[1.2]" aria-label="Next month" @click="step(1)">›</button>
       </div>
-      <div class="dp-grid mt">
-        <span v-for="(d, i) in DOW" :key="i" class="dp-dow">{{ d }}</span>
+      <div class="grid grid-cols-7 gap-1 mt-4">
+        <span v-for="(d, i) in DOW" :key="i" class="text-center text-muted text-2xs font-bold">{{ d }}</span>
         <template v-for="(c, i) in cells" :key="i">
-          <span v-if="c === null" class="dp-day empty" />
-          <button v-else type="button" class="dp-day" :class="{ selected: keyOf(c) === modelValue, today: keyOf(c) === todayKey }" @click="pick(c)">{{ c }}</button>
+          <span v-if="c === null" class="aspect-square min-w-0 p-0 text-sm border border-transparent rounded-none invisible" />
+          <button v-else type="button" class="dp-day aspect-square min-w-0 p-0 text-sm border rounded-none cursor-pointer hover:bg-wash hover:border-accent-line" :class="[(keyOf(c) === modelValue ? 'selected bg-accent text-accent-ink border-accent font-bold' : keyOf(c) === todayKey ? 'border-accent bg-transparent text-ink' : 'border-transparent bg-transparent text-ink')]" :aria-selected="keyOf(c) === modelValue" :aria-current="keyOf(c) === todayKey ? 'date' : undefined" @click="pick(c)">{{ c }}</button>
         </template>
       </div>
-      <div class="actions">
-        <button type="button" class="btn" @click="clear">{{ t('campaign.clearDate') }}</button>
-        <button type="button" class="btn" @click="pickToday">{{ t('campaign.today') }}</button>
-        <button type="button" class="btn btn-primary" @click="close">{{ t('common.close') }}</button>
+      <div class="actions flex justify-end gap-2 mt-4">
+        <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default" @click="clear">{{ t('campaign.clearDate') }}</button>
+        <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default" @click="pickToday">{{ t('campaign.today') }}</button>
+        <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" @click="close">{{ t('common.close') }}</button>
       </div>
     </div>
   </div>

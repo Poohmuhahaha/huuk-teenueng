@@ -13,55 +13,29 @@ watch(open, (value) => {
   if (timer) window.clearTimeout(timer)
   if (props.duration > 0) timer = window.setTimeout(() => (open.value = false), props.duration)
 })
+
+const toneClasses: Record<string, string> = {
+  info: 'border-l-ink',
+  success: 'border-l-ink border-l-double',
+  warning: 'border-l-ink border-l-dashed',
+  danger: 'border-l-ink bg-wash',
+}
 </script>
 
 <template>
-  <div class="p-toast" :class="[`t-${tone}`, { fixed }]" role="status">
-    <div class="p-toast-main">
-      <strong v-if="title" class="p-toast-title">{{ title }}</strong>
-      <span v-if="message" class="p-toast-msg">{{ message }}</span>
+  <div
+    class="flex items-start gap-3 w-full bg-surface border border-ink border-l-4 p-3 px-3.5 rounded-none"
+    :class="[
+      toneClasses[tone] || toneClasses.info,
+      fixed ? 'fixed right-5 bottom-5 z-[1000] w-auto min-w-[280px] max-w-[380px] shadow-[4px_4px_0_var(--color-ink)]' : ''
+    ]"
+    role="status"
+  >
+    <div class="flex flex-col gap-0.5 flex-1 text-left">
+      <strong v-if="title" class="text-[13px] font-semibold text-ink">{{ title }}</strong>
+      <span v-if="message" class="text-xs text-muted">{{ message }}</span>
       <slot />
     </div>
-    <button type="button" class="p-toast-x" aria-label="Dismiss" @click="open = false">×</button>
+    <button type="button" class="w-auto bg-transparent border-0 text-lg leading-none text-muted cursor-pointer p-0 hover:text-ink" aria-label="Dismiss" @click="open = false">×</button>
   </div>
 </template>
-
-<style scoped>
-.p-toast {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  width: 100%;
-  background: var(--paper, #fff);
-  border: 1px solid var(--ink, #000);
-  border-left-width: 4px;
-  padding: 12px 14px;
-}
-.p-toast.fixed {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  z-index: 1000;
-  width: auto;
-  min-width: 280px;
-  max-width: 380px;
-  box-shadow: 4px 4px 0 var(--ink, #000);
-}
-.t-success { border-left-style: double; }
-.t-warning { border-left-style: dashed; }
-.t-danger { background: var(--wash, #f6f6f6); }
-.p-toast-main { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-.p-toast-title { font-size: 13px; }
-.p-toast-msg { font-size: 12px; color: var(--muted, #6b6b6b); }
-.p-toast-x {
-  width: auto;
-  background: transparent;
-  border: 0;
-  font-size: 18px;
-  line-height: 1;
-  color: var(--muted, #6b6b6b);
-  cursor: pointer;
-  padding: 0;
-}
-.p-toast-x:hover { color: var(--ink, #000); }
-</style>

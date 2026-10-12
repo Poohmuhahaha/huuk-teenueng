@@ -4,10 +4,9 @@ withDefaults(defineProps<{ variant?: 'line' | 'block'; width?: string }>(), { va
 </script>
 
 <template>
-  <div class="p-skel" :class="{ block: variant === 'block' }" :style="width ? `width:${width}` : ''" />
+  <div
+    class="bg-wash w-full animate-pulse rounded-none"
+    :class="variant === 'block' ? 'h-10' : 'h-2.5'"
+    :style="width ? `width:${width}` : ''"
+  />
 </template>
-
-<style scoped>
-.p-skel { background: var(--wash, #f6f6f6); height: 10px; width: 100%; }
-.p-skel.block { height: 40px; }
-</style>

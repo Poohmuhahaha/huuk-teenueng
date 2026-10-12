@@ -1,3 +1,125 @@
+@import "tailwindcss";
+
+/* Tailwind v4 theme — every color aliases the :root token (plain var()
+   references, NOT inlined) so runtime brand theming (core/theme.ts → :root)
+   keeps working for utilities too. Custom sizes below the core scale. */
+@theme {
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-wash: var(--wash);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-wash: var(--accent-wash);
+  --color-accent-line: var(--accent-line);
+  --color-focus: var(--focus);
+  --color-selected: var(--selected);
+  --color-success: var(--success);
+  --color-success-wash: var(--success-wash);
+  --color-warning: var(--warning);
+  --color-warning-wash: var(--warning-wash);
+  --color-danger: var(--danger);
+  --color-danger-wash: var(--danger-wash);
+  --color-backdrop: var(--backdrop);
+
+  --font-sans: var(--font);
+  --font-display: var(--font-display);
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1.45;
+  --text-md: 0.9375rem;
+  --text-md--line-height: 1.6;
+}
+
+/* Shadows share names with the runtime vars, so they resolve inline (no
+   emitted :root var, no self-reference) and still follow brand changes. */
+@theme inline {
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+@keyframes sheet-in-right { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes sheet-in-left { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes sheet-in-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+@utility animate-sheet-right {
+  animation: sheet-in-right 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@utility animate-sheet-left {
+  animation: sheet-in-left 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@utility animate-sheet-up {
+  animation: sheet-in-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@utility animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Global p-drawer transition classes */
+.p-drawer-anim-enter-active,
+.p-drawer-anim-leave-active {
+  transition: opacity 0.28s ease-out;
+}
+.p-drawer-anim-leave-active {
+  transition: opacity 0.2s ease-in;
+}
+.p-drawer-anim-enter-from,
+.p-drawer-anim-leave-to {
+  opacity: 0;
+}
+.p-drawer-anim-enter-to,
+.p-drawer-anim-leave-from {
+  opacity: 1;
+}
+
+.p-drawer:not(.inline) {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.p-drawer-anim-enter-active .p-drawer {
+  transition: transform 0.28s ease-out;
+  will-change: transform;
+}
+.p-drawer-anim-leave-active .p-drawer {
+  transition: transform 0.22s ease-in;
+  will-change: transform;
+}
+
+.p-drawer-anim-enter-from.p-drawer-side-bottom .p-drawer,
+.p-drawer-anim-leave-to.p-drawer-side-bottom .p-drawer {
+  transform: translate3d(0, 100%, 0);
+}
+.p-drawer-anim-enter-to.p-drawer-side-bottom .p-drawer,
+.p-drawer-anim-leave-from.p-drawer-side-bottom .p-drawer {
+  transform: translate3d(0, 0, 0);
+}
+
+.p-drawer-anim-enter-from.p-drawer-side-right .p-drawer,
+.p-drawer-anim-leave-to.p-drawer-side-right .p-drawer {
+  transform: translate3d(100%, 0, 0);
+}
+.p-drawer-anim-enter-to.p-drawer-side-right .p-drawer,
+.p-drawer-anim-leave-from.p-drawer-side-right .p-drawer {
+  transform: translate3d(0, 0, 0);
+}
+
+.p-drawer-anim-enter-from.p-drawer-side-left .p-drawer,
+.p-drawer-anim-leave-to.p-drawer-side-left .p-drawer {
+  transform: translate3d(-100%, 0, 0);
+}
+.p-drawer-anim-enter-to.p-drawer-side-left .p-drawer,
+.p-drawer-anim-leave-from.p-drawer-side-left .p-drawer {
+  transform: translate3d(0, 0, 0);
+}
+
 /* Content Planner — production theme.
    Token-driven design system. Every selector from the wireframe stylesheet is preserved,
    so all components and interactions keep working; only the visual language changes.
@@ -51,8 +173,12 @@
 * { box-sizing: border-box; }
 
 /* Fill/fit: every control takes the container width without ever overflowing
-   it. In row layouts flex-shrink keeps siblings inside the container. */
-form, input, select, textarea, button, a.btn { width: 100%; max-width: 100%; }
+   it. In row layouts flex-shrink keeps siblings inside the container.
+   Buttons/links that carry their own width utility (w-*, min-w-*, max-w-*)
+   opt out so icon buttons and inline actions keep their shape. The :where()
+   keeps this rule at element specificity so the sized-chrome exception list
+   below (avatar, expand-btn, …) still wins for the rest. */
+form, input, select, textarea, button:not(:where([class*="w-"])), a.btn:not(:where([class*="w-"])) { width: 100%; max-width: 100%; }
 input[type="checkbox"], input[type="radio"], input[type="hidden"] { width: auto; }
 /* Sized chrome and inline utilities keep their shape. */
 .avatar, .expand-btn, .navdrop, .tab, .chipbtn, .conn-btn, .socialmini, .socialname,
@@ -119,17 +245,31 @@ button.wire { font-family: inherit; cursor: pointer; }
   border: 1px solid var(--accent-line); border-radius: var(--radius-pill);
   padding: 2px 9px; margin-left: 10px; width: 16ch; vertical-align: middle;
 }
-.links { display: flex; gap: 4px; flex: 1; min-width: 0; overflow: visible; justify-content: center; }
-.links::-webkit-scrollbar { display: none; }
-.navlink {
-  font: inherit; text-decoration: none; font-size: 14.5px; font-weight: 550; padding: 8px 14px;
-  border: 0; background: transparent; cursor: pointer; color: var(--muted);
-  border-radius: var(--radius-sm); white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+.links { display: flex; align-items: center; justify-content: center; flex: 1; min-width: 0; }
+.nav-toggle-group {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 3px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  max-width: 100%;
+  overflow-x: auto;
 }
-.navlink:hover { background: var(--wash); color: var(--ink); }
-.navlink.active { background: var(--accent-wash); color: var(--accent); font-weight: 650; }
-.navlink.active:hover { background: var(--accent-wash); }
+.nav-toggle-group::-webkit-scrollbar { display: none; }
+.navlink {
+  font: inherit; text-decoration: none; font-size: 13px; font-weight: 550; padding: 6px 14px;
+  border: 1px solid transparent; background: transparent; cursor: pointer; color: var(--muted);
+  border-radius: var(--radius-pill); white-space: nowrap;
+  transition: all 0.16s ease; user-select: none;
+}
+.navlink:hover { color: var(--ink); background: rgba(255, 255, 255, 0.6); }
+.navlink.active {
+  background: var(--surface); color: var(--ink); font-weight: 650;
+  border-color: var(--line);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.navlink.active:hover { background: var(--surface); }
 .navlink:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 /* grouped navbar dropdowns */
 .navgroup { position: relative; display: inline-flex; }
@@ -220,7 +360,7 @@ button.wire { font-family: inherit; cursor: pointer; }
   border: 0; border-radius: var(--radius-sm); background: none; color: inherit; cursor: pointer;
 }
 .ws-actions .menubtn:hover { background: var(--wash); }
-.ws-actions .menubtn.danger { color: var(--danger, #c0392b); }
+.ws-actions .menubtn.danger { color: var(--danger, #0a0a0a); }
 .ws-actions .menubtn:disabled { opacity: 0.5; cursor: not-allowed; }
 .ws-form { display: flex; gap: 6px; padding: 8px 8px 4px; }
 .ws-form .field { flex: 1; min-width: 0; }
@@ -297,6 +437,9 @@ h2 { font-size: 18px; font-weight: 650; letter-spacing: -0.005em; margin: 24px 0
 .btn-primary { background: var(--accent-strong, var(--accent)); color: var(--accent-strong-ink, var(--accent-ink)); border-color: var(--accent-strong, var(--accent)); }
 .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .btn:disabled { opacity: 0.5; cursor: default; box-shadow: none; transform: none; }
+/* Compact icon action: fixed 44px circle carrying only an icon or glyph.
+   Doubled class so it also beats the fill/fit rule for links (a.btn). */
+.btn.btn-icon { width: 44px; height: 44px; align-self: center; padding-left: 0; padding-right: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; line-height: 1; }
 /* Link-styled buttons match real buttons: same color, centered, no underline. */
 a.btn { color: inherit; text-align: center; text-decoration: none; }
 .field, select.field, input.field, textarea.field {
@@ -537,7 +680,7 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 }
 .slide-card {
   flex: 1; position: relative;
-  border: 1px solid var(--faint); border-radius: var(--radius-lg);
+  border: 1px solid var(--faint); border-radius: 24px;
   background: var(--surface); overflow: hidden;
   box-shadow: var(--shadow-md);
   /* Topbar + social bar + footer are chrome; the card fills the rest.
@@ -1079,10 +1222,10 @@ select {
 }
 textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; padding: 12px; }
 
-/* surfaces → flat, hairline, square */
+/* surfaces → flat, hairline, square (deck cards keep their own 24px radius) */
 .card, .panel, .lp-card, .plans-card, .plogin-card, .modal, .guide-panel,
 .camp-editor, .camp-list, .camp-item, .plan-card, .style-panel,
-.linkitem, .member-row, .ads-stat, .livecard, .slide-card, .read-article {
+.linkitem, .member-row, .ads-stat, .livecard, .read-article {
   border-radius: 0;
   box-shadow: none;
 }
@@ -1296,10 +1439,10 @@ select {
 }
 textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; padding: 12px; }
 
-/* surfaces → flat, hairline, square */
+/* surfaces → flat, hairline, square (deck cards keep their own 24px radius) */
 .card, .panel, .lp-card, .plans-card, .plogin-card, .modal, .guide-panel,
 .camp-editor, .camp-list, .camp-item, .plan-card, .style-panel,
-.linkitem, .member-row, .ads-stat, .livecard, .slide-card, .read-article {
+.linkitem, .member-row, .ads-stat, .livecard, .read-article {
   border-radius: 0;
   box-shadow: none;
 }
@@ -1657,7 +1800,7 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .deck.full { gap: 0; padding: 0; }
 .deck.full .slide.active .slide-card {
   max-width: none; margin: 0;
-  border: 0; border-radius: 0; box-shadow: none;
+  border: 0; border-radius: 24px; box-shadow: none;
 }
 .deck.full .card-scroll {
   position: relative;
@@ -1790,19 +1933,23 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .card-scroll.perf-scroll .perf-grid {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  gap: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   align-items: stretch;
 }
 .card-scroll.planner-scroll .planner-side,
-.card-scroll.camp-scroll .camp-side,
-.card-scroll.perf-scroll .perf-side {
+.card-scroll.camp-scroll .camp-side {
   display: grid;
   gap: 10px;
   align-content: start;
   overflow: hidden;
+}
+.card-scroll.perf-scroll .perf-side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 .card-scroll.planner-scroll .planner-main,
 .card-scroll.camp-scroll .camp-main,

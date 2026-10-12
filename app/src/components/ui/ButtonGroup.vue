@@ -6,16 +6,14 @@ withDefaults(defineProps<{ orientation?: 'horizontal' | 'vertical'; attached?: b
 </script>
 
 <template>
-  <div class="p-btngroup" :class="[orientation, { attached }]">
+  <div
+    class="inline-flex w-auto [&>*]:w-auto"
+    :class="[
+      orientation === 'vertical' ? 'flex-col items-stretch' : 'flex-row',
+      attached && orientation === 'vertical' ? '[&>*+*]:-mt-px' : '',
+      attached && orientation !== 'vertical' ? '[&>*+*]:-ml-px' : ''
+    ]"
+  >
     <slot />
   </div>
 </template>
-
-<style scoped>
-.p-btngroup { display: inline-flex; width: auto; }
-.p-btngroup.horizontal { flex-direction: row; }
-.p-btngroup.vertical { flex-direction: column; align-items: stretch; }
-.p-btngroup :deep(> *) { width: auto; }
-.p-btngroup.horizontal.attached :deep(> * + *) { margin-left: -1px; }
-.p-btngroup.vertical.attached :deep(> * + *) { margin-top: -1px; }
-</style>

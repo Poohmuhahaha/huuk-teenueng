@@ -28,12 +28,12 @@ function onPaste(event: ClipboardEvent): void {
 </script>
 
 <template>
-  <div class="p-pin" @paste="onPaste">
+  <div class="flex gap-2" @paste="onPaste">
     <input
       v-for="(char, index) in chars"
       :key="index"
       :ref="(el) => (inputs[index] = el as HTMLInputElement | null)"
-      class="p-pin-box"
+      class="w-[42px] h-12 text-center text-xl font-bold border border-line bg-surface text-ink p-0 rounded-none transition-colors focus:outline-none focus:border-ink disabled:opacity-50 disabled:cursor-not-allowed"
       :type="type"
       :value="char"
       :disabled="disabled"
@@ -44,20 +44,3 @@ function onPaste(event: ClipboardEvent): void {
     />
   </div>
 </template>
-
-<style scoped>
-.p-pin { display: flex; gap: 8px; }
-.p-pin-box {
-  width: 42px;
-  height: 48px;
-  text-align: center;
-  font-size: 20px;
-  font-weight: 700;
-  border: 1px solid var(--line, #d9d9d9);
-  background: var(--paper, #fff);
-  color: var(--ink, #000);
-  padding: 0;
-}
-.p-pin-box:focus { outline: none; border-color: var(--ink, #000); }
-.p-pin-box:disabled { opacity: 0.5; }
-</style>

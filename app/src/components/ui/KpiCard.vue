@@ -1,45 +1,56 @@
 <script setup lang="ts">
-defineProps<{ label: string; value: string | number; hint?: string; to?: string }>()
+import Sparkline from './Sparkline.vue'
+
+defineProps<{
+  label: string
+  value: string | number
+  hint?: string
+  to?: string
+  interactive?: boolean
+  spark?: number[]
+}>()
+const emit = defineEmits<{ select: [] }>()
+function pick(): void {
+  emit('select')
+}
 </script>
 
 <template>
-  <RouterLink v-if="to" class="card kpi kpi-link" :to="to">
-    <span class="kpi-label muted">{{ label }}</span>
-    <span class="kpi-value">{{ value }}</span>
-    <span v-if="hint" class="kpi-hint muted">{{ hint }}</span>
-    <svg class="kpi-go" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
-      stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M4 12 12 4M6 4h6v6" />
-    </svg>
+  <RouterLink v-if="to" class="group border border-line rounded-xl bg-surface shadow-xs hover:shadow-md hover:border-ink transition-all relative flex flex-col justify-between p-3.5 text-left no-underline text-inherit focus-visible:border-ink focus-visible:ring-2 focus-visible:ring-accent" :to="to">
+    <div>
+      <div class="flex items-center justify-between">
+        <span class="text-muted text-[11px] font-bold uppercase tracking-wider leading-[1.3]">{{ label }}</span>
+        <svg class="opacity-0 transition-all transform group-hover:opacity-60 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"
+          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 12 12 4M6 4h6v6" />
+        </svg>
+      </div>
+      <div class="text-[22px] font-black tracking-tight leading-[1.2] text-ink my-0.5">{{ value }}</div>
+      <div v-if="hint" class="text-muted text-[11.5px] leading-[1.3]">{{ hint }}</div>
+    </div>
+    <div v-if="spark && spark.length" class="text-accent/70 group-hover:text-accent block mt-2 h-[22px] transition-colors"><Sparkline :values="spark" /></div>
   </RouterLink>
-  <div v-else class="card kpi">
-    <span class="kpi-label muted">{{ label }}</span>
-    <span class="kpi-value">{{ value }}</span>
-    <span v-if="hint" class="kpi-hint muted">{{ hint }}</span>
+  <div v-else-if="interactive" class="group border border-line rounded-xl bg-surface shadow-xs hover:shadow-md hover:border-ink transition-all relative flex flex-col justify-between p-3.5 text-left no-underline text-inherit focus-visible:border-ink focus-visible:ring-2 focus-visible:ring-accent cursor-pointer" role="button" tabindex="0" :aria-label="label"
+    @click="pick" @keydown.enter.prevent="pick" @keydown.space.prevent="pick">
+    <div>
+      <div class="flex items-center justify-between">
+        <span class="text-muted text-[11px] font-bold uppercase tracking-wider leading-[1.3]">{{ label }}</span>
+        <svg class="opacity-0 transition-all transform group-hover:opacity-60 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"
+          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 12 12 4M6 4h6v6" />
+        </svg>
+      </div>
+      <div class="text-[22px] font-black tracking-tight leading-[1.2] text-ink my-0.5">{{ value }}</div>
+      <div v-if="hint" class="text-muted text-[11.5px] leading-[1.3]">{{ hint }}</div>
+    </div>
+    <div v-if="spark && spark.length" class="text-accent/70 group-hover:text-accent block mt-2 h-[22px] transition-colors"><Sparkline :values="spark" /></div>
+  </div>
+  <div v-else class="border border-line rounded-xl bg-surface shadow-xs relative flex flex-col justify-between p-3.5 text-left">
+    <div>
+      <div class="text-muted text-[11px] font-bold uppercase tracking-wider leading-[1.3]">{{ label }}</div>
+      <div class="text-[22px] font-black tracking-tight leading-[1.2] text-ink my-0.5">{{ value }}</div>
+      <div v-if="hint" class="text-muted text-[11.5px] leading-[1.3]">{{ hint }}</div>
+    </div>
+    <div v-if="spark && spark.length" class="text-accent/70 block mt-2 h-[22px]"><Sparkline :values="spark" /></div>
   </div>
 </template>
-
-<style scoped>
-.kpi {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 10px 12px;
-  text-align: left;
-}
-.kpi-label { font-size: 12px; line-height: 1.3; }
-.kpi-value { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
-.kpi-hint { font-size: 11.5px; line-height: 1.3; }
-.kpi-link { text-decoration: none; color: inherit; transition: border-color 0.15s; }
-.kpi-link:hover { border-color: var(--ink); }
-.kpi-go {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.kpi-link:hover .kpi-go,
-.kpi-link:focus-visible .kpi-go { opacity: 0.5; }
-</style>

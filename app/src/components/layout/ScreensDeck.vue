@@ -6,7 +6,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { animate } from 'motion-v'
 import { screens } from '@/core/screens'
 import type { Screen } from '@/core/screens'
-import { previewScreen } from '@/core/subnav'
 import { deckFull } from '@/core/deck'
 import { currentRole } from '@/core/auth'
 import NotFoundPage from '@/pages/NotFoundPage.vue'
@@ -23,18 +22,24 @@ const visible = computed<Screen[]>(() =>
     : screens,
 )
 
+/** Segment match: '/plan' matches '/plan' and '/plan/…', never '/plans'. */
+function matches(m: string, path: string): boolean {
+  if (m === '/') return path === '/'
+  return path === m || path.startsWith(m + '/')
+}
+
 function visibleIndexOf(path: string): number {
-  return visible.value.findIndex((s) => s.match.some((m) => path.startsWith(m)))
+  return visible.value.findIndex((s) => s.match.some((m) => matches(m, path)))
 }
 
 /** True when the current path matches no screen (renders the 404 card). */
 const notFound = computed(() => visibleIndexOf(route.path) < 0)
 
-/** Route params a screen consumes (e.g. the planner month). */
-function pageProps(s: Screen): Record<string, unknown> {
-  if (!s.path.includes(':month')) return {}
-  const raw = Number(route.params.month)
-  return Number.isInteger(raw) && raw >= 1 && raw <= 12 ? { month: String(raw) } : {}
+/** Route params a screen consumes. No screen takes params today (the planner
+ * month travels via navDate + query), so this always returns {} — kept as the
+ * single call-site for page props. */
+function pageProps(_s: Screen): Record<string, unknown> {
+  return {}
 }
 const track = ref<HTMLElement | null>(null)
 const index = ref(0)
@@ -99,6 +104,9 @@ async function setFull(on: boolean, fromIndex?: number): Promise<void> {
 
   let target: { left: number; width: number; height: number }
   if (on) {
+    // Flip first: detail columns and drawers key off this, so they switch
+    // layout while the card is still growing instead of popping in after.
+    full.value = true
     // Grow to the full-page card rect (edge to edge, full height).
     target = {
       left: deckRect.left,
@@ -227,7 +235,7 @@ function goTo(i: number): void {
   index.value = clamped
   scrollToIndex(clamped)
   const s = visible.value[clamped]
-  if (s && !s.match.some((m) => route.path.startsWith(m))) {
+  if (s && !s.match.some((m) => matches(m, route.path))) {
     router.replace({ path: s.to, query: route.query })
   }
 }
@@ -237,7 +245,7 @@ function commit(): void {
   const i = nearestIndex()
   index.value = i
   const s = visible.value[i]
-  if (s && !s.match.some((m) => route.path.startsWith(m))) {
+  if (s && !s.match.some((m) => matches(m, route.path))) {
     router.replace({ path: s.to, query: route.query })
   }
 }
@@ -252,8 +260,23 @@ onMounted(() => {
     index.value = visibleIndexOf(route.path)
     requestAnimationFrame(() => scrollToIndex(index.value, false))
   }
+  // Non-passive so onWheel may preventDefault horizontal gestures; the
+  // template keeps no @wheel binding (a .passive template listener could
+  // never preventDefault and the console warns on every swipe).
+  track.value?.addEventListener('wheel', onWheel, { passive: false })
   window.addEventListener('resize', onResize)
   window.addEventListener('keydown', onKeyGlobal)
+})
+
+// A role change can shrink the deck (staff 6 → Client 1): clamp the index so
+// it never points past the last card, then snap the track to it.
+watch(visible, (list) => {
+  if (!list.length) return
+  const clamped = Math.min(index.value, list.length - 1)
+  if (clamped !== index.value) {
+    index.value = clamped
+    scrollToIndex(clamped, false)
+  }
 })
 
 function onKeyGlobal(e: KeyboardEvent): void {
@@ -265,6 +288,7 @@ function onResize(): void {
 }
 
 onBeforeUnmount(() => {
+  track.value?.removeEventListener('wheel', onWheel)
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onKeyGlobal)
   window.clearTimeout(settle)
@@ -298,7 +322,7 @@ function onExpand(i: number): void {
   if (i !== index.value) {
     index.value = i
     const s = visible.value[i]
-    if (s && !s.match.some((m) => route.path.startsWith(m))) {
+    if (s && !s.match.some((m) => matches(m, route.path))) {
       router.replace({ path: s.to, query: route.query })
     }
   }
@@ -338,12 +362,11 @@ function onKey(e: KeyboardEvent): void {
 <template>
   <NotFoundPage v-if="notFound" />
   <div v-else>
-    <div ref="track" class="deck" :class="{ full }" role="region" aria-label="Screens" tabindex="0"
-      @scroll.passive="onScroll" @wheel.capture="onWheel" @keydown="onKey">
+    <div ref="track" class="deck" :class="{ full }" role="region" aria-roledescription="carousel" aria-label="Screens" tabindex="0"
+      @scroll.passive="onScroll" @keydown="onKey">
       <div class="slide spacer" aria-hidden="true" />
-      <section v-for="(s, i) in visible" :key="s.path" class="slide"
-        :class="{ active: i === index }"
-        @mouseenter="previewScreen(s.path)">
+        <section v-for="(s, i) in visible" :key="s.path" class="slide"
+        :class="{ active: i === index }" :aria-label="`${i + 1} of ${visible.length}`">
         <div class="slide-card">
           <button
             class="expand-btn"

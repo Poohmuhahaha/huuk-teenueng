@@ -4,27 +4,22 @@
 withDefaults(defineProps<{ title?: string; tone?: 'info' | 'success' | 'warning' | 'danger' }>(), {
   tone: 'info',
 })
+
+const toneClasses: Record<string, string> = {
+  info: 'border-l-ink',
+  success: 'border-l-ink border-l-double',
+  warning: 'border-l-ink border-l-dashed',
+  danger: 'border-l-ink bg-wash',
+}
 </script>
 
 <template>
-  <div class="p-alert" :class="`t-${tone}`" role="alert">
-    <strong v-if="title" class="p-alert-title">{{ title }}</strong>
+  <div
+    class="border border-line border-l-4 p-3 text-sm text-ink w-full rounded-none"
+    :class="toneClasses[tone] || toneClasses.info"
+    role="alert"
+  >
+    <strong v-if="title" class="block mb-0.5">{{ title }}</strong>
     <slot />
   </div>
 </template>
-
-<style scoped>
-.p-alert {
-  border: 1px solid var(--line, #e4e4e4);
-  border-left-width: 4px;
-  padding: 12px 14px;
-  font-size: 13px;
-  color: var(--ink, #000);
-  width: 100%;
-}
-.p-alert-title { display: block; margin-bottom: 2px; }
-.t-info { border-left-color: var(--ink, #000); }
-.t-success { border-left-style: double; border-left-color: var(--ink, #000); }
-.t-warning { border-left-style: dashed; border-left-color: var(--ink, #000); }
-.t-danger { border-left-color: var(--ink, #000); background: var(--wash, #f6f6f6); }
-</style>

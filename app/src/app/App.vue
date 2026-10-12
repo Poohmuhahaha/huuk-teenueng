@@ -48,7 +48,7 @@ const showWorkspaceSetup = computed(
   <RouterView v-if="route.meta.public" />
   <!-- Production gate: nothing to do before signing in. -->
   <LoginPage v-else-if="showLogin" />
-  <div v-else-if="!ready" class="boot muted">{{ t('common.loading') }}</div>
+  <div v-else-if="!ready" class="min-h-screen grid place-items-center text-sm text-muted">{{ t('common.loading') }}</div>
   <!-- First run: a signed-in account without a workspace creates one first. -->
   <WorkspaceSetupPage v-else-if="showWorkspaceSetup" />
   <AppShell v-else>
@@ -59,12 +59,3 @@ const showWorkspaceSetup = computed(
     </ErrorBoundary>
   </AppShell>
 </template>
-
-<style scoped>
-.boot {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  font-size: 14px;
-}
-</style>

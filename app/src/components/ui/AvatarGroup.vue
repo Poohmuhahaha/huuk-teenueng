@@ -9,13 +9,8 @@ const extra = computed(() => Math.max(0, props.items.length - shown.value.length
 </script>
 
 <template>
-  <div class="p-avatars">
+  <div class="flex [&>*:not(:first-child)]:-ml-2">
     <Avatar v-for="label in shown" :key="label" :label="label" />
     <Avatar v-if="extra > 0" :label="`+${extra}`" more />
   </div>
 </template>
-
-<style scoped>
-.p-avatars { display: flex; }
-.p-avatars :deep(.p-avatar + .p-avatar) { margin-left: -8px; }
-</style>

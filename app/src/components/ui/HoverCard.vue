@@ -3,29 +3,13 @@ withDefaults(defineProps<{ width?: string }>(), { width: '280px' })
 </script>
 
 <template>
-  <span class="p-hover">
-    <span class="p-hover-trigger"><slot name="trigger" /></span>
-    <span class="p-hover-card" :style="{ width }">
+  <span class="group relative inline-flex">
+    <span class="inline-flex"><slot name="trigger" /></span>
+    <span
+      class="absolute left-0 top-[calc(100%+8px)] z-[60] bg-surface border border-ink p-3.5 opacity-0 invisible transition-all duration-150 rounded-none shadow-md group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible"
+      :style="{ width }"
+    >
       <slot />
     </span>
   </span>
 </template>
-
-<style scoped>
-.p-hover { position: relative; display: inline-flex; }
-.p-hover-trigger { display: inline-flex; }
-.p-hover-card {
-  position: absolute;
-  left: 0;
-  top: calc(100% + 8px);
-  z-index: 60;
-  background: var(--paper, #fff);
-  border: 1px solid var(--ink, #000);
-  padding: 14px;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.15s, visibility 0.15s;
-}
-.p-hover:hover .p-hover-card,
-.p-hover:focus-within .p-hover-card { opacity: 1; visibility: visible; }
-</style>

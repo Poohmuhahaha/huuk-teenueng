@@ -4,30 +4,8 @@ defineProps<{ code?: string; lang?: string }>()
 </script>
 
 <template>
-  <div class="p-code">
-    <span v-if="lang" class="p-code-lang">{{ lang }}</span>
-    <pre><code><slot>{{ code }}</slot></code></pre>
+  <div class="relative w-full bg-wash border border-line p-3 overflow-x-auto rounded-none">
+    <span v-if="lang" class="absolute top-2 right-2.5 text-[10px] tracking-[0.12em] uppercase text-faint">{{ lang }}</span>
+    <pre class="m-0"><code class="font-mono text-xs text-ink"><slot>{{ code }}</slot></code></pre>
   </div>
 </template>
-
-<style scoped>
-.p-code {
-  position: relative;
-  width: 100%;
-  background: var(--wash, #f6f6f6);
-  border: 1px solid var(--line, #e4e4e4);
-  padding: 12px;
-  overflow-x: auto;
-}
-.p-code pre { margin: 0; }
-.p-code code { font-family: var(--mono, ui-monospace, Menlo, monospace); font-size: 12px; color: var(--ink, #000); }
-.p-code-lang {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--faint, #a3a3a3);
-}
-</style>

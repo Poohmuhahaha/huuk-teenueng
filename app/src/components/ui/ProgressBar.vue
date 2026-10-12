@@ -7,12 +7,7 @@ const pct = computed(() => Math.max(0, Math.min(100, Number.isFinite(props.value
 </script>
 
 <template>
-  <div class="p-progress" role="progressbar" :aria-valuenow="pct" aria-valuemin="0" aria-valuemax="100">
-    <div class="p-progress-fill" :style="{ width: `${pct}%` }" />
+  <div class="w-full h-2 bg-wash overflow-hidden rounded-none" role="progressbar" :aria-valuenow="pct" aria-valuemin="0" aria-valuemax="100">
+    <div class="h-full bg-ink transition-[width] duration-300 ease-out" :style="{ width: `${pct}%` }" />
   </div>
 </template>
-
-<style scoped>
-.p-progress { width: 100%; height: 8px; background: var(--wash, #f6f6f6); overflow: hidden; }
-.p-progress-fill { height: 100%; background: var(--ink, #000); transition: width 0.3s ease; }
-</style>

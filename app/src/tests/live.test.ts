@@ -79,7 +79,7 @@ describe('LiveSection', () => {
     expect(w.text()).toContain('Live from Meta')
     const cards = w.findAll('.livecard')
     expect(cards).toHaveLength(3)
-    expect(cards[0].attributes('href')).toBe('https://www.facebook.com/102400000000001_9001')
+    expect(cards[0].find('a.liveopen').attributes('href')).toBe('https://www.facebook.com/102400000000001_9001')
     // The complete per-post data: reaction breakdown, clicks, watch time.
     expect(cards[0].text()).toContain('Like 186')
     expect(cards[0].text()).toContain('Clicks 62')
@@ -87,7 +87,7 @@ describe('LiveSection', () => {
     expect(cards[1].text()).toContain('Avg watch 0:18')
     expect(w.text()).toContain('engagements')
     expect(w.text()).toContain('page views')
-    expect(cards[0].attributes('rel')).toContain('noopener')
+    expect(cards[0].find('a.liveopen').attributes('rel')).toContain('noopener')
     const text = w.text()
     expect(text).toContain('Studio Channel')
     expect(text).toContain('@studio.channel')

@@ -11,31 +11,36 @@ withDefaults(
 </script>
 
 <template>
-  <div v-if="open" class="p-dialog-backdrop" :class="{ expanded }" @click.self="open = false">
+  <div
+    v-if="open"
+    class="fixed inset-0 z-[1000] bg-black/40 flex justify-center"
+    :class="expanded ? 'p-6 items-center overflow-hidden' : 'p-4 pt-[10vh] items-start overflow-y-auto'"
+    @click.self="open = false"
+  >
     <div
-      class="p-dialog"
-      :class="{ expanded }"
+      class="w-full bg-surface border border-line shadow-[0_12px_40px_rgba(0,0,0,0.08)] p-7 sm:p-8 rounded-none transition-all duration-200"
+      :class="expanded ? 'flex flex-col w-[calc(100vw-48px)] max-w-none h-[calc(100vh-48px)]' : ''"
       role="dialog"
       aria-modal="true"
       :style="{ maxWidth: expanded ? undefined : width }"
     >
-      <div class="p-dialog-head">
-        <div class="p-dialog-titles">
+      <div class="flex items-start justify-between gap-3 mb-5">
+        <div class="flex flex-col flex-1 min-w-0">
           <input
             v-if="editableTitle"
             v-model="title"
-            class="p-dialog-title-input"
+            class="w-full bg-transparent border-0 border-b border-transparent p-0 m-0 text-ink font-display text-2xl leading-tight tracking-tight rounded-none outline-none placeholder:text-faint focus:border-ink"
             aria-label="Title"
             placeholder="Untitled"
           />
-          <h3 v-else-if="title" class="p-dialog-title">{{ title }}</h3>
-          <p v-if="description" class="p-dialog-desc">{{ description }}</p>
+          <h3 v-else-if="title" class="m-0 text-2xl leading-tight tracking-tight font-display text-ink">{{ title }}</h3>
+          <p v-if="description" class="m-0 mt-1.5 text-sm text-muted">{{ description }}</p>
         </div>
-        <div class="p-dialog-tools">
+        <div class="flex items-center gap-2.5 shrink-0">
           <button
             v-if="expandable"
             type="button"
-            class="p-dialog-tool"
+            class="w-auto inline-flex items-center bg-transparent border-0 text-muted cursor-pointer p-0 hover:text-ink"
             :aria-label="expanded ? 'Collapse' : 'Expand'"
             :title="expanded ? 'Collapse' : 'Expand'"
             @click="expanded = !expanded"
@@ -73,117 +78,11 @@ withDefaults(
               <line x1="3" y1="21" x2="10" y2="14" />
             </svg>
           </button>
-          <button type="button" class="p-dialog-x" aria-label="Close" @click="open = false">×</button>
+          <button type="button" class="w-auto bg-transparent border-0 text-2xl leading-none text-muted cursor-pointer p-0 hover:text-ink" aria-label="Close" @click="open = false">×</button>
         </div>
       </div>
-      <div class="p-dialog-body"><slot /></div>
-      <div v-if="$slots.footer" class="p-dialog-foot"><slot name="footer" /></div>
+      <div :class="expanded ? 'flex flex-col flex-1 min-h-0 overflow-auto' : ''"><slot /></div>
+      <div v-if="$slots.footer" class="flex justify-end gap-2.5 mt-6 pt-4.5 border-t border-line shrink-0"><slot name="footer" /></div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.p-dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 10vh 16px 16px;
-  overflow-y: auto;
-}
-.p-dialog-backdrop.expanded {
-  padding: 24px;
-  align-items: center;
-  overflow: hidden;
-}
-.p-dialog {
-  width: 100%;
-  background: var(--paper, #fff);
-  border: 1px solid var(--line, #e4e4e4);
-  border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-  padding: 28px 32px;
-}
-.p-dialog.expanded {
-  display: flex;
-  flex-direction: column;
-  width: calc(100vw - 48px);
-  max-width: none;
-  height: calc(100vh - 48px);
-}
-.p-dialog.expanded .p-dialog-body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
-.p-dialog.expanded .p-dialog-foot { flex: none; }
-.p-dialog-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.p-dialog-titles { display: flex; flex-direction: column; }
-.p-dialog-title {
-  margin: 0;
-  font-size: 24px;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  text-transform: none;
-  font-family: var(--font-display, Georgia, serif);
-}
-.p-dialog-title-input {
-  width: 100%;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  margin: 0;
-  color: var(--ink, #000);
-  font-size: 24px;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  font-family: var(--font-display, Georgia, serif);
-  outline: none;
-}
-.p-dialog-title-input::placeholder { color: var(--faint, #a3a3a3); }
-.p-dialog-title-input:focus { border-bottom: 1px solid var(--ink, #000); }
-.p-dialog-desc { margin: 6px 0 0; font-size: 14px; color: var(--muted, #6b6b6b); }
-.p-dialog-tools { display: flex; align-items: center; gap: 10px; }
-.p-dialog-tool {
-  width: auto;
-  display: inline-flex;
-  align-items: center;
-  background: transparent;
-  border: 0;
-  color: var(--muted, #6b6b6b);
-  cursor: pointer;
-  padding: 0;
-}
-.p-dialog-tool:hover { color: var(--ink, #000); }
-.p-dialog-x {
-  width: auto;
-  background: transparent;
-  border: 0;
-  font-size: 24px;
-  line-height: 1;
-  color: var(--muted, #6b6b6b);
-  cursor: pointer;
-  padding: 0;
-}
-.p-dialog-x:hover { color: var(--ink, #000); }
-.p-dialog-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 24px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line, #e4e4e4);
-}
-</style>

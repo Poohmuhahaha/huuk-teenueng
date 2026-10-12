@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Client-facing editor: markdown body with live preview, autosave, revisions,
 // scheduled publishing and SEO fields. Optimistic concurrency via `version`.
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   useContentItem, useContentRevisions, useDeleteContent, useDuplicateContent,
@@ -75,6 +75,9 @@ const publishOpen = ref(false)
 const scheduleLocal = ref('')
 const copied = ref(false)
 const bodyEl = ref<HTMLTextAreaElement | null>(null)
+const linkOpen = ref(false)
+const linkDraft = ref('https://')
+const revisionsCloseBtn = ref<HTMLButtonElement | null>(null)
 
 const dirty = computed(() => Boolean(draft.value) && JSON.stringify(draft.value) !== baseline.value)
 const content = computed<Content | null>(() => itemQ.data.value ?? null)
@@ -87,6 +90,14 @@ const readingMinutes = computed(() => Math.max(1, Math.round(wordCount.value / 2
 const publishedUrl = computed(() => {
   const slug = content.value?.slug
   if (!slug) return ''
+  // History-mode aware: derive the public URL from the router, not from the
+  // current location (which breaks under history deploy).
+  try {
+    const href = router.resolve({ path: `/read/${slug}` }).href
+    if (href) return href.startsWith('http') ? href : `${window.location.origin}${href}`
+  } catch {
+    // Fall through to the legacy derivation below.
+  }
   return `${window.location.origin}${window.location.pathname}#/read/${slug}`
 })
 
@@ -127,7 +138,10 @@ watch(
   },
   { deep: true },
 )
-onBeforeUnmount(() => window.clearTimeout(autosaveTimer))
+onBeforeUnmount(() => {
+  window.clearTimeout(autosaveTimer)
+  document.removeEventListener('click', onPublishDocClick)
+})
 
 async function save(note?: string, silent = false): Promise<boolean> {
   const current = content.value
@@ -196,7 +210,9 @@ function reloadLatest(): void {
 }
 
 function keepMine(): void {
-  loadedVersion.value = serverVersion.value
+  // Re-read the server version at click time: the stored serverVersion may be
+  // stale if the item refetched since the conflict was flagged.
+  loadedVersion.value = itemQ.data.value?.version ?? serverVersion.value
   conflict.value = false
   void save(t('studio.overwriteNote'))
 }
@@ -335,11 +351,38 @@ function prefixLines(prefix: string): void {
   })
 }
 
-function insertLink(): void {
-  const url = window.prompt(t('studio.linkPrompt'), 'https://')
+function openLink(): void {
+  linkDraft.value = 'https://'
+  linkOpen.value = true
+}
+
+function confirmLink(): void {
+  const url = linkDraft.value.trim()
+  linkOpen.value = false
   if (!url) return
   wrapSelection('[', `](${url})`, t('studio.linkText'))
 }
+
+function cancelLink(): void {
+  linkOpen.value = false
+}
+
+// The publish popover closes on outside click (trigger toggles, clicks inside
+// .publish-wrap are ignored).
+function onPublishDocClick(e: MouseEvent): void {
+  if (!publishOpen.value) return
+  const target = e.target as HTMLElement | null
+  if (!target?.closest?.('.publish-wrap')) publishOpen.value = false
+}
+
+onMounted(() => document.addEventListener('click', onPublishDocClick))
+
+// Move focus to the drawer close button when it opens.
+watch(revisionsOpen, (open) => {
+  if (open) {
+    void nextTick(() => revisionsCloseBtn.value?.focus())
+  }
+})
 
 function statusLabel(s: ContentStatus): string {
   return t(`studio.status.${s}`)
@@ -355,17 +398,17 @@ function formatStamp(stamp: string): string {
 
 <template>
   <div v-if="itemQ.isPending.value" class="muted">{{ t('studio.loading') }}</div>
-  <div v-else-if="itemQ.isError.value" class="editor-error">
+  <div v-else-if="itemQ.isError.value" class="py-2 grid gap-2 justify-items-center in-[.deck.full]:justify-items-start">
     <p class="muted">{{ itemQ.error.value?.message }}</p>
     <button class="btn" @click="() => itemQ.refetch()">{{ t('common.tryAgain') }}</button>
   </div>
-  <div v-else-if="content && draft" class="editor">
-    <header class="editor-head">
-      <input v-model="draft.title" class="field editor-title" :disabled="!canEdit"
+  <div v-else-if="content && draft" class="grid gap-1.5 in-[.deck.full]:gap-4">
+    <header class="flex gap-2.5 items-center in-[.deck.full]:flex-wrap">
+      <input v-model="draft.title" class="field text-lg font-bold flex-1" :disabled="!canEdit"
         :aria-label="t('studio.field.title')" :placeholder="t('studio.untitled')" />
-      <div class="editor-head-right">
+      <div class="flex gap-2 items-center whitespace-nowrap">
         <span class="statuschip" :class="`st-${status}`">{{ statusLabel(status) }}</span>
-        <span class="muted editor-savestate">
+        <span class="muted text-xs">
           <template v-if="saving">{{ t('studio.saving') }}</template>
           <template v-else-if="conflict">{{ t('studio.conflictShort') }}</template>
           <template v-else-if="dirty">{{ t('studio.unsaved') }}</template>
@@ -374,16 +417,16 @@ function formatStamp(stamp: string): string {
       </div>
     </header>
 
-    <div class="editor-actions">
+    <div class="flex flex-wrap gap-1.5 items-center justify-center in-[.deck.full]:justify-start [&_.btn]:py-2 [&_.btn]:px-3.5 [&_.btn]:text-xs [&_.btn]:w-auto">
       <button class="btn btn-primary" :disabled="!canEdit || saving || !dirty || conflict" @click="save()">
         {{ t('studio.saveDraft') }}
       </button>
       <template v-if="canPublish">
-        <div class="publish-wrap">
-          <button class="btn" :disabled="!canEdit" @click="publishOpen = !publishOpen">
+        <div class="relative">
+          <button class="btn" :disabled="!canEdit" :aria-expanded="publishOpen" @click="publishOpen = !publishOpen">
             {{ status === 'published' ? '✓ ' : '' }}{{ t('studio.publish') }} ▾
           </button>
-          <div v-if="publishOpen" class="publish-menu" role="dialog" :aria-label="t('studio.publish')">
+          <div v-if="publishOpen" class="absolute z-30 top-[calc(100%+6px)] left-0 bg-surface border border-faint rounded-[var(--radius,10px)] p-2 min-w-[240px] grid gap-1 shadow-lg [&_.menubtn]:text-left" role="dialog" :aria-label="t('studio.publish')">
             <button class="menubtn" :disabled="status === 'published'" @click="publishNow">{{ t('studio.publishNow') }}</button>
             <label class="lbl" for="studio-schedule" style="margin: 6px 0 0;">{{ t('studio.scheduleFor') }}</label>
             <input id="studio-schedule" class="field" type="datetime-local" v-model="scheduleLocal" />
@@ -413,8 +456,8 @@ function formatStamp(stamp: string): string {
       </button>
       <button v-else-if="canWrite" class="btn" @click="setStatus('archived')">{{ t('studio.archive') }}</button>
       <button v-if="canDelete" class="btn" @click="removeContent">{{ t('studio.delete') }}</button>
-      <span class="spacer" />
-      <div class="viewtoggle" role="tablist" :aria-label="t('studio.view')">
+      <span class="flex-1" />
+      <div class="flex gap-1" role="tablist" :aria-label="t('studio.view')">
         <button class="tab" :class="{ active: mode === 'edit' }" role="tab" :aria-selected="mode === 'edit'"
           @click="mode = 'edit'">{{ t('studio.view.edit') }}</button>
         <button class="tab" :class="{ active: mode === 'split' }" role="tab" :aria-selected="mode === 'split'"
@@ -424,7 +467,7 @@ function formatStamp(stamp: string): string {
       </div>
     </div>
 
-    <div v-if="conflict" class="conflict" role="alert">
+    <div v-if="conflict" class="flex flex-wrap gap-2 items-center border border-warning bg-warning-wash rounded-md py-2 px-2.5" role="alert">
       <strong>{{ t('studio.conflict') }}</strong>
       <span class="muted">{{ t('studio.conflictHint') }}</span>
       <button class="btn" @click="reloadLatest">{{ t('studio.reloadLatest') }}</button>
@@ -433,15 +476,15 @@ function formatStamp(stamp: string): string {
     <p v-if="saveError" class="autherr" role="alert">{{ saveError }}</p>
     <p v-if="notice" class="muted" role="status">{{ notice }}</p>
 
-    <div v-if="status === 'published' && publishedUrl" class="share">
+    <div v-if="status === 'published' && publishedUrl" class="flex gap-2 items-center flex-wrap bg-wash py-2.5 px-3 rounded-md">
       <strong>{{ t('studio.live') }}</strong>
-      <code class="share-url">{{ publishedUrl }}</code>
+      <code class="text-xs [overflow-wrap:anywhere]">{{ publishedUrl }}</code>
       <button class="btn" @click="copyLink">{{ copied ? t('studio.copied') : t('studio.copyLink') }}</button>
       <RouterLink class="btn" :to="`/read/${content.slug}`" target="_blank">{{ t('studio.openLive') }}</RouterLink>
     </div>
 
-    <div class="editor-grid" :class="`mode-${mode}`">
-      <section v-show="mode !== 'preview'" class="editor-fields">
+    <div class="grid gap-2 items-start in-[.deck.full]:gap-4" :class="mode === 'split' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'">
+      <section v-show="mode !== 'preview'" class="min-w-0">
         <div class="grid2">
           <div>
             <label class="lbl" for="studio-slug">{{ t('studio.field.slug') }}</label>
@@ -460,28 +503,33 @@ function formatStamp(stamp: string): string {
         <label class="lbl" for="studio-excerpt">{{ t('studio.field.excerpt') }}</label>
         <input id="studio-excerpt" v-model="draft.excerpt" class="field" :disabled="!canEdit" maxlength="500" />
 
-        <div class="body-toolbar" role="toolbar" :aria-label="t('studio.field.body')">
-          <button type="button" class="toolbtn" :disabled="!canEdit" :title="t('studio.tool.bold')"
+        <div class="flex gap-1 items-center justify-center in-[.deck.full]:justify-start my-2 mb-1.5" role="toolbar" :aria-label="t('studio.field.body')">
+          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.bold')"
             @click="wrapSelection('**', '**', t('studio.tool.text'))"><strong>B</strong></button>
-          <button type="button" class="toolbtn" :disabled="!canEdit" :title="t('studio.tool.italic')"
+          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.italic')"
             @click="wrapSelection('*', '*', t('studio.tool.text'))"><em>I</em></button>
-          <button type="button" class="toolbtn" :disabled="!canEdit" :title="t('studio.tool.h2')"
+          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.h2')"
             @click="prefixLines('## ')">H2</button>
-          <button type="button" class="toolbtn" :disabled="!canEdit" :title="t('studio.tool.list')"
+          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.list')"
             @click="prefixLines('- ')">•</button>
-          <button type="button" class="toolbtn" :disabled="!canEdit" :title="t('studio.tool.ordered')"
+          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.ordered')"
             @click="prefixLines('1. ')">1.</button>
-          <button type="button" class="toolbtn" :disabled="!canEdit" :title="t('studio.tool.quote')"
+          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.quote')"
             @click="prefixLines('> ')">”</button>
-          <button type="button" class="toolbtn" :disabled="!canEdit" :title="t('studio.tool.code')"
+          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.code')"
             @click="wrapSelection('`', '`', 'code')">&lt;/&gt;</button>
-          <button type="button" class="toolbtn" :disabled="!canEdit" :title="t('studio.tool.link')"
-            @click="insertLink">🔗</button>
-          <span class="muted" style="font-size: 12px;">
+          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.link')"
+            @click="openLink">🔗</button>
+          <span class="muted text-xs">
             {{ wordCount }} {{ t('studio.words') }} · {{ readingMinutes }} {{ t('studio.minRead') }}
           </span>
         </div>
-        <textarea id="studio-body" ref="bodyEl" v-model="draft.body" class="field editor-body"
+        <div v-if="linkOpen" class="flex gap-1.5 items-center my-0 mb-1.5 [&_.field]:flex-1 [&_.field]:min-w-0">
+          <input v-model="linkDraft" class="field" :aria-label="t('studio.linkPrompt')" placeholder="https://" @keydown.enter.prevent="confirmLink" @keydown.esc.prevent="cancelLink" />
+          <button type="button" class="btn" :disabled="!linkDraft.trim()" @click="confirmLink">{{ t('common.add') }}</button>
+          <button type="button" class="btn" @click="cancelLink">{{ t('common.cancel') }}</button>
+        </div>
+        <textarea id="studio-body" ref="bodyEl" v-model="draft.body" class="field font-mono text-sm leading-relaxed"
           :disabled="!canEdit" rows="7" :aria-label="t('studio.field.body')" />
 
         <div class="grid2">
@@ -496,32 +544,32 @@ function formatStamp(stamp: string): string {
           </div>
         </div>
 
-        <details class="seo">
+        <details class="mt-2.5">
           <summary>{{ t('studio.seo') }}</summary>
           <div class="grid2 mt">
             <div>
               <label class="lbl" for="studio-seo-title">{{ t('studio.field.seoTitle') }}</label>
               <input id="studio-seo-title" v-model="draft.seoTitle" class="field" :disabled="!canEdit" maxlength="200" />
-              <span class="muted" style="font-size: 11px;">{{ draft.seoTitle.length }}/60</span>
+              <span class="muted text-[11px]">{{ draft.seoTitle.length }}/200 (≤ 60)</span>
             </div>
             <div>
               <label class="lbl" for="studio-seo-desc">{{ t('studio.field.seoDescription') }}</label>
               <input id="studio-seo-desc" v-model="draft.seoDescription" class="field" :disabled="!canEdit" maxlength="500" />
-              <span class="muted" style="font-size: 11px;">{{ draft.seoDescription.length }}/160</span>
+              <span class="muted text-[11px]">{{ draft.seoDescription.length }}/500 (≤ 160)</span>
             </div>
           </div>
         </details>
       </section>
 
-      <section v-show="mode !== 'edit'" class="editor-preview">
-        <div class="preview-head">
+      <section v-show="mode !== 'edit'" class="min-w-0">
+        <div class="flex justify-between gap-2 items-baseline mb-2">
           <strong>{{ t('studio.preview') }}</strong>
           <span class="muted">{{ t('studio.previewHint') }}</span>
         </div>
-        <article class="preview-body">
-          <h1 v-if="draft.title">{{ draft.title }}</h1>
-          <p v-if="draft.excerpt" class="muted preview-excerpt">{{ draft.excerpt }}</p>
-          <img v-if="draft.heroImageUrl" :src="draft.heroImageUrl" :alt="draft.title" class="preview-hero" />
+        <article class="border border-faint rounded-[var(--radius,10px)] py-2.5 px-3 bg-surface min-h-[140px]">
+          <h1 v-if="draft.title" class="text-2xl font-bold my-2">{{ draft.title }}</h1>
+          <p v-if="draft.excerpt" class="muted text-[15px] my-2">{{ draft.excerpt }}</p>
+          <img v-if="draft.heroImageUrl" :src="draft.heroImageUrl" :alt="draft.title" class="max-w-full rounded-none my-3" @error="(e) => ((e.target as HTMLImageElement).style.display = 'none')" />
           <!-- renderMarkdown escapes all text before inserting its own tags -->
           <div class="markdown" v-html="previewHtml" />
         </article>
@@ -529,14 +577,14 @@ function formatStamp(stamp: string): string {
     </div>
 
     <!-- revisions drawer -->
-    <aside v-if="revisionsOpen" class="revisions" role="dialog" :aria-label="t('studio.revisions')">
-      <div class="revisions-head">
+    <aside v-if="revisionsOpen" class="fixed top-0 right-0 bottom-0 w-[min(420px,92vw)] z-60 bg-surface border-l border-faint p-3.5 overflow-y-auto shadow-lg" role="dialog" :aria-label="t('studio.revisions')" @keydown.esc="revisionsOpen = false; revisionPreview = null">
+      <div class="flex justify-between items-center mb-2">
         <strong>{{ t('studio.revisions') }}</strong>
-        <button class="btn" @click="revisionsOpen = false; revisionPreview = null">{{ t('common.close') }}</button>
+        <button ref="revisionsCloseBtn" class="btn" @click="revisionsOpen = false; revisionPreview = null">{{ t('common.close') }}</button>
       </div>
       <div v-if="revisionsQ.isPending.value" class="muted">{{ t('common.loading') }}</div>
       <p v-else-if="!revisions.length" class="muted">{{ t('studio.noRevisions') }}</p>
-      <ul v-else class="revisions-list">
+      <ul v-else class="list-none m-0 p-0 grid gap-1.5">
         <li v-for="revision in revisions" :key="revision.revision">
           <button class="studio-item" :class="{ on: revisionPreview?.revision === revision.revision }"
             @click="revisionPreview = revision">
@@ -545,7 +593,7 @@ function formatStamp(stamp: string): string {
           </button>
         </li>
       </ul>
-      <div v-if="revisionPreview" class="revision-preview">
+      <div v-if="revisionPreview" class="border-t border-dashed border-line mt-2.5 pt-2">
         <h4 style="margin: 8px 0 4px;">{{ revisionPreview.title }}</h4>
         <div class="markdown" v-html="renderMarkdown(revisionPreview.body)" />
         <button class="btn btn-primary mt" :disabled="!canWrite" @click="restoreRevision(revisionPreview)">
@@ -554,71 +602,8 @@ function formatStamp(stamp: string): string {
       </div>
     </aside>
   </div>
+  <div v-else class="py-2 grid gap-2 justify-items-center in-[.deck.full]:justify-items-start">
+    <p class="muted">Content not found</p>
+    <RouterLink class="btn" to="/studio">{{ t('studio.title') }}</RouterLink>
+  </div>
 </template>
-
-<style scoped>
-.editor { display: grid; gap: 6px; }
-.editor-head { display: flex; gap: 10px; align-items: center; }
-.editor-title { font-size: 18px; font-weight: 700; }
-.editor-head-right { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
-.editor-savestate { font-size: 12px; }
-.editor-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
-/* Compact action buttons — the editor lives in a popup. */
-.editor-actions .btn { padding: 8px 14px; font-size: 12px; width: auto; }
-.spacer { flex: 1; }
-.viewtoggle { display: flex; gap: 4px; }
-.publish-wrap { position: relative; }
-.publish-menu {
-  position: absolute; z-index: 30; top: calc(100% + 6px); left: 0;
-  background: var(--surface); border: 1px solid var(--faint); border-radius: var(--radius);
-  padding: 8px; min-width: 240px; display: grid; gap: 4px; box-shadow: var(--shadow-lg);
-}
-.publish-menu .menubtn { text-align: left; }
-.conflict {
-  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-  border: 1px solid var(--warning); background: var(--warning-wash); border-radius: var(--radius-sm); padding: 8px 10px;
-}
-.editor-error { padding: 8px 0; display: grid; gap: 8px; justify-items: center; }
-.share {
-  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-  background: var(--wash); padding: 10px 12px; border-radius: var(--radius-sm);
-}
-.share-url { font-size: 12px; overflow-wrap: anywhere; }
-.editor-grid { display: grid; gap: 8px; align-items: start; }
-.editor-grid.mode-split { grid-template-columns: 1fr 1fr; }
-.editor-fields, .editor-preview { min-width: 0; }
-.editor-body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; line-height: 1.6; }
-.body-toolbar { display: flex; gap: 4px; align-items: center; justify-content: center; margin: 8px 0 6px; }
-.toolbtn {
-  font: inherit; min-width: 32px; padding: 3px 7px;
-  border: 1px solid var(--faint); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer;
-  color: var(--ink); transition: background 0.15s, border-color 0.15s;
-}
-.toolbtn:hover { background: var(--wash); border-color: var(--line); }
-.toolbtn:disabled { opacity: 0.5; cursor: not-allowed; }
-.seo { margin-top: 10px; }
-.preview-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.preview-body {
-  border: 1px solid var(--faint); border-radius: var(--radius);
-  padding: 10px 12px; background: var(--surface); min-height: 140px;
-}
-.preview-excerpt { font-size: 15px; }
-.preview-hero { max-width: 100%; border-radius: 8px; }
-.revisions {
-  position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 92vw); z-index: 60;
-  background: var(--surface); border-left: 1px solid var(--faint); padding: 14px; overflow-y: auto;
-  box-shadow: var(--shadow-lg);
-}
-.revisions-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.revisions-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.revision-preview { border-top: 1px dashed var(--line); margin-top: 10px; }
-@media (max-width: 900px) {
-  .editor-grid.mode-split { grid-template-columns: 1fr; }
-}
-/* In the full-page detail panel the editor reads left-aligned. */
-.deck.full .editor-head { flex-wrap: wrap; }
-.deck.full .editor-actions { justify-content: flex-start; }
-.deck.full .body-toolbar { justify-content: flex-start; }
-.deck.full .editor-grid { gap: 16px; }
-.deck.full .editor-error { justify-items: start; }
-</style>

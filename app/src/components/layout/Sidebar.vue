@@ -16,12 +16,15 @@ function onNav(item: { id: string }, event: MouseEvent): void {
 </script>
 
 <template>
-  <aside class="p-sidebar" :class="{ collapsed }">
-    <div class="p-sidebar-head">
-      <strong v-if="!collapsed" class="p-sidebar-title">{{ title }}</strong>
+  <aside
+    class="flex flex-col bg-surface border border-line rounded-none transition-[width] duration-150 shrink-0"
+    :class="collapsed ? 'w-[52px]' : 'w-[220px]'"
+  >
+    <div class="flex items-center justify-between gap-2 p-2.5 px-3 border-b border-line">
+      <strong v-if="!collapsed" class="text-[13px] tracking-[0.06em] uppercase text-ink font-bold">{{ title }}</strong>
       <button
         type="button"
-        class="p-sidebar-toggle"
+        class="w-auto bg-transparent border-0 text-muted text-sm cursor-pointer p-0 hover:text-ink"
         aria-label="Toggle sidebar"
         :aria-expanded="!collapsed"
         @click="collapsed = !collapsed"
@@ -29,84 +32,32 @@ function onNav(item: { id: string }, event: MouseEvent): void {
         ☰
       </button>
     </div>
-    <nav class="p-sidebar-nav">
+    <nav class="flex flex-col p-1.5 gap-0.5">
       <template v-for="it in items" :key="it.id">
         <a
           v-if="it.to"
-          class="p-sidebar-item"
-          :class="{ active: model === it.id }"
+          class="flex items-center gap-2.5 w-full bg-transparent border-0 font-sans text-[13px] font-semibold p-2 px-2.5 cursor-pointer text-left whitespace-nowrap no-underline rounded-none transition-colors"
+          :class="model === it.id ? 'bg-ink text-surface' : 'text-muted hover:bg-wash hover:text-ink'"
           :href="it.to"
           :title="it.label"
           :aria-current="model === it.id ? 'page' : undefined"
           @click="onNav(it, $event)"
         >
-          <span class="p-sidebar-icon" aria-hidden="true">{{ it.icon ?? '·' }}</span>
-          <span v-if="!collapsed" class="p-sidebar-label">{{ it.label }}</span>
+          <span class="w-4 text-center shrink-0" aria-hidden="true">{{ it.icon ?? '·' }}</span>
+          <span v-if="!collapsed" class="truncate">{{ it.label }}</span>
         </a>
         <button
           v-else
           type="button"
-          class="p-sidebar-item"
-          :class="{ active: model === it.id }"
+          class="flex items-center gap-2.5 w-full bg-transparent border-0 font-sans text-[13px] font-semibold p-2 px-2.5 cursor-pointer text-left whitespace-nowrap rounded-none transition-colors"
+          :class="model === it.id ? 'bg-ink text-surface' : 'text-muted hover:bg-wash hover:text-ink'"
           :title="it.label"
           @click="model = it.id"
         >
-          <span class="p-sidebar-icon" aria-hidden="true">{{ it.icon ?? '·' }}</span>
-          <span v-if="!collapsed" class="p-sidebar-label">{{ it.label }}</span>
+          <span class="w-4 text-center shrink-0" aria-hidden="true">{{ it.icon ?? '·' }}</span>
+          <span v-if="!collapsed" class="truncate">{{ it.label }}</span>
         </button>
       </template>
     </nav>
   </aside>
 </template>
-
-<style scoped>
-.p-sidebar {
-  display: flex;
-  flex-direction: column;
-  width: 220px;
-  background: var(--paper, #fff);
-  border: 1px solid var(--line, #d9d9d9);
-  transition: width 0.15s;
-}
-.p-sidebar.collapsed { width: 52px; }
-.p-sidebar-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line, #d9d9d9);
-}
-.p-sidebar-title { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
-.p-sidebar-toggle {
-  width: auto;
-  background: transparent;
-  border: 0;
-  color: var(--muted, #6b6b6b);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 0;
-}
-.p-sidebar-toggle:hover { color: var(--ink, #000); }
-.p-sidebar-nav { display: flex; flex-direction: column; padding: 6px; gap: 2px; }
-.p-sidebar-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  background: transparent;
-  border: 0;
-  color: var(--muted, #6b6b6b);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 8px 10px;
-  cursor: pointer;
-  text-align: left;
-  white-space: nowrap;
-  text-decoration: none;
-}
-.p-sidebar-item:hover { background: var(--wash, #f6f6f6); color: var(--ink, #000); text-decoration: none; }
-.p-sidebar-item.active { background: var(--ink, #000); color: var(--paper, #fff); }
-.p-sidebar-icon { width: 16px; text-align: center; flex: none; }
-</style>

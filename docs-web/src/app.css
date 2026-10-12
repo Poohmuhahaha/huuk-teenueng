@@ -1,0 +1,65 @@
+/* docs-web reader skin — monochrome portfolio chrome (ink/paper, square
+ * corners, hard-step hover). Headings serif (Tinos), UI sans (Inter). */
+:root {
+  --ink: #000000;
+  --muted: #6b6b6b;
+  --faint: #a3a3a3;
+  --line: #e4e4e4;
+  --wash: #ffffff;
+  --surface: #ffffff;
+  --accent: #000000;
+  --maxw: 1080px;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--wash);
+  line-height: 1.55;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: "Tinos", "Times New Roman", Georgia, serif; font-weight: 700; }
+.shell { display: flex; min-height: 100vh; max-width: var(--maxw); margin: 0 auto; }
+.side {
+  width: 280px; flex: none;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  padding: 16px 14px;
+  position: sticky; top: 0; height: 100vh; overflow: auto;
+}
+.brand { display: flex; align-items: baseline; gap: 8px; text-decoration: none; color: inherit; }
+.brand strong { font-family: "Tinos", Georgia, serif; text-transform: lowercase; font-size: 18px; }
+.live { color: var(--muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.search { width: 100%; margin: 12px 0 4px; padding: 8px 10px; border: 1px solid var(--ink); border-radius: 0; font: inherit; background: var(--surface); }
+.warn { color: var(--ink); font-size: 13px; border: 1px solid var(--ink); padding: 8px 10px; }
+.group { margin-top: 14px; }
+.group-label { margin: 0 0 4px; font-size: 12px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.22em; color: var(--muted); }
+.link { display: block; padding: 5px 8px; border-radius: 0; text-decoration: none; color: var(--ink); font-size: 14px; }
+.link:hover { background: var(--ink); color: var(--surface); }
+.link.active { background: var(--ink); color: var(--surface); font-weight: 600; }
+.main { flex: 1; min-width: 0; padding: 28px 32px 64px; background: var(--surface); border-left: 0; }
+.state { max-width: 640px; margin: 40px auto; }
+.doc { max-width: 780px; }
+.doc > h1 { font-size: clamp(28px, 3.6vw, 44px); letter-spacing: -0.015em; }
+.muted { color: var(--muted); }
+pre {
+  background: var(--ink); color: var(--surface);
+  padding: 12px 14px; border-radius: 0; overflow: auto; font-size: 13px;
+}
+code { font-size: 0.9em; }
+pre code { color: inherit; }
+.markdown table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+.markdown th, .markdown td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; }
+.markdown th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.markdown blockquote { border-left: 3px solid var(--ink); margin: 12px 0; padding: 4px 12px; color: var(--muted); }
+.pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); }
+.pager a { text-decoration: underline; text-underline-offset: 4px; color: var(--ink); font-weight: 500; }
+.pager a:hover { background: var(--ink); color: var(--surface); text-decoration: none; }
+@media (max-width: 760px) {
+  .shell { flex-direction: column; }
+  .side { width: 100%; height: auto; position: static; border-right: 0; border-bottom: 1px solid var(--line); }
+  .main { padding: 20px 16px 48px; }
+}

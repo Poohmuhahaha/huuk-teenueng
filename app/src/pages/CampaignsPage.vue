@@ -178,9 +178,8 @@ async function destroy(): Promise<void> {
       <aside class="camp-side">
         <span v-if="saved" class="muted">{{ t('campaign.saved') }}</span>
         <span v-if="error" class="autherr" role="alert">{{ error }}</span>
-        <button class="btn btn-primary" :disabled="!canWrite || create.isPending.value" @click="newCampaign">
-          {{ t('campaign.new') }}
-        </button>
+        <button class="btn btn-primary btn-icon" :disabled="!canWrite || create.isPending.value"
+          :title="t('campaign.new')" aria-label="New campaign" @click="newCampaign">{{ create.isPending.value ? '…' : '+' }}</button>
       </aside>
 
       <div class="camp-main camp-list">

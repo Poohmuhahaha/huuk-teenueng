@@ -3,22 +3,10 @@ defineProps<{ size?: 'sm' | 'md' }>()
 </script>
 
 <template>
-  <kbd class="p-kbd" :class="size ?? 'md'"><slot /></kbd>
+  <kbd
+    class="inline-flex items-center justify-center min-w-5 border border-b-2 border-line bg-wash text-ink font-mono text-[11px] px-1.5 py-0.5 rounded-none"
+    :class="{ 'text-[10px] px-1 py-[1px]': size === 'sm' }"
+  >
+    <slot />
+  </kbd>
 </template>
-
-<style scoped>
-.p-kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  border: 1px solid var(--line, #d9d9d9);
-  border-bottom-width: 2px;
-  background: var(--wash, #f6f6f6);
-  color: var(--ink, #000);
-  font-family: var(--mono, ui-monospace, Menlo, monospace);
-  font-size: 11px;
-  padding: 2px 6px;
-}
-.p-kbd.sm { font-size: 10px; padding: 1px 4px; }
-</style>

@@ -24,12 +24,23 @@ onBeforeUnmount(() => window.clearTimeout(timer))
 </script>
 
 <template>
-  <div class="card copybar" :class="{ compact }" style="background: var(--wash);">
-    <div class="copybar-info">
-      <strong>Copy-paste assembled</strong>
-      <p class="copybar-text muted">{{ text || '(empty — fill caption + CTA + tags)' }}</p>
+  <div
+    class="border border-line rounded-none bg-wash shadow-sm"
+    :class="compact ? 'flex items-center gap-3 p-2.5 px-3' : 'p-4 flex flex-col gap-3'"
+  >
+    <div :class="compact ? 'flex-1 min-w-0 flex items-baseline gap-2.5' : 'flex flex-col gap-1'">
+      <strong class="text-ink" :class="compact ? 'shrink-0 text-[13px]' : 'text-sm font-semibold'">Copy-paste assembled</strong>
+      <p
+        class="text-muted"
+        :class="compact ? 'm-0 text-xs overflow-hidden text-ellipsis whitespace-nowrap' : 'm-0 text-xs whitespace-pre-wrap'"
+      >{{ text || '(empty — fill caption + CTA + tags)' }}</p>
     </div>
-    <button v-if="!compact" class="btn btn-primary" :disabled="!text" @click="copy">
+    <button
+      v-if="!compact"
+      class="w-full bg-ink text-surface border border-ink py-2 px-3 text-sm font-semibold cursor-pointer rounded-none transition-colors hover:bg-accent-hover hover:border-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+      :disabled="!text"
+      @click="copy"
+    >
       {{ copied ? 'Copied' : 'Copy for publishing' }}
     </button>
     <IconButton
@@ -45,35 +56,8 @@ onBeforeUnmount(() => window.clearTimeout(timer))
         <path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5" />
       </svg>
     </IconButton>
-    <p v-if="failed" class="autherr" role="alert">
+    <p v-if="failed" class="text-xs text-danger font-semibold mt-1" role="alert">
       Clipboard unavailable — select the text above and copy it manually.
     </p>
   </div>
 </template>
-
-<style scoped>
-.copybar-text { white-space: pre-wrap; }
-
-/* Compact strip: label + one-line preview on the left, copy icon on the right. */
-.copybar.compact {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-}
-.copybar.compact .copybar-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-.copybar.compact strong { flex: none; font-size: 13px; }
-.copybar.compact .copybar-text {
-  margin: 0;
-  font-size: 12.5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-</style>

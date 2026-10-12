@@ -4,10 +4,10 @@ defineProps<{ on?: boolean; title?: string }>()
 </script>
 
 <template>
-  <span class="p-dot" :class="{ on }" :title="title" aria-hidden="true" />
+  <span
+    class="inline-block w-2 h-2 rounded-full"
+    :class="on ? 'bg-ink' : 'bg-faint'"
+    :title="title"
+    aria-hidden="true"
+  />
 </template>
-
-<style scoped>
-.p-dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; background: var(--faint, #a3a3a3); }
-.p-dot.on { background: var(--ink, #000); }
-</style>

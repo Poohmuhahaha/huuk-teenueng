@@ -19,25 +19,26 @@ const current = computed(() => props.options.find((o) => o.value === model.value
 </script>
 
 <template>
-  <div ref="root" class="p-select" :class="[`s-${size}`, { open }]">
+  <div ref="root" class="relative w-full">
     <button
       type="button"
-      class="p-select-trigger"
+      class="flex items-center justify-between gap-2.5 w-full bg-surface border border-line text-ink font-sans cursor-pointer text-left transition-colors rounded-none focus-visible:outline-none focus-visible:border-ink disabled:opacity-50 disabled:cursor-not-allowed"
+      :class="size === 'sm' ? 'px-2.5 py-1.5 text-[13px]' : 'px-3 py-[9px] text-sm'"
       :disabled="disabled"
       :aria-expanded="open"
       aria-haspopup="listbox"
       @click="open = !open"
     >
-      <span class="p-select-value" :class="{ placeholder: !current }">{{ current ?? placeholder }}</span>
-      <span class="p-select-caret" aria-hidden="true">▾</span>
+      <span class="overflow-hidden text-ellipsis whitespace-nowrap" :class="{ 'text-faint': !current }">{{ current ?? placeholder }}</span>
+      <span class="text-muted text-[11px]" aria-hidden="true">▾</span>
     </button>
-    <div v-if="open" class="p-select-menu" role="listbox">
+    <div v-if="open" class="absolute z-[60] top-[calc(100%+4px)] left-0 right-0 bg-surface border border-ink max-h-[240px] overflow-y-auto p-1 shadow-md rounded-none" role="listbox">
       <button
         v-for="o in options"
         :key="o.value"
         type="button"
-        class="p-select-item"
-        :class="{ active: o.value === model }"
+        class="flex items-center justify-between w-full bg-transparent border-0 text-ink font-sans text-[13px] px-2.5 py-2 cursor-pointer text-left rounded-none hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed"
+        :class="{ 'font-bold bg-wash': o.value === model }"
         role="option"
         :aria-selected="o.value === model"
         :disabled="o.disabled"
@@ -49,57 +50,3 @@ const current = computed(() => props.options.find((o) => o.value === model.value
     </div>
   </div>
 </template>
-
-<style scoped>
-.p-select { position: relative; width: 100%; }
-.p-select-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  background: var(--paper, #fff);
-  border: 1px solid var(--line, #d9d9d9);
-  color: var(--ink, #000);
-  font: inherit;
-  font-size: 14px;
-  padding: 9px 12px;
-  cursor: pointer;
-  text-align: left;
-}
-.s-sm .p-select-trigger { padding: 6px 10px; font-size: 13px; }
-.p-select-trigger:focus-visible { outline: none; border-color: var(--ink, #000); }
-.p-select-trigger:disabled { opacity: 0.5; cursor: not-allowed; }
-.p-select-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.p-select-value.placeholder { color: var(--faint, #a3a3a3); }
-.p-select-caret { color: var(--muted, #6b6b6b); font-size: 11px; }
-.p-select-menu {
-  position: absolute;
-  z-index: 60;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  background: var(--paper, #fff);
-  border: 1px solid var(--ink, #000);
-  max-height: 240px;
-  overflow-y: auto;
-  padding: 4px;
-}
-.p-select-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  background: transparent;
-  border: 0;
-  color: var(--ink, #000);
-  font: inherit;
-  font-size: 13px;
-  padding: 8px 10px;
-  cursor: pointer;
-  text-align: left;
-}
-.p-select-item:hover { background: var(--wash, #f6f6f6); }
-.p-select-item.active { font-weight: 700; }
-.p-select-item:disabled { opacity: 0.4; cursor: not-allowed; }
-</style>

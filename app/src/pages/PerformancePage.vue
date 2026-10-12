@@ -70,19 +70,23 @@ const growth = computed(() => {
     <h1>Performance</h1>
 
     <div class="perf-grid">
-      <aside class="perf-side">
-        <MonthToggle v-model="month" />
-        <label class="lbl" for="perf-platform">Platform</label>
-        <select id="perf-platform" class="field" v-model="platform">
-          <option v-for="o in setup?.platforms ?? []" :key="o" :value="o">{{ o }}</option>
-        </select>
-        <button class="btn btn-primary" :disabled="!platform || imp.isPending.value || !canImport"
-          :title="canImport ? '' : t('auth.noPerm')"
-          @click="imp.mutate({ platform, month })">
-          {{ imp.isPending.value ? 'Importing…' : 'Import' }}
-        </button>
-        <p v-if="imp.data.value" class="muted">Imported {{ imp.data.value.imported }} metric row(s) for {{ platform }} · month {{ month }}.</p>
-        <p v-if="imp.error.value" class="muted">{{ imp.error.value instanceof Error ? imp.error.value.message : imp.error.value }}</p>
+      <aside class="perf-side flex flex-wrap items-center gap-3">
+        <div class="w-48 sm:w-56">
+          <MonthToggle v-model="month" />
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="sr-only" for="perf-platform">Platform</label>
+          <select id="perf-platform" class="field h-[44px] min-w-[140px] m-0" v-model="platform" aria-label="Platform">
+            <option v-for="o in setup?.platforms ?? []" :key="o" :value="o">{{ o }}</option>
+          </select>
+          <button class="btn btn-primary h-[44px] whitespace-nowrap px-5 flex-none" :disabled="!platform || imp.isPending.value || !canImport"
+            :title="canImport ? '' : t('auth.noPerm')"
+            @click="imp.mutate({ platform, month })">
+            {{ imp.isPending.value ? 'Importing…' : 'Import' }}
+          </button>
+        </div>
+        <span v-if="imp.data.value" class="text-xs text-muted">Imported {{ imp.data.value.imported }} metric row(s) for {{ platform }} · month {{ month }}.</span>
+        <span v-if="imp.error.value" class="text-xs text-danger">{{ imp.error.value instanceof Error ? imp.error.value.message : imp.error.value }}</span>
       </aside>
 
       <div class="perf-main">
