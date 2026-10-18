@@ -4,6 +4,7 @@
 
 **Open-Source Content Planning, Campaign Management & Multi-Platform Social Studio**
 
+[![Status: WIP](https://img.shields.io/badge/Status-Active%20Development%20(WIP)-f59e0b)](https://github.com/Poohmuhahaha/huuk-teenueng)
 [![CI/CD Pipeline](https://github.com/Poohmuhahaha/huuk-teenueng/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Poohmuhahaha/huuk-teenueng/actions/workflows/ci-cd.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Backend-Rust%20%7C%20Axum%200.8%20%7C%20SQLx%200.8-orange)](https://github.com/tokio-rs/axum)
@@ -16,6 +17,10 @@
 </p>
 
 </div>
+
+> [!WARNING]
+> **Project Status: Active Development (Work in Progress / Pre-Alpha)**
+> Huuk is currently under heavy active development and is **not yet feature-complete**. Core architecture, database schemas, API contracts, and UI workflows may change frequently before the first stable release (`v1.0.0`).
 
 ---
 
