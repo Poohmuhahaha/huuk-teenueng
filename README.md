@@ -12,10 +12,6 @@
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2016-336791)](https://www.postgresql.org)
 [![Caddy](https://img.shields.io/badge/Ingress-Caddy%202-1f883d)](https://caddyserver.com)
 
-<p align="center">
-  <img src="https://i.pinimg.com/1200x/5e/1c/4d/5e1c4d3cd83e7f0f439b41089c1cbe5c.jpg" alt="Huuk Banner" width="100%" />
-</p>
-
 </div>
 
 > [!WARNING]
