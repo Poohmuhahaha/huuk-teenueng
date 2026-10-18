@@ -1,121 +1,96 @@
-# Huuk by teenueng
+# Huuk
 
-Content planner — Vue 3 frontend + Rust backend.
+Production-grade content planning, campaign management, and multi-platform publishing workspace built on **Vue 3 + TanStack Query + Tailwind CSS + Zod** and **Rust (Axum + SQLx) + PostgreSQL 16** behind **Caddy 2**.
 
-<!-- portfolio -->
 <p align="center">
-  <img src="https://i.pinimg.com/1200x/5e/1c/4d/5e1c4d3cd83e7f0f439b41089c1cbe5c.jpg" />
+  <img src="https://i.pinimg.com/1200x/5e/1c/4d/5e1c4d3cd83e7f0f439b41089c1cbe5c.jpg" alt="Huuk Banner" />
 </p>
 
-| Part | Folder | What it is |
-|---|---|---|
-| dev | `app/` | Canonical frontend — Vue 3 + TanStack Query, client-ready design system (see `app/README.md`) |
-| dev | `server/` | Rust (Axum + SQLx) REST backend (see `server/README.md`) |
-| dev | `ops/` | Operations — `deploy/` (compose env, Caddy, systemd), `caddy/`, `scripts/` (dev, deploy, install, backup, restore, smoke), `docker-compose.yml` (see `ops/README.md`) |
-| data | `data/` | Runtime backend snapshot (`content-planner.json`, git-ignored — the live store, not source) |
-| backup | `backups/` | Timestamped snapshots (git-ignored, mode 600 — see `docs/DEPLOYMENT.md` § backups) |
-| other | `docs/` | Developer + operations docs, including `docs/DEPLOYMENT.md` |
+---
 
-Status: all 14 user stories (US-001…US-014) are implemented — 94 Rust tests + 188 frontend tests green,
-real email+password accounts (Argon2id, session tokens, rate-limited login, account revocation,
-self-service profile), configurable auth/permissions with an admin recovery token, full-screen
-social platform login pages, and a credential-optional OAuth 2.0 flow (Meta/Facebook/Instagram,
-Google/YouTube, TikTok wired; add credentials to go live).
+## Architecture & Engineering Standards
 
-**Built-in CMS with a client portal:** articles/pages/notes with a Markdown editor + live preview,
-autosave, revision history/restore, scheduled publishing, SEO fields and a public read-only
-delivery page (`/#/read/{slug}`). Clients get their own **Content Studio** (`/#/studio`) and a
-dedicated **Client** role; admins onboard them from Settings by creating a sign-in account
-(a temporary password is generated and shown once).
+Huuk follows the **Master Engineering SOP** for high-reliability web applications:
 
-Production hardening is in place: durable atomic JSON snapshots (`DATA_FILE`), env-driven
-configuration, restrictive-by-default CORS/security headers/body limits/request timeouts,
-graceful shutdown, health + readiness probes, structured audit logging, server-side validation,
-and collision-free ids. `ops/scripts/dev.sh` runs the explicit demo mode; deployments run in production mode
-(`DEMO_MODE` unset → auth required, demo accounts removed, registration closed, first Owner
-bootstrapped from `ADMIN_EMAIL`/`ADMIN_PASSWORD`). See `server/README.md` § Going to production.
+- **Same-Origin Reverse Proxy Topology (`deploy/Caddyfile`)**: Caddy terminates TLS, applies `zstd`/`gzip` compression and hardened security headers (`HSTS`, `CSP`, `X-Frame-Options`), serves Vite hashed assets as `immutable` (1 year) and `index.html` as `no-store`, and proxies `/api/*` with active `/healthz` health checks.
+- **Secure Cookie Auth + Single-Flight Refresh (`server/src/handlers.rs`, `app/src/api/client.ts`)**: `HttpOnly`, `Secure`, `SameSite=Lax` session cookies paired with a single-flight `401` refresh queue (`POST /api/auth/refresh`). Zero tokens stored in `localStorage` or `sessionStorage`.
+- **Zero-Downtime PostgreSQL Migrations (`server/migrations/`, `server/src/db.rs`)**: Expand-and-Contract schema migrations executed via a dedicated one-off `--run-migrations-only` container before backend rollout, backed by `PgPoolOptions` runtime session guardrails (`statement_timeout = 5000ms`, `lock_timeout = 3000ms`) and `mimalloc`.
+- **Contract-First End-to-End Type Safety (`ts-rs` + `Zod`)**: Rust DTOs in `server/src/model.rs` and `server/src/error.rs` export TypeScript definitions to `app/src/api/types/`, verified at compile time with `AssertEqual<ZodType, TsRsType>` and validated at runtime with Zod in `app/src/api/schemas/index.ts`.
+- **4-State TanStack Query UI & Semantic Design Tokens**: Every data view explicitly handles `isPending`, `isError` (with retry), `isEmpty`, and `data` using semantic Tailwind design tokens.
 
-## Run everything — one command
+---
 
-```sh
-bun run dev          # or: npm run dev / bash ops/scripts/dev.sh
+## Repository Structure
+
+```text
+huuk/
+├─ .github/workflows/ci-cd.yml   # Automated CI/CD verification pipeline
+├─ deploy/
+│  ├─ Caddyfile                  # Canonical production Caddy reverse proxy config
+│  ├─ docker-compose.dev.yml     # Local PostgreSQL 16 development database
+│  └─ docker-compose.prod.yml    # Production stack (Postgres, Migration, API, Caddy)
+├─ server/                       # Rust (Axum 0.8 + SQLx 0.8 + MiMalloc) backend
+│  ├─ Cargo.toml                 # Dependencies & Thin-LTO release profile
+│  ├─ Dockerfile                 # Multi-stage cargo-chef + musl + Alpine (non-root appuser)
+│  ├─ migrations/                # SQLx PostgreSQL migrations
+│  └─ src/
+│     ├─ main.rs                 # Entrypoint, --run-migrations-only flag, graceful shutdown
+│     ├─ db.rs                   # PgPool session guardrails & PostgreSQL persistence
+│     ├─ error.rs                # Unified ApiErrorResponse contract
+│     ├─ model.rs                # Domain & DTO structs with #[derive(TS)]
+│     ├─ handlers.rs             # Axum route handlers & HttpOnly cookie auth
+│     └─ store.rs                # Workspace, campaign, content, and schedule engine
+├─ app/                          # Vue 3 + TanStack Query + Tailwind CSS + Zod SPA
+│  ├─ tailwind.config.ts         # Semantic design tokens
+│  ├─ vite.config.ts             # Vendor chunk splitting & build optimization
+│  └─ src/
+│     ├─ api/
+│     │  ├─ client.ts            # customFetch with single-flight 401 refresh queue
+│     │  ├─ types/               # Auto-generated by ts-rs via `cargo test`
+│     │  └─ schemas/             # Zod schemas + AssertEqual<Zod, TsRs> gates
+│     ├─ components/             # UI & domain components
+│     ├─ pages/                  # Route-level 4-state views
+│     └─ tests/                  # Vitest unit & integration test suite
+├─ ops/                          # Operational scripts (dev, deploy, backup, restore, smoke)
+├─ CONTRIBUTING.md
+├─ SECURITY.md
+├─ LICENSE                       # MIT License
+└─ justfile                      # Unified command runner (`just verify`, `just gen-types`)
 ```
 
-That builds/starts the Rust backend on `:8787` in demo mode, waits for its health check, then
-starts the Vue dev server (using **bun** when available, npm otherwise) with `VITE_API_URL` wired
-to it. **Ctrl+C stops both** and the backend flushes its snapshot before exiting.
+---
 
-Production — no Docker needed (the binary serves the API **and** the frontend):
+## Quick Start
 
-```sh
-sudo ops/scripts/install.sh     # build + install + systemd service, generated admin secrets
-# → http://localhost:8787, config in /etc/content-planner.env
-ops/scripts/install.sh --help   # port, prefix, public host, updates, …
+### Local Development
+
+```bash
+# Install frontend dependencies
+cd app && bun install && cd ..
+
+# Run backend (:8787) + frontend (:5173) in demo mode
+bun run dev
 ```
 
-Production — Docker Compose (API + web + optional Caddy TLS):
+### Verification & Production Build
 
-```sh
-ops/scripts/deploy.sh init      # create ops/deploy/.env.production with generated admin secrets
-ops/scripts/deploy.sh up        # http://localhost:8080
-ops/scripts/deploy.sh up --tls  # Caddy on 80/443 with automatic HTTPS
-ops/scripts/deploy.sh smoke     # verify the running deployment
+```bash
+just verify       # Run cargo fmt, clippy (-D warnings), cargo test, ts-rs check, vue-tsc, vitest, and vite build
+just gen-types    # Export TypeScript bindings from Rust DTOs via ts-rs
 ```
 
-Full guide (all paths incl. Podman, env reference, client onboarding, backups/restore, updates,
-staging rehearsal, troubleshooting): **`docs/DEPLOYMENT.md`**.
+### Production Deployment (Docker Compose)
 
-```sh
-bun run dev:mock     # frontend only, in-memory mock data (no backend)
-bun run dev:server   # backend only
-bun run app          # frontend only (mock), e.g. for UI work
-bun run server       # backend only via cargo
-bun run test         # Rust tests (94) + frontend tests (188)
-bun run build        # release backend + production frontend build
+```bash
+docker compose -f deploy/docker-compose.prod.yml run --rm migration
+docker compose -f deploy/docker-compose.prod.yml up -d --build
 ```
 
-First-time frontend install (bun or npm — either works):
+---
 
-```sh
-cd app && bun install       # or: npm install
-```
+## Security
 
-Ports: backend `8787` (override with `PORT=… npm run dev`), frontend default Vite port
-(5173, auto-increments if busy).
-
-## Requirements
-
-- **Bun** (preferred) or Node 20+ with npm
-- Rust 1.75+ with cargo (only for `server/` or the full `run dev`; `run dev:mock` needs no Rust)
-
-## How the two sides connect
-
-`app/src/api/index.ts` picks the data source: unset `VITE_API_URL` → in-memory mock
-(`app/src/mock/api.ts`); set → HTTP client (`app/src/api/http.ts`) → the Rust API. Both implement
-the same functions, so pages never change. `ops/scripts/dev.sh` sets the var for you.
-
-```sh
-# manual alternative
-cd server && cargo run
-cd app && echo 'VITE_API_URL=http://localhost:8787' > .env.local && bun run dev  # or npm run dev
-```
-
-## More documentation
-
-- `docs/DEPLOYMENT.md` — production deployment (Docker Compose, TLS, backups, smoke tests)
-- `docs/00_STATUS.md` … `docs/06_Business.md` — maintenance docs; `docs/07_Plan.*` — delivery plan
-- `docs/ARCHITECTURE.md` — deck navigation, full-page animation, layout system, platform connections
-- `docs/COMPONENTS.md` — component/page reference
-- `docs/GUIDES.md` — how-tos + gotchas (read this before changing animation or tables)
-- `docs/CHANGELOG.md` — frontend build history
-- `docs/prompts/` — all `.prompt.md` sources (git-ignored, kept locally)
-- `app/README.md` — frontend: design system, structure, run instructions
-- `server/README.md` — API reference, data model, validation, production path
-- `app/CODEMAP.md` — suggested code-reading order
-
-Research heavies (`.pdf` / `.typ` / `.prompt.md`) are git-ignored build/sources —
-kept in your working copy, regenerated from the `.md` files (e.g.
-`typst compile --root . docs/07_Plan.typ docs/07_Plan.pdf`).
+To report a security vulnerability, please follow our [SECURITY.md](SECURITY.md) responsible-disclosure process.
 
 ## License
 

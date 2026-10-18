@@ -4,8 +4,7 @@ node_modules/
 server/target/
 dist/
 **/dist/
-**/.vitepress/cache/
-**/.vitepress/dist/
+cms/
 
 # python artifacts
 __pycache__/
