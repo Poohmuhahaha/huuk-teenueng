@@ -8,15 +8,20 @@ import {
 } from '@/core/queries'
 import type { Campaign, CampaignMetric, CampaignStatus } from '@/mock/db'
 import DatePickerPopup from '@/components/ui/DatePickerPopup.vue'
+import TableFrame from '@/components/tables/TableFrame.vue'
 import InfoTip from '@/components/ui/InfoTip.vue'
+import MonthToggle from '@/components/ui/MonthToggle.vue'
+import DockBar from '@/components/ui/DockBar.vue'
+import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import Drawer from '@/components/overlays/Drawer.vue'
+import { activeMonth, activeYear } from '@/core/navdate'
 import { deckFull } from '@/core/deck'
 import { useWidePane } from '@/composables/useWidePane'
 import { t } from '@/core/i18n'
 
 const route = useRoute()
 const router = useRouter()
-const { data: campaigns, isPending } = useCampaigns()
+const { data: campaigns, isPending, isError, error: loadError, refetch } = useCampaigns()
 const { data: setup } = useSetup()
 const { data: contentRows } = useContentList({})
 const create = useCreateCampaign()
@@ -26,6 +31,60 @@ const { can } = usePermission()
 
 const canWrite = computed(() => can('campaigns.write'))
 const canDelete = computed(() => can('campaigns.delete'))
+
+// Month filter: the deck works on one (year, month), so campaigns follow the
+// shared values like the planner does. Dateless campaigns always show; dated
+// ones show when the selected year-month falls inside their window.
+const month = ref<number>(activeMonth.value)
+watch(month, (value) => { activeMonth.value = value })
+watch(activeMonth, (value) => { if (value !== month.value) month.value = value })
+const year = ref<number>(activeYear.value)
+watch(year, (value) => { activeYear.value = value })
+watch(activeYear, (value) => { if (value !== year.value) year.value = value })
+
+function setMonth(value: number): void { month.value = value }
+function setYear(value: number): void { year.value = value }
+
+function monthOf(d: string | null): number | null {
+  const m = /^\d{4}-(\d{2})-\d{2}/.exec(d ?? '')
+  const n = m ? Number(m[1]) : NaN
+  return n >= 1 && n <= 12 ? n : null
+}
+
+function yearOf(d: string | null): number | null {
+  const m = /^(\d{4})-\d{2}-\d{2}/.exec(d ?? '')
+  const n = m ? Number(m[1]) : NaN
+  return n >= 1970 && n <= 9999 ? n : null
+}
+
+function covers(m: number, s: number, e: number): boolean {
+  let cur = s
+  for (let i = 0; i < 12; i++) {
+    if (cur === m) return true
+    if (cur === e) return false
+    cur = (cur % 12) + 1
+  }
+  return false
+}
+
+const visible = computed(() => (campaigns.value ?? []).filter((c) => {
+  const s = monthOf(c.startDate)
+  const e = monthOf(c.endDate)
+  if (s === null && e === null) return true
+  const a = s ?? e
+  const b = e ?? s
+  if (a === null || b === null) return true
+  // Year-bounded windows compare absolute month indexes; a window with no
+  // usable years (or running backwards) keeps the legacy month-only check.
+  const sy = yearOf(c.startDate)
+  const ey = yearOf(c.endDate)
+  if (sy !== null && ey !== null) {
+    const start = sy * 12 + a
+    const end = ey * 12 + b
+    if (start <= end) return sy * 12 + a <= year.value * 12 + month.value && year.value * 12 + month.value <= end
+  }
+  return covers(month.value, a, b)
+}))
 
 const root = ref<HTMLElement | null>(null)
 const { wide } = useWidePane(root, 'camp-scroll')
@@ -175,28 +234,36 @@ async function destroy(): Promise<void> {
     <h1>{{ t('campaign.title') }}<InfoTip :text="t('campaign.hint')" /></h1>
 
     <div class="camp-grid">
-      <aside class="camp-side">
-        <span v-if="saved" class="muted">{{ t('campaign.saved') }}</span>
-        <span v-if="error" class="autherr" role="alert">{{ error }}</span>
+      <DockBar label="Campaign controls">
+        <MonthToggle :model-value="month" :year="year" @update:model-value="setMonth" @update:year="setYear" />
+        <span class="dock-sep" aria-hidden="true" />
         <button class="btn btn-primary btn-icon" :disabled="!canWrite || create.isPending.value"
           :title="t('campaign.new')" aria-label="New campaign" @click="newCampaign">{{ create.isPending.value ? '…' : '+' }}</button>
-      </aside>
+      </DockBar>
 
       <div class="camp-main camp-list">
-      <div v-if="isPending" class="muted">{{ t('common.loading') }}</div>
-      <button v-for="c in campaigns" v-else :key="c.id" type="button" class="camp-item"
-        :class="{ active: c.id === selectedId }" @click="select(c.id)">
-        <span class="camp-item-head">
-          <strong>{{ c.name }}</strong>
-          <span class="camp-status" :class="c.status">{{ statusLabel(c.status) }}</span>
-        </span>
-        <span class="muted">{{ c.startDate || '—' }} → {{ c.endDate || '—' }}</span>
-        <span class="muted">
-          {{ c.contentIds.length }} {{ t('campaign.linked') }} ·
-          {{ c.budget ? `฿${c.budget.toLocaleString()}` : t('campaign.noBudget') }}
-        </span>
-      </button>
-      <p v-if="campaigns && !campaigns.length" class="muted">{{ t('campaign.empty') }}</p>
+        <span v-if="saved" class="muted">{{ t('campaign.saved') }}</span>
+        <span v-if="error" class="autherr" role="alert">{{ error }}</span>
+        <div v-if="isPending" class="muted">{{ t('common.loading') }}</div>
+        <div v-else-if="isError" class="card" role="alert">
+          <p class="muted">{{ loadError?.message }}</p>
+          <button type="button" class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
+        </div>
+        <p v-else-if="!visible || visible.length === 0" class="muted">{{ t('campaign.empty') }}</p>
+        <template v-else>
+          <button v-for="c in visible" :key="c.id" type="button" class="camp-item"
+            :class="{ active: c.id === selectedId }" @click="select(c.id)">
+            <span class="camp-item-head">
+              <strong>{{ c.name }}</strong>
+              <span class="camp-status" :class="c.status">{{ statusLabel(c.status) }}</span>
+            </span>
+            <span class="muted">{{ c.startDate || '—' }} → {{ c.endDate || '—' }}</span>
+            <span class="muted">
+              {{ c.contentIds.length }} {{ t('campaign.linked') }} ·
+              {{ c.budget ? `฿${c.budget.toLocaleString()}` : t('campaign.noBudget') }}
+            </span>
+          </button>
+        </template>
       </div>
 
       <div v-if="(deckFull || wide) && !editorOpen" class="camp-detail">
@@ -239,8 +306,9 @@ async function destroy(): Promise<void> {
         <div>
           <label class="lbl">{{ t('campaign.platforms') }}</label>
           <div class="chiprow">
-            <button v-for="p in setup?.platforms ?? []" :key="p" type="button" class="chipbtn"
+            <button v-for="p in setup?.platforms ?? []" :key="p" type="button" class="chipbtn inline-flex items-center gap-1.5"
               :class="{ on: draft.platforms.includes(p) }" :disabled="!canWrite" @click="toggleIn('platforms', p)">
+              <PlatformLogo :name="p" :size="13" />
               {{ p }}
             </button>
           </div>
@@ -286,20 +354,18 @@ async function destroy(): Promise<void> {
       <textarea id="camp-notes" class="field" rows="3" v-model="draft.notes" :disabled="!canWrite"></textarea>
 
       <h3>{{ t('campaign.schedule') }}<InfoTip :text="t('campaign.scheduleHint')" /></h3>
-      <div v-if="schedule.length" class="tblwrap">
-        <table class="tbl">
-          <thead>
-            <tr><th>{{ t('campaign.content') }}</th><th>{{ t('campaign.date') }}</th><th>{{ t('campaign.status') }}</th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="c in schedule" :key="c.id" style="cursor: default;">
-              <td>{{ c.title }}</td>
-              <td>{{ contentDate(c) }}</td>
-              <td>{{ c.status }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <TableFrame v-if="schedule.length">
+        <thead>
+          <tr><th>{{ t('campaign.content') }}</th><th>{{ t('campaign.date') }}</th><th>{{ t('campaign.status') }}</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="c in schedule" :key="c.id" style="cursor: default;">
+            <td>{{ c.title }}</td>
+            <td>{{ contentDate(c) }}</td>
+            <td>{{ c.status }}</td>
+          </tr>
+        </tbody>
+      </TableFrame>
       <p v-else class="muted">{{ t('campaign.noContent') }}</p>
 
       <h3>{{ t('campaign.linkContent') }}</h3>

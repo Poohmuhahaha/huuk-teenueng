@@ -1,0 +1,136 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+env:
+  CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: "true"
+
+jobs:
+  lint-and-typecheck:
+    name: Stage 1 - Lint & Type Contract Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Check Rust Formatting
+        working-directory: ./server
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy (Zero Warnings Allowed)
+        working-directory: ./server
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Verify TypeScript Contract Sync (ts-rs)
+        run: |
+          cd server && cargo test --lib export_bindings
+          git diff --exit-code app/src/api/types/
+
+      - name: Install Frontend Dependencies
+        working-directory: ./app
+        run: bun install --frozen-lockfile
+
+      - name: Frontend Typecheck (vue-tsc)
+        working-directory: ./app
+        run: bun run typecheck
+
+  test:
+    name: Stage 2 - Automated Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Run Rust Integration Tests
+        working-directory: ./server
+        env:
+          DATABASE_URL: postgres://test_user:test_password@localhost:5432/test_db
+          SQLX_OFFLINE: "false"
+        run: cargo test
+
+      - name: Install Frontend Dependencies
+        working-directory: ./app
+        run: bun install --frozen-lockfile
+
+      - name: Run Frontend Unit Tests
+        working-directory: ./app
+        run: bun run test
+
+  build:
+    name: Stage 3 - Build Production Artifacts
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build Frontend SPA
+        working-directory: ./app
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Upload Frontend Dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: app/dist
+
+  deploy:
+    name: Stage 4 - Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Ready for Deployment
+        run: echo "All verification stages passed. Ready for production deployment."

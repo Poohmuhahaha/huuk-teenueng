@@ -400,9 +400,9 @@ function formatStamp(stamp: string): string {
   <div v-if="itemQ.isPending.value" class="muted">{{ t('studio.loading') }}</div>
   <div v-else-if="itemQ.isError.value" class="py-2 grid gap-2 justify-items-center in-[.deck.full]:justify-items-start">
     <p class="muted">{{ itemQ.error.value?.message }}</p>
-    <button class="btn" @click="() => itemQ.refetch()">{{ t('common.tryAgain') }}</button>
+    <button class="btn w-auto" @click="() => itemQ.refetch()">{{ t('common.tryAgain') }}</button>
   </div>
-  <div v-else-if="content && draft" class="grid gap-1.5 in-[.deck.full]:gap-4">
+  <div v-else-if="content && draft" class="grid gap-3 in-[.deck.full]:gap-4">
     <header class="flex gap-2.5 items-center in-[.deck.full]:flex-wrap">
       <input v-model="draft.title" class="field text-lg font-bold flex-1" :disabled="!canEdit"
         :aria-label="t('studio.field.title')" :placeholder="t('studio.untitled')" />
@@ -417,70 +417,75 @@ function formatStamp(stamp: string): string {
       </div>
     </header>
 
-    <div class="flex flex-wrap gap-1.5 items-center justify-center in-[.deck.full]:justify-start [&_.btn]:py-2 [&_.btn]:px-3.5 [&_.btn]:text-xs [&_.btn]:w-auto">
-      <button class="btn btn-primary" :disabled="!canEdit || saving || !dirty || conflict" @click="save()">
-        {{ t('studio.saveDraft') }}
-      </button>
-      <template v-if="canPublish">
-        <div class="relative">
-          <button class="btn" :disabled="!canEdit" :aria-expanded="publishOpen" @click="publishOpen = !publishOpen">
-            {{ status === 'published' ? '✓ ' : '' }}{{ t('studio.publish') }} ▾
-          </button>
-          <div v-if="publishOpen" class="absolute z-30 top-[calc(100%+6px)] left-0 bg-surface border border-faint rounded-[var(--radius,10px)] p-2 min-w-[240px] grid gap-1 shadow-lg [&_.menubtn]:text-left" role="dialog" :aria-label="t('studio.publish')">
-            <button class="menubtn" :disabled="status === 'published'" @click="publishNow">{{ t('studio.publishNow') }}</button>
-            <label class="lbl" for="studio-schedule" style="margin: 6px 0 0;">{{ t('studio.scheduleFor') }}</label>
-            <input id="studio-schedule" class="field" type="datetime-local" v-model="scheduleLocal" />
-            <button class="menubtn" :disabled="!scheduleLocal" @click="schedulePublish">{{ t('studio.schedule') }}</button>
-            <button v-if="status === 'published' || status === 'scheduled'" class="menubtn" @click="unpublishNow">
-              {{ t('studio.unpublish') }}
+    <div class="sticky top-[-16px] z-10 -mx-4 px-4 py-2 bg-surface border-b border-line grid gap-2">
+      <div class="flex flex-wrap gap-2 items-center">
+        <button class="btn btn-primary w-auto" :disabled="!canEdit || saving || !dirty || conflict" @click="save()">
+          {{ t('studio.saveDraft') }}
+        </button>
+        <template v-if="canPublish">
+          <div class="relative publish-wrap">
+            <button class="btn w-auto" :disabled="!canEdit" :aria-expanded="publishOpen" @click="publishOpen = !publishOpen">
+              {{ status === 'published' ? '✓ ' : '' }}{{ t('studio.publish') }} ▾
             </button>
+            <div v-if="publishOpen" class="absolute z-30 top-[calc(100%+6px)] left-0 bg-surface border border-faint rounded-none p-2 min-w-[240px] grid gap-1 shadow-none [&_.menubtn]:text-left" role="dialog" :aria-label="t('studio.publish')">
+              <button class="menubtn" :disabled="status === 'published'" @click="publishNow">{{ t('studio.publishNow') }}</button>
+              <label class="lbl" for="studio-schedule" style="margin: 6px 0 0;">{{ t('studio.scheduleFor') }}</label>
+              <input id="studio-schedule" class="field" type="datetime-local" v-model="scheduleLocal" />
+              <button class="menubtn" :disabled="!scheduleLocal" @click="schedulePublish">{{ t('studio.schedule') }}</button>
+              <button v-if="status === 'published' || status === 'scheduled'" class="menubtn" @click="unpublishNow">
+                {{ t('studio.unpublish') }}
+              </button>
+            </div>
           </div>
+        </template>
+        <template v-else-if="canWrite">
+          <button v-if="status === 'draft'" class="btn w-auto" :disabled="!canEdit" @click="setStatus('review')">
+            {{ t('studio.submitReview') }}
+          </button>
+          <button v-else-if="status === 'review'" class="btn w-auto" :disabled="!canEdit" @click="setStatus('draft')">
+            {{ t('studio.backToDraft') }}
+          </button>
+        </template>
+        <span class="flex-1" />
+        <div class="flex gap-1" role="tablist" :aria-label="t('studio.view')">
+          <button class="tab" :class="{ active: mode === 'edit' }" role="tab" :aria-selected="mode === 'edit'"
+            @click="mode = 'edit'">{{ t('studio.view.edit') }}</button>
+          <button class="tab" :class="{ active: mode === 'split' }" role="tab" :aria-selected="mode === 'split'"
+            @click="mode = 'split'">{{ t('studio.view.split') }}</button>
+          <button class="tab" :class="{ active: mode === 'preview' }" role="tab" :aria-selected="mode === 'preview'"
+            @click="mode = 'preview'">{{ t('studio.view.preview') }}</button>
         </div>
-      </template>
-      <template v-else-if="canWrite">
-        <button v-if="status === 'draft'" class="btn" :disabled="!canEdit" @click="setStatus('review')">
-          {{ t('studio.submitReview') }}
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <button class="btn w-auto" :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')" @click="duplicateContent">
+          {{ t('studio.duplicate') }}
         </button>
-        <button v-else-if="status === 'review'" class="btn" :disabled="!canEdit" @click="setStatus('draft')">
-          {{ t('studio.backToDraft') }}
+        <button class="btn w-auto" @click="revisionsOpen = !revisionsOpen">
+          {{ t('studio.revisions') }} ({{ content.revisions.length }})
         </button>
-      </template>
-      <button class="btn" :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')" @click="duplicateContent">
-        {{ t('studio.duplicate') }}
-      </button>
-      <button class="btn" @click="revisionsOpen = !revisionsOpen">
-        {{ t('studio.revisions') }} ({{ content.revisions.length }})
-      </button>
-      <button v-if="status === 'archived' && canWrite" class="btn" @click="setStatus('draft')">
-        {{ t('studio.restoreDraft') }}
-      </button>
-      <button v-else-if="canWrite" class="btn" @click="setStatus('archived')">{{ t('studio.archive') }}</button>
-      <button v-if="canDelete" class="btn" @click="removeContent">{{ t('studio.delete') }}</button>
-      <span class="flex-1" />
-      <div class="flex gap-1" role="tablist" :aria-label="t('studio.view')">
-        <button class="tab" :class="{ active: mode === 'edit' }" role="tab" :aria-selected="mode === 'edit'"
-          @click="mode = 'edit'">{{ t('studio.view.edit') }}</button>
-        <button class="tab" :class="{ active: mode === 'split' }" role="tab" :aria-selected="mode === 'split'"
-          @click="mode = 'split'">{{ t('studio.view.split') }}</button>
-        <button class="tab" :class="{ active: mode === 'preview' }" role="tab" :aria-selected="mode === 'preview'"
-          @click="mode = 'preview'">{{ t('studio.view.preview') }}</button>
+        <button v-if="status === 'archived' && canWrite" class="btn w-auto" @click="setStatus('draft')">
+          {{ t('studio.restoreDraft') }}
+        </button>
+        <button v-else-if="canWrite" class="btn w-auto" @click="setStatus('archived')">{{ t('studio.archive') }}</button>
+        <span class="flex-1" />
+        <button v-if="canDelete" class="btn w-auto" @click="removeContent">{{ t('studio.delete') }}</button>
       </div>
     </div>
 
-    <div v-if="conflict" class="flex flex-wrap gap-2 items-center border border-warning bg-warning-wash rounded-md py-2 px-2.5" role="alert">
+    <div v-if="conflict" class="flex flex-wrap gap-2 items-center border border-warning bg-warning-wash rounded-none py-2 px-2.5" role="alert">
       <strong>{{ t('studio.conflict') }}</strong>
       <span class="muted">{{ t('studio.conflictHint') }}</span>
-      <button class="btn" @click="reloadLatest">{{ t('studio.reloadLatest') }}</button>
-      <button class="btn btn-primary" @click="keepMine">{{ t('studio.keepMine') }}</button>
+      <button class="btn w-auto" @click="reloadLatest">{{ t('studio.reloadLatest') }}</button>
+      <button class="btn btn-primary w-auto" @click="keepMine">{{ t('studio.keepMine') }}</button>
     </div>
     <p v-if="saveError" class="autherr" role="alert">{{ saveError }}</p>
     <p v-if="notice" class="muted" role="status">{{ notice }}</p>
 
-    <div v-if="status === 'published' && publishedUrl" class="flex gap-2 items-center flex-wrap bg-wash py-2.5 px-3 rounded-md">
+    <div v-if="status === 'published' && publishedUrl" class="flex gap-2 items-center flex-wrap bg-wash py-2.5 px-3 rounded-none">
       <strong>{{ t('studio.live') }}</strong>
       <code class="text-xs [overflow-wrap:anywhere]">{{ publishedUrl }}</code>
-      <button class="btn" @click="copyLink">{{ copied ? t('studio.copied') : t('studio.copyLink') }}</button>
-      <RouterLink class="btn" :to="`/read/${content.slug}`" target="_blank">{{ t('studio.openLive') }}</RouterLink>
+      <button class="btn w-auto" @click="copyLink">{{ copied ? t('studio.copied') : t('studio.copyLink') }}</button>
+      <RouterLink class="btn w-auto" :to="`/read/${content.slug}`" target="_blank">{{ t('studio.openLive') }}</RouterLink>
     </div>
 
     <div class="grid gap-2 items-start in-[.deck.full]:gap-4" :class="mode === 'split' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'">
@@ -503,7 +508,7 @@ function formatStamp(stamp: string): string {
         <label class="lbl" for="studio-excerpt">{{ t('studio.field.excerpt') }}</label>
         <input id="studio-excerpt" v-model="draft.excerpt" class="field" :disabled="!canEdit" maxlength="500" />
 
-        <div class="flex gap-1 items-center justify-center in-[.deck.full]:justify-start my-2 mb-1.5" role="toolbar" :aria-label="t('studio.field.body')">
+        <div class="flex flex-wrap gap-1 items-center justify-center in-[.deck.full]:justify-start my-2 mb-1.5" role="toolbar" :aria-label="t('studio.field.body')">
           <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.bold')"
             @click="wrapSelection('**', '**', t('studio.tool.text'))"><strong>B</strong></button>
           <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.italic')"
@@ -519,15 +524,15 @@ function formatStamp(stamp: string): string {
           <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.code')"
             @click="wrapSelection('`', '`', 'code')">&lt;/&gt;</button>
           <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.link')"
-            @click="openLink">🔗</button>
+            @click="openLink"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6.5 9.5a3 3 0 0 0 4.2 0l2-2a3 3 0 0 0-4.2-4.2l-1 1" /><path d="M9.5 6.5a3 3 0 0 0-4.2 0l-2 2a3 3 0 0 0 4.2 4.2l1-1" /></svg></button>
           <span class="muted text-xs">
             {{ wordCount }} {{ t('studio.words') }} · {{ readingMinutes }} {{ t('studio.minRead') }}
           </span>
         </div>
         <div v-if="linkOpen" class="flex gap-1.5 items-center my-0 mb-1.5 [&_.field]:flex-1 [&_.field]:min-w-0">
           <input v-model="linkDraft" class="field" :aria-label="t('studio.linkPrompt')" placeholder="https://" @keydown.enter.prevent="confirmLink" @keydown.esc.prevent="cancelLink" />
-          <button type="button" class="btn" :disabled="!linkDraft.trim()" @click="confirmLink">{{ t('common.add') }}</button>
-          <button type="button" class="btn" @click="cancelLink">{{ t('common.cancel') }}</button>
+          <button type="button" class="btn w-auto" :disabled="!linkDraft.trim()" @click="confirmLink">{{ t('common.add') }}</button>
+          <button type="button" class="btn w-auto" @click="cancelLink">{{ t('common.cancel') }}</button>
         </div>
         <textarea id="studio-body" ref="bodyEl" v-model="draft.body" class="field font-mono text-sm leading-relaxed"
           :disabled="!canEdit" rows="7" :aria-label="t('studio.field.body')" />
@@ -580,7 +585,7 @@ function formatStamp(stamp: string): string {
     <aside v-if="revisionsOpen" class="fixed top-0 right-0 bottom-0 w-[min(420px,92vw)] z-60 bg-surface border-l border-faint p-3.5 overflow-y-auto shadow-lg" role="dialog" :aria-label="t('studio.revisions')" @keydown.esc="revisionsOpen = false; revisionPreview = null">
       <div class="flex justify-between items-center mb-2">
         <strong>{{ t('studio.revisions') }}</strong>
-        <button ref="revisionsCloseBtn" class="btn" @click="revisionsOpen = false; revisionPreview = null">{{ t('common.close') }}</button>
+        <button ref="revisionsCloseBtn" class="btn w-auto" @click="revisionsOpen = false; revisionPreview = null">{{ t('common.close') }}</button>
       </div>
       <div v-if="revisionsQ.isPending.value" class="muted">{{ t('common.loading') }}</div>
       <p v-else-if="!revisions.length" class="muted">{{ t('studio.noRevisions') }}</p>
@@ -604,6 +609,6 @@ function formatStamp(stamp: string): string {
   </div>
   <div v-else class="py-2 grid gap-2 justify-items-center in-[.deck.full]:justify-items-start">
     <p class="muted">Content not found</p>
-    <RouterLink class="btn" to="/studio">{{ t('studio.title') }}</RouterLink>
+    <RouterLink class="btn w-auto" to="/studio">{{ t('studio.title') }}</RouterLink>
   </div>
 </template>

@@ -1,31 +1,24 @@
 // @vitest-environment happy-dom
-// The navbar workspace switcher: list, switch, rename, create.
+// The workspace switcher (Settings workspace tab): list, switch, rename, create.
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import AppShell from '@/components/layout/AppShell.vue'
+import WorkspaceSwitcher from '@/components/settings/WorkspaceSwitcher.vue'
+import SettingsPage from '@/pages/SettingsPage.vue'
 import { activeWorkspaceId, setActiveWorkspace } from '@/core/workspace'
 import { workspaces as dbWorkspaces } from '@/mock/db'
+import { login, logout } from '@/core/auth'
 
-function mountShell() {
+function mountSwitcher() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
-      { path: '/', component: { template: '<div />' } },
-      { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
-    ],
-  })
-  return mount(AppShell, {
-    global: { plugins: [router, [VueQueryPlugin, { queryClient: qc }]] },
-    slots: { default: '<div />' },
+  return mount(WorkspaceSwitcher, {
+    global: { plugins: [[VueQueryPlugin, { queryClient: qc }]] },
   })
 }
 
-async function openMenu(w: ReturnType<typeof mountShell>) {
-  // The switcher lives in the avatar toggle, next to the connect section.
-  await w.find('.avatar').trigger('click')
+async function openMenu(w: ReturnType<typeof mountSwitcher>) {
+  // The switcher lives on the Settings workspace tab.
   await vi.waitFor(() => {
     expect(w.find('.ws-trigger').exists()).toBe(true)
     expect(w.find('.ws-trigger').text()).toContain('workspace')
@@ -47,7 +40,7 @@ beforeEach(() => {
 
 describe('workspace switcher', () => {
   it('lists workspaces and marks the active one', async () => {
-    const w = mountShell()
+    const w = mountSwitcher()
     await openMenu(w)
 
     const items = w.findAll('.ws-item')
@@ -59,7 +52,7 @@ describe('workspace switcher', () => {
   })
 
   it('renames the active workspace from the menu', async () => {
-    const w = mountShell()
+    const w = mountSwitcher()
     await openMenu(w)
 
     await w.findAll('.ws-actions .menubtn')[0].trigger('click')
@@ -78,7 +71,7 @@ describe('workspace switcher', () => {
   })
 
   it('creates a workspace and makes it active', async () => {
-    const w = mountShell()
+    const w = mountSwitcher()
     await openMenu(w)
 
     await w.find('.ws-form .field').setValue('Client B')
@@ -96,7 +89,7 @@ describe('workspace switcher', () => {
   })
 
   it('switches back to another workspace', async () => {
-    const w = mountShell()
+    const w = mountSwitcher()
     await openMenu(w)
 
     await w.find('.ws-form .field').setValue('Client B')
@@ -118,5 +111,29 @@ describe('workspace switcher', () => {
     }, { timeout: 5000 })
 
     w.unmount()
+  })
+})
+
+describe('settings workspace tab', () => {
+  it('hosts the switcher, profile and account actions (ex avatar popup)', async () => {
+    await login('owner@studio.local', 'demo1234')
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/settings', component: SettingsPage }],
+    })
+    await router.push({ path: '/settings', query: { tab: 'workspace' } })
+    const w = mount(SettingsPage, {
+      global: { plugins: [router, [VueQueryPlugin, { queryClient: qc }]] },
+    })
+    try {
+      await vi.waitFor(() => {
+        expect(w.find('.ws-trigger').exists()).toBe(true)
+        expect(w.find('#profile-name').exists()).toBe(true)
+      }, { timeout: 8000 })
+    } finally {
+      w.unmount()
+      await logout().catch(() => undefined)
+    }
   })
 })

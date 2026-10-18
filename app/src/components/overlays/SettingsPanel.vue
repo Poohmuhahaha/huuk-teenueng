@@ -11,6 +11,7 @@ import type { OptionList } from '@/api/contract'
 import { PERMISSIONS } from '@/mock/db'
 import type { Permission, Role } from '@/mock/db'
 import Chip from '@/components/ui/Chip.vue'
+import TableFrame from '@/components/tables/TableFrame.vue'
 
 const { data: setup, isPending } = useSetup()
 const saveSetup = useSaveSetup()
@@ -427,32 +428,30 @@ const setupError = computed(() => {
         {{ t('auth.require') }}
       </label>
       <h3>{{ t('auth.roles') }}</h3>
-      <div class="tblwrap">
-        <table class="tbl">
-          <thead>
-            <tr>
-              <th scope="col">{{ t('auth.perms') }}</th>
-              <th scope="col" v-for="r in roleDraft" :key="r.name">
-                {{ r.name }}
-                <button class="btn" style="margin-left: 6px;"
-                  :disabled="!canManage || roleDraft.length <= 1 || roleInUse(r.name) || removeRole.isPending.value"
-                  :title="canManage ? (roleInUse(r.name) ? 'Role is in use' : '') : t('auth.noPerm')"
-                  :aria-label="`Remove role ${r.name}`" @click="confirmRemove(`role:${r.name}`, () => removeRl(r.name))">{{ confirmId === `role:${r.name}` ? 'Confirm?' : '×' }}</button>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="perm in PERMISSIONS" :key="perm" style="cursor: default;">
-              <td class="muted">{{ perm }}</td>
-              <td v-for="(r, i) in roleDraft" :key="r.name">
-                <input type="checkbox" :checked="r.permissions.includes(perm)" :disabled="!canManage"
-                  :aria-label="`${r.name}: ${perm}`" :title="canManage ? '' : t('auth.noPerm')"
-                  @change="togglePerm(i, perm, ($event.target as HTMLInputElement).checked)" />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <TableFrame>
+        <thead>
+          <tr>
+            <th scope="col">{{ t('auth.perms') }}</th>
+            <th scope="col" v-for="r in roleDraft" :key="r.name">
+              {{ r.name }}
+              <button class="btn" style="margin-left: 6px;"
+                :disabled="!canManage || roleDraft.length <= 1 || roleInUse(r.name) || removeRole.isPending.value"
+                :title="canManage ? (roleInUse(r.name) ? 'Role is in use' : '') : t('auth.noPerm')"
+                :aria-label="`Remove role ${r.name}`" @click="confirmRemove(`role:${r.name}`, () => removeRl(r.name))">{{ confirmId === `role:${r.name}` ? 'Confirm?' : '×' }}</button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="perm in PERMISSIONS" :key="perm" style="cursor: default;">
+            <td class="muted">{{ perm }}</td>
+            <td v-for="(r, i) in roleDraft" :key="r.name">
+              <input type="checkbox" :checked="r.permissions.includes(perm)" :disabled="!canManage"
+                :aria-label="`${r.name}: ${perm}`" :title="canManage ? '' : t('auth.noPerm')"
+                @change="togglePerm(i, perm, ($event.target as HTMLInputElement).checked)" />
+            </td>
+          </tr>
+        </tbody>
+      </TableFrame>
       <div class="row mt">
         <input class="field" style="flex: 1;" v-model="newRoleName" placeholder="new role" aria-label="New role name"
           :disabled="!canManage" :title="canManage ? '' : t('auth.noPerm')" @keyup.enter="addRl" />

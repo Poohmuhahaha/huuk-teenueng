@@ -2,7 +2,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '@/mock/api'
 import { currentUser, login, logout, register, restore, updateProfile } from '@/core/auth'
-import { setToken, token } from '@/core/token'
 
 describe('register (US-012)', () => {
   it('rejects an empty name, a malformed email, and a short password', async () => {
@@ -118,32 +117,30 @@ describe('account administration (US-012)', () => {
   })
 })
 
-describe('token persistence (US-012)', () => {
+describe('cookie-only session (SOP Hard Rule 1)', () => {
   afterEach(() => vi.useRealTimers())
 
-  it('setToken writes to localStorage and clears it', () => {
-    setToken('tok-123')
-    expect(token.value).toBe('tok-123')
-    expect(localStorage.getItem('cp.token')).toBe('tok-123')
-    setToken(null)
-    expect(token.value).toBeNull()
+  it('never writes a token to web storage on login', async () => {
+    await api.login('owner@studio.local', 'demo1234')
     expect(localStorage.getItem('cp.token')).toBeNull()
+    expect(sessionStorage.getItem('cp.token')).toBeNull()
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i) ?? ''
+      expect(key.toLowerCase()).not.toContain('token')
+    }
   })
 
   it('restore() rehydrates a valid session', async () => {
-    const r = await api.login('owner@studio.local', 'demo1234')
-    setToken(r.token)
+    await api.login('owner@studio.local', 'demo1234')
     currentUser.value = null
     await restore()
     expect(currentUser.value).toMatchObject({ name: 'Studio Owner', role: 'Owner', plan: 'free' })
   })
 
-  it('restore() clears a bad token', async () => {
-    setToken('bogus-token')
+  it('restore() clears the UI state when the session is gone', async () => {
+    await logout()
     await restore()
-    expect(token.value).toBeNull()
     expect(currentUser.value).toBeNull()
-    expect(localStorage.getItem('cp.token')).toBeNull()
   })
 
   it('me() rejects once the session expires', async () => {
@@ -157,13 +154,10 @@ describe('token persistence (US-012)', () => {
     const created = await register({ name: 'Auth Reg', email: 'authreg@studio.local', password: 'password1234' })
     expect(created.name).toBe('Auth Reg')
     expect(currentUser.value?.name).toBe('Auth Reg')
-    expect(token.value).toBeTruthy()
-    expect(localStorage.getItem('cp.token')).toBe(token.value)
+    expect(localStorage.getItem('cp.token')).toBeNull()
 
     await logout()
     expect(currentUser.value).toBeNull()
-    expect(token.value).toBeNull()
-    expect(localStorage.getItem('cp.token')).toBeNull()
 
     const u = await login('owner@studio.local', 'demo1234')
     expect(u.name).toBe('Studio Owner')

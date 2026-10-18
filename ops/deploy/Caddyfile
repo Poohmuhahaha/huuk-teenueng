@@ -1,14 +1,42 @@
-# TLS front for the compose stack (profile "tls").
-# SITE_ADDRESS=huuk.teenueng.com  -> automatic HTTPS (Let's Encrypt)
-# SITE_ADDRESS unset/empty      -> HTTP only on :80
-{$SITE_ADDRESS::80} {
-	encode gzip
+# Master Engineering SOP §5.1 — Caddy 2 Reverse Proxy, Static Asset & Security Configuration
+{$APP_DOMAIN:localhost} {
+    encode zstd gzip
 
-	handle /api/* {
-		reverse_proxy api:8787
-	}
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+        -Server
+    }
 
-	handle {
-		reverse_proxy web:8080
-	}
+    handle /healthz {
+        reverse_proxy {$API_UPSTREAM:127.0.0.1:8787}
+    }
+
+    handle /api/* {
+        reverse_proxy {$API_UPSTREAM:127.0.0.1:8787} {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    handle {
+        root * {$FRONTEND_ROOT:/var/lib/content-planner/web}
+
+        @assets {
+            path /assets/*
+        }
+        header @assets Cache-Control "public, max-age=31536000, immutable"
+
+        @html {
+            path *.html /
+        }
+        header @html Cache-Control "no-cache, no-store, must-revalidate"
+
+        try_files {path} /index.html
+        file_server
+    }
 }

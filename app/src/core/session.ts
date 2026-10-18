@@ -1,9 +1,11 @@
 // Session state shared by auth, the HTTP client and the query cache.
 // Kept free of imports from auth.ts / api to avoid cycles:
-//   auth.ts → api → api/http.ts → session.ts → token.ts
+//   auth.ts → api → api/http.ts → session.ts
+//
+// The session itself lives in the server's HttpOnly `cp_session` cookie
+// (SOP Hard Rule 1) — nothing in the SPA ever stores or reads a token.
 import { ref } from 'vue'
 import type { User } from '@/mock/db'
-import { setToken, token } from './token'
 
 export const currentUser = ref<User | null>(null)
 
@@ -26,15 +28,13 @@ function notify(): void {
   }
 }
 
-export function startSession(newToken: string, user: User): void {
-  setToken(newToken)
+export function startSession(user: User): void {
   currentUser.value = user
   notify()
 }
 
 export function clearSession(): void {
-  const hadSession = token.value !== null || currentUser.value !== null
-  setToken(null)
+  const hadSession = currentUser.value !== null
   currentUser.value = null
   if (hadSession) notify()
 }

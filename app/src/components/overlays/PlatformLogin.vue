@@ -11,6 +11,7 @@ import api from '@/api'
 import { beginOAuth } from '@/core/oauth'
 import type { OauthMode } from '@/api/contract'
 import { t } from '@/core/i18n'
+import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 
 const props = defineProps<{ platform: PlatformId | null }>()
 const emit = defineEmits<{ close: [] }>()
@@ -157,7 +158,7 @@ async function onSync(): Promise<void> {
       <div class="plogin-card">
         <button class="plogin-close" style="width: auto; min-width: 32px;" :aria-label="t('common.close')" :title="t('common.close')"
           :disabled="busy" @click="emit('close')">×</button>
-        <h2 id="plogin-title" class="plogin-brand">{{ meta.name }}</h2>
+        <h2 id="plogin-title" class="plogin-brand flex items-center justify-center gap-2"><PlatformLogo :id="platform ?? ''" :size="20" />{{ meta.name }}</h2>
 
         <p v-if="!mayManage" class="plogin-note">{{ t('auth.noPerm') }}</p>
 

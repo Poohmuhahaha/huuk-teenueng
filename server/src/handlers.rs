@@ -34,6 +34,7 @@ const MAX_LIST_ITEM: usize = 200;
 #[derive(Deserialize)]
 pub struct MonthQuery {
     pub month: Option<u32>,
+    pub year: Option<u32>,
 }
 
 #[derive(Deserialize)]
@@ -96,9 +97,19 @@ pub struct LockBody {
 pub struct ImportBody {
     pub platform: String,
     pub month: u32,
+    /// Omitted/0 = the workspace year.
+    #[serde(default)]
+    pub year: u32,
 }
 
 // ---- shared helpers ----
+
+/// HttpOnly session cookie used by the browser flow; the SPA never sees the
+/// token. API clients may keep using `Authorization: Bearer` instead.
+pub const SESSION_COOKIE: &str = "cp_session";
+
+/// Session cookie lifetime (mirrors the store's session TTL).
+const SESSION_MAX_AGE_SECS: i64 = crate::store::SESSION_TTL_DAYS * 24 * 60 * 60;
 
 /// Extracts the token from an `Authorization: Bearer <token>` header.
 fn bearer_token(headers: &HeaderMap) -> Option<&str> {
@@ -109,11 +120,60 @@ fn bearer_token(headers: &HeaderMap) -> Option<&str> {
         .strip_prefix("Bearer ")
 }
 
-/// Resolves a bearer token to a live session's account email, removing the
-/// session from the store when it has expired.
+/// Extracts the session token from the `cp_session` cookie.
+fn cookie_token(headers: &HeaderMap) -> Option<&str> {
+    headers
+        .get(header::COOKIE)?
+        .to_str()
+        .ok()?
+        .split(';')
+        .filter_map(|part| part.trim().strip_prefix(SESSION_COOKIE))
+        .find_map(|rest| rest.strip_prefix('='))
+}
+
+/// Cookie-first token resolution: browsers authenticate with the HttpOnly
+/// cookie, non-browser clients (tests, desktop, scripts) with `Bearer`.
+fn request_token(headers: &HeaderMap) -> Option<&str> {
+    cookie_token(headers).or_else(|| bearer_token(headers))
+}
+
+/// `Set-Cookie` value for a session. `Secure` is on unless `COOKIE_SECURE=0`
+/// (plain-HTTP LAN testing); `Max-Age=0` clears the cookie.
+fn session_cookie(token: &str, max_age_secs: i64) -> String {
+    use axum_extra::extract::cookie::{Cookie, SameSite};
+    Cookie::build((SESSION_COOKIE, token.to_string()))
+        .path("/")
+        .http_only(true)
+        .secure(cookie_secure())
+        .same_site(SameSite::Lax)
+        .max_age(time::Duration::seconds(max_age_secs))
+        .build()
+        .to_string()
+}
+
+fn cookie_secure() -> bool {
+    !matches!(
+        std::env::var("COOKIE_SECURE")
+            .map(|v| v.trim().to_ascii_lowercase())
+            .as_deref(),
+        Ok("0") | Ok("false") | Ok("no")
+    )
+}
+
+/// JSON response that also sets (or clears) the session cookie.
+fn json_with_cookie(body: serde_json::Value, cookie: String) -> Response {
+    let mut res = Json(body).into_response();
+    if let Ok(value) = HeaderValue::from_str(&cookie) {
+        res.headers_mut().insert(header::SET_COOKIE, value);
+    }
+    res
+}
+
+/// Resolves a cookie/bearer token to a live session's account email, removing
+/// the session from the store when it has expired.
 fn require_session(store: &mut Store, headers: &HeaderMap) -> Result<String, ApiError> {
     let token =
-        bearer_token(headers).ok_or_else(|| ApiError::unauthorized("missing bearer token"))?;
+        request_token(headers).ok_or_else(|| ApiError::unauthorized("missing session token"))?;
     let session = store
         .session(token)
         .cloned()
@@ -176,7 +236,8 @@ fn constant_time_eq(a: &str, b: &str) -> bool {
 
 /// Read-access check shared by the read-auth middleware and `get_setup`.
 /// While `authRequired` is off (demo mode) everything is readable; otherwise a
-/// live bearer token — or the operator recovery token — is required.
+/// live session (cookie or bearer) — or the operator recovery token — is
+/// required.
 pub(crate) fn has_read_access(store: &Store, headers: &HeaderMap) -> bool {
     if let Some(expected) = store.admin_token.as_deref() {
         if let Some(provided) = headers.get("x-admin-token").and_then(|v| v.to_str().ok()) {
@@ -188,7 +249,7 @@ pub(crate) fn has_read_access(store: &Store, headers: &HeaderMap) -> bool {
     if !store.setup.auth_required {
         return true;
     }
-    bearer_token(headers)
+    request_token(headers)
         .and_then(|token| store.session(token))
         .is_some_and(|session| session.expires > Utc::now())
 }
@@ -206,7 +267,7 @@ pub(crate) fn current_account(store: &Store, headers: &HeaderMap) -> Option<Stri
     if !store.setup.auth_required {
         return None;
     }
-    bearer_token(headers)
+    request_token(headers)
         .and_then(|token| store.session(token))
         .filter(|session| session.expires > Utc::now())
         .map(|session| session.email.clone())
@@ -323,6 +384,20 @@ fn validate_month(month: u32) -> Result<(), ApiError> {
     Ok(())
 }
 
+/// Planning years stay in the same range as the workspace year.
+fn validate_year(year: u32) -> Result<(), ApiError> {
+    if !(1970..=9999).contains(&year) {
+        return Err(ApiError::bad_request("year must be between 1970 and 9999"));
+    }
+    Ok(())
+}
+
+/// Extracts the year prefix from a YYYY-MM-DD date, if well-formed.
+fn year_of_date(value: &str) -> Option<u32> {
+    let y = value.get(..4)?.parse::<u32>().ok()?;
+    (1970..=9999).contains(&y).then_some(y)
+}
+
 fn validate_date(field: &str, value: &str) -> Result<(), ApiError> {
     if value.is_empty() {
         return Ok(());
@@ -355,6 +430,7 @@ fn validate_list(field: &str, values: &[String]) -> Result<(), ApiError> {
 
 fn validate_post(post: &Post, setup: &SetupConfig) -> Result<(), ApiError> {
     validate_month(post.month)?;
+    validate_year(post.year)?;
     if post.topic.trim().is_empty() {
         return Err(ApiError::bad_request("topic is required"));
     }
@@ -397,6 +473,21 @@ fn validate_post(post: &Post, setup: &SetupConfig) -> Result<(), ApiError> {
 
 pub async fn health() -> Json<serde_json::Value> {
     Json(json!({ "status": "ok", "service": "content-planner-server" }))
+}
+
+/// Deep health check (`GET /healthz`) per Master Engineering SOP §3.4.
+/// Executes `SELECT 1` against PostgreSQL when a database pool is configured.
+pub async fn healthz(State(s): State<AppState>) -> Result<&'static str, StatusCode> {
+    let pool = {
+        let store = s.read().await;
+        store.db.clone()
+    };
+    if let Some(pool) = pool {
+        crate::db::check_health(&pool)
+            .await
+            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    }
+    Ok("OK")
 }
 
 /// Readiness: the store is reachable and serving.
@@ -719,7 +810,7 @@ fn validate_password(field: &str, password: &str) -> Result<(), ApiError> {
 pub async fn register(
     State(s): State<AppState>,
     AppJson(body): AppJson<RegisterBody>,
-) -> Result<Json<serde_json::Value>, ApiError> {
+) -> Result<Response, ApiError> {
     let name = body.name.trim().to_string();
     if name.is_empty() {
         return Err(ApiError::bad_request("name is required"));
@@ -793,15 +884,17 @@ pub async fn register(
     }
     let token = store.open_session(&email);
     tracing::info!(email = %email, "account registered");
-    Ok(Json(
-        json!({ "token": token, "user": user_json(&store, &email) }),
+    let body = json!({ "token": token, "user": user_json(&store, &email) });
+    Ok(json_with_cookie(
+        body,
+        session_cookie(&token, SESSION_MAX_AGE_SECS),
     ))
 }
 
 pub async fn login(
     State(s): State<AppState>,
     AppJson(body): AppJson<LoginBody>,
-) -> Result<Json<serde_json::Value>, ApiError> {
+) -> Result<Response, ApiError> {
     let email = body.email.trim().to_lowercase();
     if email.len() > 254 || !email.contains('@') {
         return Err(ApiError::unauthorized("invalid email or password"));
@@ -841,8 +934,35 @@ pub async fn login(
     }
     let token = store.open_session(&email);
     tracing::info!(email = %email, "login");
-    Ok(Json(
-        json!({ "token": token, "user": user_json(&store, &email) }),
+    let body = json!({ "token": token, "user": user_json(&store, &email) });
+    Ok(json_with_cookie(
+        body,
+        session_cookie(&token, SESSION_MAX_AGE_SECS),
+    ))
+}
+
+/// Slides the session behind `POST /api/auth/refresh`: the presented token is
+/// revoked, a fresh one is opened for the same account, and the browser gets a
+/// re-issued HttpOnly cookie. Bearer clients get the new token in the JSON
+/// body (they hold no cookie). The SPA calls this at most once per burst of
+/// 401s (single-flight) instead of logging the user out mid-session.
+pub async fn refresh(State(s): State<AppState>, headers: HeaderMap) -> Result<Response, ApiError> {
+    let via_bearer = bearer_token(&headers).is_some();
+    let mut store = s.write().await;
+    let old = request_token(&headers)
+        .ok_or_else(|| ApiError::unauthorized("missing session token"))?
+        .to_string();
+    let email = require_session(&mut store, &headers)?;
+    store.revoke_session(&old);
+    let token = store.open_session(&email);
+    tracing::info!(email = %email, "session refreshed");
+    let mut body = json!({ "ok": true, "user": user_json(&store, &email) });
+    if via_bearer {
+        body["token"] = json!(token);
+    }
+    Ok(json_with_cookie(
+        body,
+        session_cookie(&token, SESSION_MAX_AGE_SECS),
     ))
 }
 
@@ -883,28 +1003,32 @@ pub async fn set_plan(
     Ok(Json(json!({ "user": user })))
 }
 
-pub async fn logout(
-    State(s): State<AppState>,
-    headers: HeaderMap,
-) -> Result<Json<serde_json::Value>, ApiError> {
+pub async fn logout(State(s): State<AppState>, headers: HeaderMap) -> Result<Response, ApiError> {
     let mut store = s.write().await;
-    let token = bearer_token(&headers)
-        .ok_or_else(|| ApiError::unauthorized("missing bearer token"))?
+    let token = request_token(&headers)
+        .ok_or_else(|| ApiError::unauthorized("missing session token"))?
         .to_string();
     require_session(&mut store, &headers)?;
     store.revoke_session(&token);
-    Ok(Json(json!({ "ok": true })))
+    // Clearing the cookie keeps the browser from replaying the dead token.
+    Ok(json_with_cookie(
+        json!({ "ok": true }),
+        session_cookie("", 0),
+    ))
 }
 
 /// Revokes every session of the caller's account, including the current one.
 pub async fn logout_all(
     State(s): State<AppState>,
     headers: HeaderMap,
-) -> Result<Json<serde_json::Value>, ApiError> {
+) -> Result<Response, ApiError> {
     let mut store = s.write().await;
     let email = require_session(&mut store, &headers)?;
     store.sessions.retain(|_, session| session.email != email);
-    Ok(Json(json!({ "ok": true })))
+    Ok(json_with_cookie(
+        json!({ "ok": true }),
+        session_cookie("", 0),
+    ))
 }
 
 /// Lists registered accounts for the Setup screen (no hashes, ever).
@@ -1071,7 +1195,7 @@ pub async fn change_password(
         .get_mut(&email)
         .ok_or_else(|| ApiError::unauthorized("invalid token"))?;
     account.password_hash = new_hash;
-    let current = session_key(bearer_token(&headers).unwrap_or_default());
+    let current = session_key(request_token(&headers).unwrap_or_default());
     store
         .sessions
         .retain(|key, session| key == &current || session.email != email);
@@ -1091,12 +1215,18 @@ pub async fn list_posts(
             return Json(Vec::new());
         }
     }
+    if let Some(year) = q.year {
+        if !(1970..=9999).contains(&year) {
+            return Json(Vec::new());
+        }
+    }
     let store = s.read().await;
     Json(
         store
             .posts
             .iter()
             .filter(|p| q.month.is_none_or(|month| p.month == month))
+            .filter(|p| q.year.is_none_or(|year| p.year == year))
             .cloned()
             .collect(),
     )
@@ -1111,6 +1241,10 @@ pub async fn add_post(
     require_perm(&mut store, &headers, "posts.write")?;
     post.id = uid("p");
     post.locked_by = None;
+    // Old clients predate the year field and send 0 — assume the workspace year.
+    if post.year == 0 {
+        post.year = store.setup.year as u32;
+    }
     validate_post(&post, &store.setup)?;
     store.posts.push(post.clone());
     Ok(Json(post))
@@ -1139,7 +1273,16 @@ pub async fn update_post(
     }
     // Apply to a staged copy first: an invalid patch must not corrupt the row.
     let mut candidate = post.clone();
+    let retargeted_date = matches!(&patch.date, Some(Some(_)));
+    let explicit_year = patch.year.is_some();
     patch.apply(&mut candidate);
+    // Retargeting the date without an explicit year moves the post along —
+    // keep the year in sync so the row never strands between filters.
+    if retargeted_date && !explicit_year {
+        if let Some(y) = candidate.date.as_deref().and_then(year_of_date) {
+            candidate.year = y;
+        }
+    }
     validate_post(&candidate, &setup)?;
     *post = candidate;
     Ok(Json(post.clone()))
@@ -1289,6 +1432,9 @@ pub async fn promote_idea(
     validate_month(month)?;
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "ideas.write")?;
+    // Omitted year = the workspace year, so old clients keep working.
+    let year = q.year.unwrap_or(store.setup.year as u32);
+    validate_year(year)?;
     let idea = store
         .ideas
         .iter()
@@ -1310,6 +1456,7 @@ pub async fn promote_idea(
     let post = Post {
         id: uid("p"),
         month,
+        year,
         topic: idea.topic.clone(),
         pillar,
         format: idea.format.clone(),
@@ -1369,8 +1516,8 @@ pub async fn list_metrics(State(s): State<AppState>) -> Json<Vec<Metric>> {
     Json(s.read().await.metrics.clone())
 }
 
-/// Recomputes deterministic pseudo-metrics for every post scheduled in `month`
-/// that targets `platform`, then upserts them into the metric table.
+/// Recomputes deterministic pseudo-metrics for every post scheduled in (`year`,
+/// `month`) that targets `platform`, then upserts them into the metric table.
 pub async fn import_metrics(
     State(s): State<AppState>,
     headers: HeaderMap,
@@ -1383,6 +1530,13 @@ pub async fn import_metrics(
     validate_month(body.month)?;
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "metrics.import")?;
+    // Omitted/0 year = the workspace year, so old clients keep working.
+    let year = if body.year == 0 {
+        store.setup.year as u32
+    } else {
+        body.year
+    };
+    validate_year(year)?;
     if !store.setup.platforms.is_empty() && !store.setup.platforms.iter().any(|p| p == &platform) {
         return Err(ApiError::bad_request(&format!(
             "unknown platform '{platform}'"
@@ -1391,7 +1545,7 @@ pub async fn import_metrics(
     let fresh: Vec<Metric> = store
         .posts
         .iter()
-        .filter(|p| p.month == body.month && p.platforms.contains(&platform))
+        .filter(|p| p.month == body.month && p.year == year && p.platforms.contains(&platform))
         .map(|p| {
             // Same formula as the frontend mock, so both data sources agree.
             let hash: u64 = format!("{}{}", p.id, platform)
@@ -1654,12 +1808,13 @@ pub async fn upload_brand_image(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     use base64::Engine as _;
 
-    let mut store = s.write().await;
-    require_perm(&mut store, &headers, "brand.write")?;
-    let dir = store
-        .images_dir
-        .clone()
-        .ok_or_else(|| ApiError::bad_request("image storage is disabled (DATA_FILE is empty)"))?;
+    let dir = {
+        let mut store = s.write().await;
+        require_perm(&mut store, &headers, "brand.write")?;
+        store.images_dir.clone().ok_or_else(|| {
+            ApiError::bad_request("image storage is disabled (DATA_FILE is empty)")
+        })?
+    };
 
     let name = body.name.trim();
     let bytes = base64::engine::general_purpose::STANDARD
@@ -1681,15 +1836,21 @@ pub async fn upload_brand_image(
         .ok_or_else(|| ApiError::bad_request("could not read the image dimensions"))?;
     check_image_bounds(&kind, width, height)?;
 
-    std::fs::create_dir_all(&dir).map_err(|_| ApiError::internal("cannot create image storage"))?;
+    tokio::fs::create_dir_all(&dir)
+        .await
+        .map_err(|_| ApiError::internal("cannot create image storage"))?;
     let stem = name.rsplit_once('.').map(|(stem, _)| stem).unwrap_or(name);
     let mut file = format!("{}.{}", image_slug(stem), ext);
     let mut n = 2;
-    while dir.join(&file).exists() {
+    while tokio::fs::try_exists(dir.join(&file))
+        .await
+        .unwrap_or(false)
+    {
         file = format!("{}-{n}.{ext}", image_slug(stem));
         n += 1;
     }
-    std::fs::write(dir.join(&file), &bytes)
+    tokio::fs::write(dir.join(&file), &bytes)
+        .await
         .map_err(|_| ApiError::internal("cannot store image"))?;
     tracing::info!(image = %file, bytes = bytes.len(), width, height, kind = %kind, "brand image uploaded");
     Ok(Json(serde_json::json!({
@@ -1705,21 +1866,27 @@ pub async fn delete_brand_image(
     headers: HeaderMap,
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let mut store = s.write().await;
-    require_perm(&mut store, &headers, "brand.write")?;
-    let dir = store
-        .images_dir
-        .clone()
-        .ok_or_else(|| ApiError::not_found("image not found"))?;
+    let dir = {
+        let mut store = s.write().await;
+        require_perm(&mut store, &headers, "brand.write")?;
+        store
+            .images_dir
+            .clone()
+            .ok_or_else(|| ApiError::not_found("image not found"))?
+    };
     if name.contains('/') || name.contains('\\') || name.contains("..") {
         return Err(ApiError::bad_request("invalid image name"));
     }
     let path = dir.join(&name);
-    let bytes = std::fs::read(&path).map_err(|_| ApiError::not_found("image not found"))?;
+    let bytes = tokio::fs::read(&path)
+        .await
+        .map_err(|_| ApiError::not_found("image not found"))?;
     if image_kind(&name, &bytes).is_none() {
         return Err(ApiError::not_found("image not found"));
     }
-    std::fs::remove_file(&path).map_err(|_| ApiError::internal("cannot delete image"))?;
+    tokio::fs::remove_file(&path)
+        .await
+        .map_err(|_| ApiError::internal("cannot delete image"))?;
     tracing::info!(image = %name, "brand image deleted");
     Ok(Json(serde_json::json!({ "ok": true })))
 }
@@ -2207,11 +2374,17 @@ fn read_font_assets(dir: &std::path::Path) -> Vec<FontAsset> {
 
 /// Public list of uploaded fonts (the theme needs it without auth).
 pub async fn list_fonts(State(s): State<AppState>) -> Json<Vec<FontAsset>> {
-    let store = s.read().await;
-    Json(match store.fonts_dir.as_deref() {
-        Some(dir) => read_font_assets(dir),
-        None => Vec::new(),
-    })
+    let dir = {
+        let store = s.read().await;
+        store.fonts_dir.clone()
+    };
+    let Some(dir) = dir else {
+        return Json(Vec::new());
+    };
+    let assets = tokio::task::spawn_blocking(move || read_font_assets(&dir))
+        .await
+        .unwrap_or_default();
+    Json(assets)
 }
 
 pub async fn upload_font(
@@ -2221,12 +2394,14 @@ pub async fn upload_font(
 ) -> Result<Json<Vec<FontAsset>>, ApiError> {
     use base64::Engine as _;
 
-    let mut store = s.write().await;
-    require_perm(&mut store, &headers, "brand.write")?;
-    let dir = store
-        .fonts_dir
-        .clone()
-        .ok_or_else(|| ApiError::bad_request("font storage is disabled (DATA_FILE is empty)"))?;
+    let dir = {
+        let mut store = s.write().await;
+        require_perm(&mut store, &headers, "brand.write")?;
+        store
+            .fonts_dir
+            .clone()
+            .ok_or_else(|| ApiError::bad_request("font storage is disabled (DATA_FILE is empty)"))?
+    };
 
     let name = body.name.trim();
     let bytes = base64::engine::general_purpose::STANDARD
@@ -2244,26 +2419,38 @@ pub async fn upload_font(
         ));
     };
 
-    std::fs::create_dir_all(&dir).map_err(|_| ApiError::internal("cannot create font storage"))?;
-    let stem = name.rsplit_once('.').map(|(stem, _)| stem).unwrap_or(name);
-    let base = format!("{}.{}", font_slug(stem), ext);
-    let mut file = base.clone();
-    let mut n = 2;
-    while dir.join(&file).exists() {
-        file = format!("{}-{n}.{ext}", font_slug(stem));
-        n += 1;
-    }
-    std::fs::write(dir.join(&file), &bytes).map_err(|_| ApiError::internal("cannot store font"))?;
-    let mut manifest = load_manifest(&dir);
-    manifest.retain(|m| m.name != file);
-    manifest.push(FontMeta {
-        family: font_family(stem),
-        uploaded_at: Utc::now().timestamp(),
-        name: file.clone(),
-    });
-    save_manifest(&dir, &manifest)?;
-    tracing::info!(font = %file, bytes = bytes.len(), "brand font uploaded");
-    Ok(Json(read_font_assets(&dir)))
+    let stem = name
+        .rsplit_once('.')
+        .map(|(stem, _)| stem)
+        .unwrap_or(name)
+        .to_string();
+    let ext = ext.to_string();
+    let assets = tokio::task::spawn_blocking(move || -> Result<Vec<FontAsset>, ApiError> {
+        std::fs::create_dir_all(&dir)
+            .map_err(|_| ApiError::internal("cannot create font storage"))?;
+        let base = format!("{}.{}", font_slug(&stem), ext);
+        let mut file = base.clone();
+        let mut n = 2;
+        while dir.join(&file).exists() {
+            file = format!("{}-{n}.{ext}", font_slug(&stem));
+            n += 1;
+        }
+        std::fs::write(dir.join(&file), &bytes)
+            .map_err(|_| ApiError::internal("cannot store font"))?;
+        let mut manifest = load_manifest(&dir);
+        manifest.retain(|m| m.name != file);
+        manifest.push(FontMeta {
+            family: font_family(&stem),
+            uploaded_at: Utc::now().timestamp(),
+            name: file.clone(),
+        });
+        save_manifest(&dir, &manifest)?;
+        tracing::info!(font = %file, bytes = bytes.len(), "brand font uploaded");
+        Ok(read_font_assets(&dir))
+    })
+    .await
+    .map_err(|_| ApiError::internal("font upload task failed"))??;
+    Ok(Json(assets))
 }
 
 pub async fn delete_font(
@@ -2271,26 +2458,33 @@ pub async fn delete_font(
     headers: HeaderMap,
     Path(name): Path<String>,
 ) -> Result<Json<Vec<FontAsset>>, ApiError> {
-    let mut store = s.write().await;
-    require_perm(&mut store, &headers, "brand.write")?;
-    let dir = store
-        .fonts_dir
-        .clone()
-        .ok_or_else(|| ApiError::not_found("font not found"))?;
+    let dir = {
+        let mut store = s.write().await;
+        require_perm(&mut store, &headers, "brand.write")?;
+        store
+            .fonts_dir
+            .clone()
+            .ok_or_else(|| ApiError::not_found("font not found"))?
+    };
     if name.contains('/') || name.contains('\\') || name.contains("..") {
         return Err(ApiError::bad_request("invalid font name"));
     }
-    let path = dir.join(&name);
-    let bytes = std::fs::read(&path).map_err(|_| ApiError::not_found("font not found"))?;
-    if font_kind(&name, &bytes).is_none() {
-        return Err(ApiError::not_found("font not found"));
-    }
-    std::fs::remove_file(&path).map_err(|_| ApiError::internal("cannot delete font"))?;
-    let mut manifest = load_manifest(&dir);
-    manifest.retain(|m| m.name != name);
-    save_manifest(&dir, &manifest)?;
-    tracing::info!(font = %name, "brand font deleted");
-    Ok(Json(read_font_assets(&dir)))
+    let assets = tokio::task::spawn_blocking(move || -> Result<Vec<FontAsset>, ApiError> {
+        let path = dir.join(&name);
+        let bytes = std::fs::read(&path).map_err(|_| ApiError::not_found("font not found"))?;
+        if font_kind(&name, &bytes).is_none() {
+            return Err(ApiError::not_found("font not found"));
+        }
+        std::fs::remove_file(&path).map_err(|_| ApiError::internal("cannot delete font"))?;
+        let mut manifest = load_manifest(&dir);
+        manifest.retain(|m| m.name != name);
+        save_manifest(&dir, &manifest)?;
+        tracing::info!(font = %name, "brand font deleted");
+        Ok(read_font_assets(&dir))
+    })
+    .await
+    .map_err(|_| ApiError::internal("font delete task failed"))??;
+    Ok(Json(assets))
 }
 
 /// Serves an uploaded font file (public, immutable — safe to cache forever).
@@ -2901,7 +3095,7 @@ fn content_actor(
     // request carries a valid session (client studio demo mode).
     let email = match email {
         Some(email) => Some(email),
-        None => bearer_token(headers)
+        None => request_token(headers)
             .and_then(|token| store.session(token))
             .filter(|session| session.expires > Utc::now())
             .map(|session| session.email.clone()),
@@ -3387,7 +3581,10 @@ pub async fn serve_fallback(static_dir: Option<std::path::PathBuf>, req: Request
     if req.method() != Method::GET && req.method() != Method::HEAD {
         return (
             StatusCode::METHOD_NOT_ALLOWED,
-            Json(json!({ "error": "method not allowed" })),
+            Json(crate::error::ApiErrorResponse::new(
+                "METHOD_NOT_ALLOWED",
+                "method not allowed",
+            )),
         )
             .into_response();
     }

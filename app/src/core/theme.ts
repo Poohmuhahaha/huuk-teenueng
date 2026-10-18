@@ -172,3 +172,54 @@ export function applyBrandTheme(
     style.removeProperty('--font')
   }
 }
+
+const THEME_KEY = 'cp.brand-theme'
+
+interface PersistedTheme {
+  brand: Pick<
+    Brand,
+    'palette' | 'fonts' | 'radius' | 'fillOpacity' | 'strokeWidth' | 'shadow'
+  > | null
+  assets: Pick<FontAsset, 'name' | 'family' | 'url'>[]
+}
+
+/** Remembers the last applied brand theme so the next boot can paint it
+ * synchronously (stale-while-revalidate) instead of flashing the defaults
+ * while the brand query is in flight. Never throws. */
+export function persistBrandTheme(brand: Brand | null | undefined, assets: FontAsset[] = []): void {
+  try {
+    if (typeof localStorage === 'undefined') return
+    const payload: PersistedTheme = {
+      brand: brand
+        ? {
+          palette: brand.palette,
+          fonts: brand.fonts,
+          radius: brand.radius,
+          fillOpacity: brand.fillOpacity,
+          strokeWidth: brand.strokeWidth,
+          shadow: brand.shadow,
+        }
+        : null,
+      assets: assets.map((a) => ({ name: a.name, family: a.family, url: a.url })),
+    }
+    localStorage.setItem(THEME_KEY, JSON.stringify(payload))
+  } catch {
+    // Private mode / quota — the next boot falls back to the default theme.
+  }
+}
+
+/** Re-applies the remembered theme: call synchronously before mount so the
+ * first paint already wears the brand. Returns true when applied. */
+export function restoreBrandTheme(root?: HTMLElement): boolean {
+  try {
+    if (typeof localStorage === 'undefined') return false
+    const raw = localStorage.getItem(THEME_KEY)
+    if (!raw) return false
+    const parsed = JSON.parse(raw) as Partial<PersistedTheme> | null
+    if (!parsed || typeof parsed !== 'object') return false
+    applyBrandTheme((parsed.brand ?? null) as Brand | null, (parsed.assets ?? []) as FontAsset[], root)
+    return true
+  } catch {
+    return false
+  }
+}

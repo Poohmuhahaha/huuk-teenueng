@@ -7,6 +7,7 @@ import {
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { Post } from '@/mock/db'
 import StatusChip from '@/components/ui/StatusChip.vue'
+import TableFrame from '@/components/tables/TableFrame.vue'
 
 const props = defineProps<{ rows: Post[]; loading?: boolean }>()
 const emit = defineEmits<{ select: [post: Post] }>()
@@ -89,50 +90,46 @@ function onRowKeydown(e: KeyboardEvent, post: Post): void {
       <slot name="actions" />
     </div>
     <div v-if="loading" class="text-muted text-sm" role="status">Loading rows…</div>
-    <div v-else class="overflow-x-auto border border-faint bg-surface rounded-none">
-      <table class="tbl w-full border-collapse text-md [&_tr:last-child_td]:border-b-0">
-        <thead>
-          <tr>
-            <th v-for="header in table.getHeaderGroups()[0]?.headers ?? []" :key="header.id"
-              class="text-left border-b border-faint px-3.5 py-2.5 uppercase tracking-[0.05em] text-muted bg-surface-2 text-[11.5px] font-bold whitespace-nowrap"
-              :class="header.column.getCanSort() ? 'cursor-pointer hover:text-ink' : ''"
-              :aria-sort="ariaSort(header.column.getCanSort(), header.column.getIsSorted())"
-              :tabindex="header.column.getCanSort() ? 0 : undefined"
-              @click="toggleSort(header.column)"
-              @keydown.enter.prevent="toggleSort(header.column)"
-              @keydown.space.prevent="toggleSort(header.column)">
-              <input v-if="header.id === 'select'" type="checkbox" :checked="allChecked"
-                :indeterminate.prop="someChecked && !allChecked" aria-label="Select all rows"
-                :aria-checked="allChecked ? 'true' : someChecked ? 'mixed' : 'false'"
-                @click.stop @change="toggleAll" />
-              <template v-else>
-                <FlexRender v-if="!header.isPlaceholder" :header="header" />
-                {{ header.column.getIsSorted() === 'asc' ? '↑' : header.column.getIsSorted() === 'desc' ? '↓' : '' }}
-              </template>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="!rows.length">
-            <td colspan="6" class="text-center text-muted text-sm border-b border-faint px-3.5 py-2.5">No rows yet.</td>
-          </tr>
-          <tr v-for="row in table.getRowModel().rows" :key="row.id"
-            class="cursor-pointer transition-colors hover:bg-surface-2"
-            :class="checked.has(row.original.id) ? 'bg-selected' : ''" tabindex="0"
-            @click="emit('select', row.original)"
-            @keydown.enter.prevent="onRowKeydown($event, row.original)"
-            @keydown.space.prevent="onRowKeydown($event, row.original)">
-            <td v-for="cell in row.getAllCells()" :key="cell.id" class="text-left border-b border-faint px-3.5 py-2.5" @click="onCellClick($event, cell.column.id)">
-              <input v-if="cell.column.id === 'select'" type="checkbox"
-                :checked="checked.has(row.original.id)" :aria-label="`Select ${row.original.topic}`"
-                @change="toggleOne(row.original.id)" />
-              <StatusChip v-else-if="cell.column.id === 'status'" :status="row.original.status" />
-              <FlexRender v-else :cell="cell" />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <TableFrame v-else>
+      <thead>
+        <tr>
+          <th v-for="header in table.getHeaderGroups()[0]?.headers ?? []" :key="header.id"
+            :class="header.column.getCanSort() ? 'sortable' : ''"
+            :aria-sort="ariaSort(header.column.getCanSort(), header.column.getIsSorted())"
+            :tabindex="header.column.getCanSort() ? 0 : undefined"
+            @click="toggleSort(header.column)"
+            @keydown.enter.prevent="toggleSort(header.column)"
+            @keydown.space.prevent="toggleSort(header.column)">
+            <input v-if="header.id === 'select'" type="checkbox" :checked="allChecked"
+              :indeterminate.prop="someChecked && !allChecked" aria-label="Select all rows"
+              :aria-checked="allChecked ? 'true' : someChecked ? 'mixed' : 'false'"
+              @click.stop @change="toggleAll" />
+            <template v-else>
+              <FlexRender v-if="!header.isPlaceholder" :header="header" />
+              {{ header.column.getIsSorted() === 'asc' ? '↑' : header.column.getIsSorted() === 'desc' ? '↓' : '' }}
+            </template>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-if="!rows.length">
+          <td colspan="6" class="text-center text-muted">No rows yet.</td>
+        </tr>
+        <tr v-for="row in table.getRowModel().rows" :key="row.id"
+          :class="checked.has(row.original.id) ? 'selected' : ''" tabindex="0"
+          @click="emit('select', row.original)"
+          @keydown.enter.prevent="onRowKeydown($event, row.original)"
+          @keydown.space.prevent="onRowKeydown($event, row.original)">
+          <td v-for="cell in row.getAllCells()" :key="cell.id" @click="onCellClick($event, cell.column.id)">
+            <input v-if="cell.column.id === 'select'" type="checkbox"
+              :checked="checked.has(row.original.id)" :aria-label="`Select ${row.original.topic}`"
+              @change="toggleOne(row.original.id)" />
+            <StatusChip v-else-if="cell.column.id === 'status'" :status="row.original.status" />
+            <FlexRender v-else :cell="cell" />
+          </td>
+        </tr>
+      </tbody>
+    </TableFrame>
     <p class="text-muted text-sm">{{ checked.size }} selected · click a row to edit · headers sort</p>
   </div>
 </template>

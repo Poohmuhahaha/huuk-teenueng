@@ -8,7 +8,8 @@ import BarChart from '@/components/ui/BarChart.vue'
 import TxnTable from '@/components/tables/TxnTable.vue'
 
 const CURRENCY = '฿' // Finance sheet currency symbol
-const { data: txns, isPending } = useTxns()
+const { data: txns, isPending, isError, error: loadError, refetch } = useTxns()
+const isEmpty = computed(() => !txns.value || txns.value.length === 0)
 const addTxn = useAddTxn()
 const { can } = usePermission()
 const canWrite = computed(() => can('finance.write'))
@@ -82,6 +83,14 @@ async function add(): Promise<void> {
   </div>
   <h2>Transactions</h2>
   <div v-if="isPending" class="muted">Loading ledger…</div>
+  <div v-else-if="isError" class="card" role="alert">
+    <p class="muted">Could not load ledger: {{ loadError?.message }}</p>
+    <button type="button" class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
+  </div>
+  <div v-else-if="isEmpty" class="empty-state">
+    <p class="muted">No transactions recorded yet.</p>
+    <TxnTable :rows="[]" :currency="CURRENCY" />
+  </div>
   <TxnTable v-else :rows="txns ?? []" :currency="CURRENCY" />
   <h2>Log transaction</h2>
   <div class="grid4">

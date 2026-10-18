@@ -3,7 +3,7 @@
 //! others; the result is newest-first and snapshot-bounded.
 
 use crate::ads::parse::permission_hint;
-use crate::model::{AdCampaign, AdInsight, AdSet, Ad, AdsData};
+use crate::model::{Ad, AdCampaign, AdInsight, AdSet, AdsData};
 use crate::oauth::OauthSettings;
 
 use super::accounts::{fetch_ad_accounts, fetch_error_hint};

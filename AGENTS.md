@@ -1,12 +1,15 @@
 # AGENTS.md — Huuk (Content Planner)
 
-Vue 3 frontend + Rust (Axum) backend. `app/` canonical frontend, `server/` API,
-`ops/` deploy scripts, `docs/` maintenance docs. No CI, no eslint/prettier —
-`vue-tsc` (via build) and the two test suites are the verification gates.
+Vue 3 frontend + Rust (Axum) backend + PostgreSQL (SQLx) + Caddy + ts-rs + Zod (Master Engineering SOP compliant).
+`app/` canonical frontend, `server/` API, `deploy/` & `ops/` deploy configs/scripts, `docs/` maintenance docs.
 
 ## Run / verify
 
 ```sh
+just ci              # Full SOP gate: cargo fmt, clippy -D warnings, ts-rs contract check, cargo test, bun typecheck/test/build
+just dev-db          # Start local PostgreSQL 16 container (deploy/docker-compose.dev.yml)
+just gen-types       # Export TypeScript bindings from Rust structs via ts-rs
+just check-types     # Verify app/src/api/types/ matches Rust structs
 bun run dev          # backend :8787 (DEMO_MODE=1) + Vite, wired via VITE_API_URL; Ctrl+C stops both
 bun run dev:mock     # frontend only, in-memory mock (no Rust needed)
 bun run dev-server   # backend only
@@ -23,41 +26,46 @@ bun run build        # cargo build --release + vue-tsc -b && vite build
   suite is `server/tests/api.rs`, boots the real router via `tower::oneshot`, no network);
   `cd app && bun run test -- <file-or-substring>` (vitest filter). Typecheck only:
   `cd app && bun run typecheck`.
-- Before calling a change done: `bun run build` **and** `bun run test` (type errors only
-  surface in `vue-tsc -b`, which `vitest` does not run).
+- Before calling a change done: run `just ci` (`cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`, `just check-types`, `cargo test`, `bun run typecheck`, `bun run test`, `bun run build`).
 
-## Data-source swap (read before touching data flow)
+## Data-source swap & Contract Sync (read before touching data flow)
 
 `app/src/api/index.ts` picks the source on `VITE_API_URL`: unset → `src/mock/api.ts`
-(in-memory, resets on reload); set → `src/api/http.ts` → Rust API. Both implement the
-same functions. Rules:
+(in-memory, resets on reload); set → `src/api/http.ts` (using `src/api/client.ts` + `src/api/schemas/index.ts`) → Rust API. Both implement the same functions. Rules:
 
 - Pages/components **never import `src/mock/` directly**; only via `src/api/index.ts`.
-- New/changed endpoint = 4 places in one change: `server/src/handlers.rs` →
-  `app/src/api/http.ts` **and** `app/src/mock/api.ts` → `server/openapi.yaml`
+- DTOs in `server/src/model.rs` and `ApiErrorResponse` in `server/src/error.rs` derive `ts_rs::TS` (`#[ts(export, export_to = "../../app/src/api/types/")]`) and are paired with Zod schemas and compile-time `AssertEqual<z.infer<typeof Schema>, TsRsType>` assertions in `app/src/api/schemas/index.ts`.
+- Never use `as unknown as` in `app/src/` or `.unwrap()` / `.expect()` in production `server/src/`.
+- New/changed endpoint = `server/src/handlers.rs` → `app/src/api/http.ts` + `app/src/api/schemas/index.ts` **and** `app/src/mock/api.ts` → `server/openapi.yaml`
   (source of truth, served at `/api/openapi.yaml` + Swagger UI at `/api/docs`;
   `tests/api.rs` asserts both are served) → tests on both sides.
-- JSON is camelCase; errors are always `{ "error": "…" }`. Restart Vite after
+- JSON is camelCase; errors follow `ApiErrorResponse` (`{ "error_code": "…", "message": "…", "details": …, "error": "…" }`). Restart Vite after
   adding/changing `.env.local` (`VITE_API_URL=http://localhost:8787`).
 - Stale UI on `:8080` is expected: that's the **built** SPA from the deploy stack, not
   the dev server. After frontend changes: `cd app && bun run build`, then redeploy/restart.
 
 ## Backend notes (`server/src/`)
 
-- `main.rs` config/env + persistence loop + graceful shutdown; `lib.rs` router + `AppState`
-  (`Arc<RwLock<Store>>`); `store.rs` state/seed/snapshots; `model.rs` types; `handlers.rs`
-  one handler per endpoint; `error.rs` envelope; `oauth.rs`, `live.rs`, `ads.rs`, `secrets.rs`.
+- `main.rs` (`mimalloc` global allocator, config/env, PostgreSQL pool + SQLx migrations + snapshot persistence loop, graceful shutdown); `lib.rs` router + `AppState`
+  (`Arc<RwLock<Store>>`) + `/healthz`; `db.rs` PostgreSQL pool (`sqlx::PgPool`, `statement_timeout = 5000ms`, `lock_timeout = 3000ms`), migrations (`server/migrations/`), and DB snapshot persistence; `store.rs` state/seed/snapshots; `model.rs` types (`ts-rs`); `handlers.rs`
+  one handler per endpoint (never hold `RwLock` guards across `.await` points); `error.rs` `ApiErrorResponse` envelope; `oauth.rs`, `live.rs`, `ads.rs`, `secrets.rs`.
 - Local dev runs `DEMO_MODE=1` (seeded accounts, auth optional, open registration).
   Without it: production mode — auth required, demo accounts gone, registration closed,
   first Owner from `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
-- Auth: Argon2id, 64-hex-char session tokens, 30-day TTL, in-memory (reset on restart).
+- Auth: Argon2id (`tokio::task::spawn_blocking`), 64-hex-char session tokens, 7-day TTL.
+  The browser session is an **HttpOnly `cp_session` cookie** (`axum-extra` `Cookie` builder with `Secure` + `SameSite::Lax`;
+  `COOKIE_SECURE=0` opts out for plain-HTTP LAN testing) — the SPA must never store
+  tokens (no localStorage). API clients may use the `token` from login/register as
+  `Authorization: Bearer`; `POST /api/auth/refresh` rotates the session (cookie re-issued;
+  Bearer callers get the new token in the body). The frontend calls it single-flight on
+  401 in `api/client.ts` (`isRefreshing` + `failedQueue`).
   With `authRequired` on, post locks derive the holder from the **session** — client-sent
   `user`/`lockedBy` are ignored; creates never accept `lockedBy`.
-- State snapshots to `DATA_FILE` atomically every 5s when dirty + on SIGTERM/SIGINT.
+- State persists to PostgreSQL (`DATABASE_URL` via `db.rs`) and/or `DATA_FILE` atomically every 5s when dirty + on SIGTERM/SIGINT.
   `data/`, `backups/`, `ops/deploy/.env.production`, `*.prompt.md`, `*.pdf`/`*.typ`
   are git-ignored runtime/secrets — never commit them.
 - Demo logins: `owner@studio.local` / `editor@studio.local` / `client@studio.local`,
-  password `demo1234`. Token persists in `localStorage` (`cp.token`).
+  password `demo1234`. The session lives in the HttpOnly cookie — never in web storage.
 
 ## Frontend rules (`app/src/`)
 

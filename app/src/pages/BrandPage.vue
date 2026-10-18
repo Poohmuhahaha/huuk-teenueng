@@ -7,6 +7,8 @@ import {
 } from '@/core/queries'
 import { t } from '@/core/i18n'
 import InfoTip from '@/components/ui/InfoTip.vue'
+import DockBar from '@/components/ui/DockBar.vue'
+import Subnavbar from '@/components/layout/Subnavbar.vue'
 import type { Brand, FontAsset } from '@/mock/db'
 import {
   base64ToBytes, boundsHint, checkImageBounds, fitWithin, imageDimensions,
@@ -566,8 +568,7 @@ async function addDont(): Promise<void> {
 <template>
   <div class="brandpage">
     <header class="brand-head">
-      <span class="brand-step">{{ finished ? '✓' : `${step + 1} / ${STEPS.length}` }}</span>
-      <h1>{{ finished ? t('brand.applied') : t(STEPS[step].title) }}</h1>
+      <Subnavbar select />
     </header>
 
     <div v-if="onboarding" class="brand-note">
@@ -584,11 +585,10 @@ async function addDont(): Promise<void> {
       <p v-if="writeError" class="autherr" role="alert">{{ writeError }}</p>
 
       <!-- 0 · identity -->
-      <section v-show="step === 0 && !finished" class="brand-body">
+      <section v-show="step === 0 && !finished" class="brand-body brand-hero">
         <p class="brand-prompt">{{ t('brand.stepIdentityHint') }}</p>
-        <label class="lbl" for="brand-channel">Channel name</label>
         <input id="brand-channel" class="field" :value="brand.channel" :disabled="!canWrite || busy"
-          :title="canWrite ? '' : t('auth.noPerm')" @change="save('channel', $event)" />
+          :title="canWrite ? '' : t('auth.noPerm')" :aria-label="t('brand.stepIdentityHint')" @change="save('channel', $event)" />
       </section>
 
       <!-- 1 · voice -->
@@ -840,13 +840,13 @@ async function addDont(): Promise<void> {
         <p v-if="imageError" class="autherr" role="alert">{{ imageError }}</p>
       </section>
 
-      <footer class="brand-nav">
-        <button v-if="step > 0 && !finished" class="btn" @click="prevStep">{{ t('brand.back') }}</button>
-        <button v-if="!finished" class="btn btn-primary" @click="nextStep">
+      <DockBar label="Brand steps">
+        <button v-if="step > 0 && !finished" class="btn w-auto" @click="prevStep">{{ t('brand.back') }}</button>
+        <button v-if="!finished" class="btn btn-primary w-auto flex-1" @click="nextStep">
           {{ step === STEPS.length - 1 ? t('brand.finish') : t('brand.next') }}
         </button>
-        <button v-else class="btn btn-primary" @click="restartStep">{{ t('brand.back') }}</button>
-      </footer>
+        <button v-else class="btn btn-primary w-auto flex-1" @click="restartStep">{{ t('brand.back') }}</button>
+      </DockBar>
     </template>
   </div>
 </template>

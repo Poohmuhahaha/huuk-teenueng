@@ -8,6 +8,7 @@ import type { FeedPlatformId } from '@/core/platforms'
 import { currentRole } from '@/core/auth'
 import FeedGrid from '@/components/ui/FeedGrid.vue'
 import LiveSection from '@/components/live/LiveSection.vue'
+import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import SocialMediaBar from '@/components/ui/SocialMediaBar.vue'
 
 const { data: setup } = useSetup()
@@ -91,20 +92,21 @@ const monthLabel = computed(() => {
   <div v-if="setup" class="mb-2.5">
     <div class="row flex-wrap justify-center gap-1.5" role="tablist" :aria-label="t('feed.platform')">
       <button v-for="tab in platformTabs" :key="tab.name" type="button"
-        class="feed-tab inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-[13.5px] font-semibold cursor-pointer transition"
+        class="feed-tab inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm-minus font-semibold cursor-pointer transition"
         :class="platform === tab.name
           ? 'active bg-accent border-accent text-accent-ink'
           : 'bg-surface border-line text-muted hover:bg-wash hover:text-ink'"
         role="tab" :aria-selected="platform === tab.name"
         @click="choosePlatform(tab.name)">
+        <PlatformLogo :name="tab.name" :size="14" />
         {{ tab.name }}
-        <span class="feed-tab-count px-1.5 rounded-full text-[11.5px] font-bold"
+        <span class="feed-tab-count px-1.5 rounded-full text-2xs-plus font-bold"
           :class="platform === tab.name ? 'bg-white/25 text-inherit' : 'bg-wash text-muted'">
           {{ tab.count }}
         </span>
       </button>
     </div>
-    <div class="grid2 max-w-[620px] mt-2">
+    <div class="grid2 max-w-feed mt-2">
       <div><label class="lbl" for="feed-upto">{{ t('feed.upto') }}</label>
         <input id="feed-upto" class="field" type="date" v-model="upto" /></div>
       <div><label class="lbl" for="feed-size">{{ t('feed.size') }}</label>

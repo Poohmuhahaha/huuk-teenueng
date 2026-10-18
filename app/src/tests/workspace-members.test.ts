@@ -8,6 +8,7 @@ import MembersPage from '@/pages/MembersPage.vue'
 import AppShell from '@/components/layout/AppShell.vue'
 import appRouter from '@/app/router'
 import * as api from '@/mock/api'
+import { login as authLogin } from '@/core/auth'
 import { setup, workspaces as dbWorkspaces } from '@/mock/db'
 import { setActiveWorkspace } from '@/core/workspace'
 import { clearSession } from '@/core/session'
@@ -30,13 +31,14 @@ function mountShell() {
       { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
     ],
   })
-  return mount(AppShell, {
+  const w = mount(AppShell, {
     global: { plugins: [router, [VueQueryPlugin, { queryClient: qc }]] },
     slots: { default: '<div />' },
   })
+  return { w, router }
 }
 
-function navLabels(w: ReturnType<typeof mountShell>): string[] {
+function navLabels(w: ReturnType<typeof mountShell>['w']): string[] {
   return w.findAll('.navlink').map((l) => l.text())
 }
 
@@ -86,7 +88,7 @@ describe('workspace members page', () => {
     }, { timeout: 8000 })
     w.unmount()
 
-    const shell = mountShell()
+    const { w: shell } = mountShell()
     await vi.waitFor(() => {
       expect(navLabels(shell)).toContain('Branding')
     }, { timeout: 8000 })
@@ -94,7 +96,7 @@ describe('workspace members page', () => {
   })
 
   it('shows only the owner notice to a non-owner and hides the nav link', async () => {
-    await api.login('editor@studio.local', 'demo1234')
+    await authLogin('editor@studio.local', 'demo1234')
     setActiveWorkspace('ws-default')
 
     const w = mountPage()
@@ -105,11 +107,12 @@ describe('workspace members page', () => {
     expect(w.find('.member-row').exists()).toBe(false)
     w.unmount()
 
-    const shell = mountShell()
+    const { w: shell, router: shellRouter } = mountShell()
     await shell.find('.avatar').trigger('click')
     await vi.waitFor(() => {
-      expect(shell.find('.ws-trigger').exists()).toBe(true)
+      expect(shellRouter.currentRoute.value.path).toBe('/settings')
     }, { timeout: 8000 })
+    expect(shellRouter.currentRoute.value.query.tab).toBe('workspace')
     expect(navLabels(shell)).not.toContain('Members')
     shell.unmount()
   })

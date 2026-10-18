@@ -5,13 +5,16 @@ import { t } from '@/core/i18n'
 import { platformGoals, plus7 } from '@/mock/db'
 import BarChart from '@/components/ui/BarChart.vue'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
+import TableFrame from '@/components/tables/TableFrame.vue'
+import DockBar from '@/components/ui/DockBar.vue'
 import LiveSection from '@/components/live/LiveSection.vue'
 import { useWidePane } from '@/composables/useWidePane'
-import { activeMonth } from '@/core/navdate'
+import { activeMonth, activeYear } from '@/core/navdate'
 
-const { data: metrics } = useMetrics()
+const { data: metrics, isPending: metricsPending } = useMetrics()
 const { data: setup } = useSetup()
-const { data: allPosts, isError, error: loadError, refetch } = useAllPosts()
+const { data: allPosts, isPending: postsPending, isError, error: loadError, refetch } = useAllPosts()
+const isPending = computed(() => postsPending.value && metricsPending.value)
 
 const imp = useImportMetrics()
 const { can } = usePermission()
@@ -21,12 +24,14 @@ useWidePane(root, 'perf-scroll')
 const platform = ref('')
 // The deck works on one month: this is the shared value every card follows.
 const month = activeMonth
+const year = activeYear
 
 watch(setup, (s) => {
   if (s && !platform.value) platform.value = s.platforms[0] ?? ''
 }, { immediate: true })
 
 const posts = computed(() => allPosts.value ?? [])
+const isEmpty = computed(() => posts.value.length === 0)
 
 const byPost = computed(() => {
   const mets = metrics.value ?? []
@@ -70,62 +75,59 @@ const growth = computed(() => {
     <h1>Performance</h1>
 
     <div class="perf-grid">
-      <aside class="perf-side flex flex-wrap items-center gap-3">
-        <div class="w-48 sm:w-56">
-          <MonthToggle v-model="month" />
-        </div>
+      <DockBar label="Performance controls">
+        <MonthToggle v-model="month" v-model:year="year" />
+        <span class="dock-sep" aria-hidden="true" />
         <div class="flex items-center gap-2">
           <label class="sr-only" for="perf-platform">Platform</label>
-          <select id="perf-platform" class="field h-[44px] min-w-[140px] m-0" v-model="platform" aria-label="Platform">
+          <select id="perf-platform" class="field h-11 min-w-25 m-0" v-model="platform" aria-label="Platform">
             <option v-for="o in setup?.platforms ?? []" :key="o" :value="o">{{ o }}</option>
           </select>
-          <button class="btn btn-primary h-[44px] whitespace-nowrap px-5 flex-none" :disabled="!platform || imp.isPending.value || !canImport"
+          <button class="btn btn-primary h-11 whitespace-nowrap px-4 flex-none" :disabled="!platform || imp.isPending.value || !canImport"
             :title="canImport ? '' : t('auth.noPerm')"
-            @click="imp.mutate({ platform, month })">
+            @click="imp.mutate({ platform, month, year })">
             {{ imp.isPending.value ? 'Importing…' : 'Import' }}
           </button>
         </div>
-        <span v-if="imp.data.value" class="text-xs text-muted">Imported {{ imp.data.value.imported }} metric row(s) for {{ platform }} · month {{ month }}.</span>
-        <span v-if="imp.error.value" class="text-xs text-danger">{{ imp.error.value instanceof Error ? imp.error.value.message : imp.error.value }}</span>
-      </aside>
+      </DockBar>
 
       <div class="perf-main">
-        <div v-if="isError" class="card">
+        <span v-if="imp.data.value" class="text-xs text-muted">Imported {{ imp.data.value.imported }} metric row(s) for {{ platform }} · {{ month }}/{{ year }}.</span>
+        <span v-if="imp.error.value" class="text-xs text-danger">{{ imp.error.value instanceof Error ? imp.error.value.message : imp.error.value }}</span>
+        <div v-if="isPending" class="muted">Loading performance…</div>
+        <div v-if="isError" class="card" role="alert">
           <p class="muted">Could not load posts: {{ loadError?.message }}</p>
           <button class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
         </div>
         <h2>Platform goals</h2>
-        <div class="tblwrap">
-          <table class="tbl">
-            <thead><tr><th>Platform</th><th class="num">Start</th><th class="num">Goal</th><th class="num">Now</th><th class="num">Delta</th></tr></thead>
-            <tbody>
-              <tr v-for="g in goalRows" :key="g.platform" style="cursor: default;">
-                <td>{{ g.platform }}</td>
-                <td class="num">{{ g.start.toLocaleString('en-US') }}</td>
-                <td class="num">{{ g.goal.toLocaleString('en-US') }}</td>
-                <td class="num">{{ g.now.toLocaleString('en-US') }}</td>
-                <td class="num">{{ g.delta >= 0 ? '+' : '' }}{{ g.delta.toLocaleString('en-US') }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <TableFrame>
+          <thead><tr><th>Platform</th><th class="num">Start</th><th class="num">Goal</th><th class="num">Now</th><th class="num">Delta</th></tr></thead>
+          <tbody>
+            <tr v-for="g in goalRows" :key="g.platform" style="cursor: default;">
+              <td>{{ g.platform }}</td>
+              <td class="num">{{ g.start.toLocaleString('en-US') }}</td>
+              <td class="num">{{ g.goal.toLocaleString('en-US') }}</td>
+              <td class="num">{{ g.now.toLocaleString('en-US') }}</td>
+              <td class="num">{{ g.delta >= 0 ? '+' : '' }}{{ g.delta.toLocaleString('en-US') }}</td>
+            </tr>
+          </tbody>
+        </TableFrame>
         <h2>Views by month</h2>
         <BarChart :items="growth" />
         <h2>Per-post +7 days</h2>
-        <div class="tblwrap">
-          <table class="tbl">
-            <thead><tr><th>Topic</th><th>Posted</th><th>+7 days</th><th class="num">Likes</th><th class="num">Views</th></tr></thead>
-            <tbody>
-              <tr v-for="r in byPost" :key="r.post.id" style="cursor: default;">
-                <td>{{ r.post.topic }}</td>
-                <td>{{ r.post.date ?? '—' }}</td>
-                <td>{{ r.post.date ? plus7(r.post.date) : '—' }}</td>
-                <td class="num">{{ r.likes.toLocaleString('en-US') }}</td>
-                <td class="num">{{ r.views.toLocaleString('en-US') }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <p v-if="isEmpty && !isPending && !isError" class="muted">No posts recorded yet.</p>
+        <TableFrame v-else>
+          <thead><tr><th>Topic</th><th>Posted</th><th>+7 days</th><th class="num">Likes</th><th class="num">Views</th></tr></thead>
+          <tbody>
+            <tr v-for="r in byPost" :key="r.post.id" style="cursor: default;">
+              <td>{{ r.post.topic }}</td>
+              <td>{{ r.post.date ?? '—' }}</td>
+              <td>{{ r.post.date ? plus7(r.post.date) : '—' }}</td>
+              <td class="num">{{ r.likes.toLocaleString('en-US') }}</td>
+              <td class="num">{{ r.views.toLocaleString('en-US') }}</td>
+            </tr>
+          </tbody>
+        </TableFrame>
         <LiveSection variant="table" />
       </div>
     </div>

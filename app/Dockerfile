@@ -1,5 +1,5 @@
 # Build context: repo root — needed so this Dockerfile can reach both app/ and
-# ops/nginx/. From the repo root:
+# ops/caddy/. From the repo root:
 #   docker build -f app/Dockerfile .
 # (docker compose in ops/ sets context: .. and dockerfile: app/Dockerfile)
 # syntax=docker/dockerfile:1
@@ -22,11 +22,10 @@ COPY app/ .
 # Same as CI (.github/workflows/ci.yml): build via Bun.
 RUN bun run build
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine
-# nginx config lives with the rest of the ops assets.
-COPY ops/nginx/nginx.conf /etc/nginx/conf.d/default.conf
-COPY ops/nginx/nginx-api-proxy.inc /etc/nginx/cp-api-proxy.inc
-COPY --from=build /src/dist /usr/share/nginx/html
+FROM caddy:2-alpine
+# Caddy config lives with the rest of the ops assets.
+COPY ops/caddy/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /src/dist /srv
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=5 \
     CMD wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1

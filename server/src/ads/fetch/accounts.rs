@@ -74,9 +74,7 @@ pub(super) fn fetch_error_hint(error: String) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ads::fetch::test_support::{
-        fake_business_graph, fake_permission_denied_graph,
-    };
+    use crate::ads::fetch::test_support::{fake_business_graph, fake_permission_denied_graph};
 
     #[tokio::test]
     async fn falls_back_to_business_portfolios() {
@@ -94,6 +92,9 @@ mod tests {
         let mut oauth = OauthSettings::from_env();
         oauth.set_graph_base(&base);
         let error = fetch_ad_accounts(&oauth, "token").await.unwrap_err();
-        assert_eq!(fetch_error_hint(error), "reconnect Meta to grant ads access");
+        assert_eq!(
+            fetch_error_hint(error),
+            "reconnect Meta to grant ads access"
+        );
     }
 }

@@ -11,8 +11,8 @@ export interface HubTab {
 }
 
 const props = withDefaults(
-  defineProps<{ tabs: HubTab[]; modelValue: string; controlsPrefix?: string }>(),
-  { controlsPrefix: '' },
+  defineProps<{ tabs: HubTab[]; modelValue: string; controlsPrefix?: string; idPrefix?: string }>(),
+  { controlsPrefix: '', idPrefix: 'hubtab' },
 )
 const emit = defineEmits<{ 'update:modelValue': [string] }>()
 
@@ -33,7 +33,7 @@ function onKey(e: KeyboardEvent, index: number): void {
   if (id === undefined) return
   emit('update:modelValue', id)
   void nextTick(() => {
-    document.getElementById(`hubtab-${id}`)?.focus()
+    document.getElementById(`${props.idPrefix}-${id}`)?.focus()
   })
 }
 </script>
@@ -41,14 +41,14 @@ function onKey(e: KeyboardEvent, index: number): void {
 <template>
   <div class="hubtabs flex justify-center m-0" role="tablist">
     <!-- Segmented Toggle capsule matching Navbar toggle design -->
-    <div class="inline-flex items-center gap-[2px] p-[3px] bg-wash border border-line rounded-full shadow-2xs max-w-full overflow-x-auto">
+    <div class="inline-flex items-center gap-1 p-1 bg-wash border border-line rounded-full shadow-2xs max-w-full overflow-x-auto">
       <button
         v-for="(t, i) in tabs"
         :key="t.id"
-        :id="`hubtab-${t.id}`"
+        :id="`${idPrefix}-${t.id}`"
         type="button"
         role="tab"
-        class="w-auto flex-none text-xs font-medium tracking-[0.01em] px-3.5 py-1.5 rounded-full border border-transparent cursor-pointer transition-all select-none whitespace-nowrap"
+        class="w-auto flex-none text-sm font-medium tracking-[0.01em] px-4 py-2 rounded-full border border-transparent cursor-pointer transition-all select-none whitespace-nowrap"
         :class="modelValue === t.id
           ? 'active bg-ink text-surface font-semibold shadow-xs border-ink'
           : 'text-muted hover:text-ink hover:bg-surface/50'"

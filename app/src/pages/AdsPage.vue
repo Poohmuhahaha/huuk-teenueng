@@ -13,6 +13,7 @@ import {
 import { beginOAuth } from '@/core/oauth'
 import { t } from '@/core/i18n'
 import InfoTip from '@/components/ui/InfoTip.vue'
+import TableFrame from '@/components/tables/TableFrame.vue'
 import type { AdCampaign } from '@/mock/db'
 
 const { data: view, isPending, isError, error: loadError } = useAds()
@@ -255,7 +256,7 @@ const audit = computed(() => view.value?.audit ?? [])
     <p v-else-if="sync.error.value" class="autherr" role="alert">{{ sync.error.value.message }}</p>
     <p v-else-if="view?.error" class="autherr" role="alert">{{ view.error }}</p>
     <p v-if="actionError" class="autherr" role="alert">{{ actionError }}</p>
-    <p v-else-if="notice" class="mt-2.5 text-[13.5px] font-semibold text-success">{{ notice }}</p>
+    <p v-else-if="notice" class="mt-2.5 text-sm-minus font-semibold text-success">{{ notice }}</p>
 
     <!-- opt-in row -->
     <div class="row my-3.5 mb-1.5 gap-2.5">
@@ -286,7 +287,7 @@ const audit = computed(() => view.value?.audit ?? [])
     <template v-else>
       <!-- account picker + summary -->
       <div class="row my-3.5 mb-2.5 gap-3 items-center">
-        <label v-if="accounts.length > 1" class="flex flex-col gap-1 text-[13.5px]">
+        <label v-if="accounts.length > 1" class="flex flex-col gap-1 text-sm-minus">
           <span class="muted">{{ t('ads.account') }}</span>
           <select v-model="accountId" class="py-1.5 px-2.5 border border-line rounded-lg bg-surface font-inherit">
             <option v-for="a in accounts" :key="a.id" :value="a.id">
@@ -303,7 +304,7 @@ const audit = computed(() => view.value?.audit ?? [])
         </button>
       </div>
 
-      <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 mb-3.5">
+      <div class="grid grid-auto-cards gap-3 mb-3.5">
         <div class="panel flex flex-col gap-1 [&>strong]:text-xl">
           <span class="muted">{{ t('ads.spend') }}</span>
           <strong>{{ money(totals.spend * 100) }}</strong>
@@ -323,9 +324,8 @@ const audit = computed(() => view.value?.audit ?? [])
       </div>
 
       <!-- campaign table -->
-      <div class="tblwrap">
-        <table class="tbl ads-tbl [&_tbody_tr]:cursor-pointer">
-          <thead>
+      <TableFrame class="ads-tbl">
+        <thead>
             <tr>
               <th>{{ t('ads.campaign') }}</th>
               <th>{{ t('ads.objective') }}</th>
@@ -365,8 +365,8 @@ const audit = computed(() => view.value?.audit ?? [])
                   <div class="py-1.5 px-0.5 pb-2.5">
                     <div class="grid2">
                       <div>
-                        <h4 class="my-3 mb-1.5 text-[13px] uppercase tracking-wider text-muted">{{ t('ads.settings') }}</h4>
-                        <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 m-0 text-[13.5px] [&>dt]:text-muted [&>dd]:m-0">
+                        <h4 class="my-3 mb-1.5 text-xs-plus uppercase tracking-wider text-muted">{{ t('ads.settings') }}</h4>
+                        <dl class="grid grid-kv gap-x-3 gap-y-1 m-0 text-sm-minus [&>dt]:text-muted [&>dd]:m-0">
                           <dt>{{ t('ads.objective') }}</dt><dd>{{ c.objective }}</dd>
                           <dt>{{ t('ads.bidStrategy') }}</dt><dd>{{ c.bidStrategy || '—' }}</dd>
                           <dt>{{ t('ads.schedule') }}</dt>
@@ -378,7 +378,7 @@ const audit = computed(() => view.value?.audit ?? [])
                         </dl>
                       </div>
                       <div>
-                        <h4 class="my-3 mb-1.5 text-[13px] uppercase tracking-wider text-muted">{{ t('ads.actions') }}</h4>
+                        <h4 class="my-3 mb-1.5 text-xs-plus uppercase tracking-wider text-muted">{{ t('ads.actions') }}</h4>
                         <div class="row">
                           <button class="btn" :disabled="!canWrite" @click="openBudget(c)">
                             {{ t('ads.editBudget') }}
@@ -396,7 +396,7 @@ const audit = computed(() => view.value?.audit ?? [])
                       </div>
                     </div>
 
-                    <h4 class="my-3 mb-1.5 text-[13px] uppercase tracking-wider text-muted">{{ t('ads.adsets') }}</h4>
+                    <h4 class="my-3 mb-1.5 text-xs-plus uppercase tracking-wider text-muted">{{ t('ads.adsets') }}</h4>
                     <div v-for="s in adsetsOf(c.id)" :key="s.id" class="panel mb-2">
                       <div class="row">
                         <strong>{{ s.name }}</strong>
@@ -407,7 +407,7 @@ const audit = computed(() => view.value?.audit ?? [])
                         {{ t('ads.targeting') }}: {{ s.targeting || '—' }}
                         <template v-if="s.promotedObject"> · {{ t('ads.promoted') }}: {{ s.promotedObject }}</template>
                       </p>
-                      <ul class="mt-1 pl-4.5 flex flex-col gap-1 text-[13.5px]">
+                      <ul class="mt-1 pl-4.5 flex flex-col gap-1 text-sm-minus">
                         <li v-for="a in adsOf(s.id)" :key="a.id">
                           <span class="badge" :class="statusClass(a.status)">{{ a.status }}</span>
                           {{ a.creativeTitle || a.name }}
@@ -422,8 +422,7 @@ const audit = computed(() => view.value?.audit ?? [])
               </tr>
             </template>
           </tbody>
-        </table>
-      </div>
+      </TableFrame>
     </template>
 
     <!-- audit trail -->
@@ -439,10 +438,10 @@ const audit = computed(() => view.value?.audit ?? [])
 
     <!-- budget dialog -->
     <div v-if="budgetFor" class="fixed inset-0 z-60 grid place-items-center bg-black/35" @click.self="budgetFor = null">
-      <div class="panel ads-dialog w-[min(520px,92vw)] max-h-[88vh] overflow-auto" role="dialog" aria-modal="true">
+      <div class="panel ads-dialog dialog-sheet overflow-auto" role="dialog" aria-modal="true">
         <h3>{{ t('ads.editBudget') }}</h3>
         <p class="muted">{{ budgetFor.name }}</p>
-        <label class="flex flex-col gap-1 mt-2.5 text-[13.5px]">
+        <label class="flex flex-col gap-1 mt-2.5 text-sm-minus">
           <span>{{ t('ads.dailyBudget') }} ({{ currency }})</span>
           <input v-model="budgetDaily" class="py-1.5 px-2.5 border border-line rounded-lg bg-surface font-inherit" type="number" min="0" step="0.01" />
         </label>
@@ -457,7 +456,7 @@ const audit = computed(() => view.value?.audit ?? [])
 
     <!-- opt-in confirm -->
     <div v-if="manageConfirm" class="fixed inset-0 z-60 grid place-items-center bg-black/35" @click.self="manageConfirm = false">
-      <div class="panel ads-dialog w-[min(520px,92vw)] max-h-[88vh] overflow-auto" role="dialog" aria-modal="true">
+      <div class="panel ads-dialog dialog-sheet overflow-auto" role="dialog" aria-modal="true">
         <h3>{{ t('ads.manageEnable') }}</h3>
         <p class="muted">{{ t('ads.manageConfirm') }}</p>
         <div class="row mt">
@@ -469,33 +468,33 @@ const audit = computed(() => view.value?.audit ?? [])
 
     <!-- boost dialog -->
     <div v-if="boostOpen" class="fixed inset-0 z-60 grid place-items-center bg-black/35" @click.self="boostOpen = false">
-      <div class="panel ads-dialog w-[min(520px,92vw)] max-h-[88vh] overflow-auto" role="dialog" aria-modal="true">
+      <div class="panel ads-dialog dialog-sheet overflow-auto" role="dialog" aria-modal="true">
         <h3>{{ t('ads.boostTitle') }}<InfoTip :text="t('ads.boostHint')" /></h3>
-        <label class="flex flex-col gap-1 mt-2.5 text-[13.5px]">
+        <label class="flex flex-col gap-1 mt-2.5 text-sm-minus">
           <span>{{ t('ads.boostName') }}</span>
           <input v-model="boostForm.name" class="py-1.5 px-2.5 border border-line rounded-lg bg-surface font-inherit" maxlength="120" />
         </label>
-        <label class="flex flex-col gap-1 mt-2.5 text-[13.5px]">
+        <label class="flex flex-col gap-1 mt-2.5 text-sm-minus">
           <span>{{ t('ads.objective') }}</span>
           <select v-model="boostForm.objective" class="py-1.5 px-2.5 border border-line rounded-lg bg-surface font-inherit">
             <option v-for="o in OBJECTIVES" :key="o" :value="o">{{ o }}</option>
           </select>
         </label>
         <div class="grid2">
-          <label class="flex flex-col gap-1 mt-2.5 text-[13.5px]">
+          <label class="flex flex-col gap-1 mt-2.5 text-sm-minus">
             <span>{{ t('ads.dailyBudget') }} ({{ currency }})</span>
             <input v-model="boostForm.dailyBudget" class="py-1.5 px-2.5 border border-line rounded-lg bg-surface font-inherit" type="number" min="0" step="0.01" />
           </label>
-          <label class="flex flex-col gap-1 mt-2.5 text-[13.5px]">
+          <label class="flex flex-col gap-1 mt-2.5 text-sm-minus">
             <span>{{ t('ads.boostDays') }}</span>
             <input v-model.number="boostForm.days" class="py-1.5 px-2.5 border border-line rounded-lg bg-surface font-inherit" type="number" min="1" max="90" />
           </label>
         </div>
-        <label class="flex flex-col gap-1 mt-2.5 text-[13.5px]">
+        <label class="flex flex-col gap-1 mt-2.5 text-sm-minus">
           <span>{{ t('ads.boostCountries') }}</span>
           <input v-model="boostForm.countries" class="py-1.5 px-2.5 border border-line rounded-lg bg-surface font-inherit" placeholder="TH" />
         </label>
-        <label class="flex flex-col gap-1 mt-2.5 text-[13.5px]">
+        <label class="flex flex-col gap-1 mt-2.5 text-sm-minus">
           <span>{{ t('ads.boostPost') }}</span>
           <select v-model="boostForm.storyId" class="py-1.5 px-2.5 border border-line rounded-lg bg-surface font-inherit">
             <option v-for="p in boostPosts" :key="p.id" :value="p.id">

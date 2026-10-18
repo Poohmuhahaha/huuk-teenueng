@@ -15,7 +15,7 @@ const useMock = import.meta.env.VITE_USE_MOCK === 'true'
 export const usingMock = useMock
 
 const api: Api = useMock
-  ? ((await import('@/mock/api')) as unknown as Api)
+  ? (await import('@/mock/api')).mockApi
   : http
 
 export default api

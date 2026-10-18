@@ -1,12 +1,22 @@
 //! Domain types. Field names are camelCase on the wire to match the frontend.
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct Post {
     #[serde(default)]
     pub id: String,
     pub month: u32,
+    /// Planning year. Old snapshots predate the field and load as 0 —
+    /// `Store::load_or_seed` backfills those to the workspace year.
+    #[serde(default)]
+    pub year: u32,
     pub topic: String,
     pub pillar: String,
     pub format: String,
@@ -27,8 +37,13 @@ pub struct Post {
     pub locked_by: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct SetupConfig {
     pub language: String,
     pub year: i32,
@@ -51,8 +66,13 @@ pub struct SetupConfig {
 }
 
 /// A self-hosted brand font uploaded from the Brand Identity page.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct FontAsset {
     /// Stored file name (slug + extension).
     pub name: String,
@@ -60,12 +80,19 @@ pub struct FontAsset {
     pub family: String,
     /// Public URL the app loads with @font-face.
     pub url: String,
+    #[ts(type = "number")]
     pub size: u64,
+    #[ts(type = "number")]
     pub uploaded_at: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct User {
     pub name: String,
     pub role: String,
@@ -103,16 +130,26 @@ pub const CONTENT_KINDS: [&str; 3] = ["article", "page", "note"];
 /// Maximum stored revisions per content item (oldest dropped).
 pub const MAX_CONTENT_REVISIONS: usize = 20;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct Role {
     pub name: String,
     #[serde(default)]
     pub permissions: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct Idea {
     #[serde(default)]
     pub id: String,
@@ -123,25 +160,42 @@ pub struct Idea {
     pub done: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct HashtagGroup {
     pub id: String,
     pub title: String,
     pub tags: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct Metric {
     pub post_id: String,
     pub platform: String,
+    #[ts(type = "number")]
     pub likes: u64,
+    #[ts(type = "number")]
     pub views: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct Txn {
     #[serde(default)]
     pub id: String,
@@ -152,8 +206,13 @@ pub struct Txn {
     pub sub: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct Brand {
     pub channel: String,
     pub positioning: String,
@@ -197,8 +256,13 @@ fn default_shadow() -> String {
     "soft".into()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct PlatformConnection {
     pub id: String,
     pub status: String,
@@ -525,15 +589,22 @@ pub struct Workspace {
 }
 
 /// Wire shape of a workspace for the switcher (no brand/connection payloads).
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct WorkspaceSummary {
     pub id: String,
     pub name: String,
     pub created: String,
     /// Platforms currently connected in this workspace.
+    #[ts(type = "number")]
     pub connected: usize,
     /// Platform slots the workspace has (usually 4).
+    #[ts(type = "number")]
     pub total: usize,
     /// Whether the requesting account owns this workspace.
     pub is_owner: bool,
@@ -585,6 +656,7 @@ where
 #[serde(rename_all = "camelCase", default)]
 pub struct PostPatch {
     pub month: Option<u32>,
+    pub year: Option<u32>,
     pub topic: Option<String>,
     pub pillar: Option<String>,
     pub format: Option<String>,
@@ -610,6 +682,9 @@ impl PostPatch {
     pub fn apply(self, p: &mut Post) {
         if let Some(v) = self.month {
             p.month = v;
+        }
+        if let Some(v) = self.year {
+            p.year = v;
         }
         if let Some(v) = self.topic {
             p.topic = v;
@@ -662,8 +737,13 @@ impl PostPatch {
     }
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct SetupPatch {
     pub language: Option<String>,
     pub year: Option<i32>,
@@ -674,8 +754,13 @@ pub struct SetupPatch {
     pub roles: Option<Vec<Role>>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct BrandPatch {
     pub channel: Option<String>,
     pub positioning: Option<String>,
@@ -699,8 +784,13 @@ pub struct BrandPatch {
 /// A publishable content item (article/page/note) with an editorial workflow.
 /// `version` implements optimistic concurrency: PATCH/publish requests send the
 /// version they last read and get a 409 when someone else saved in between.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct Content {
     #[serde(default)]
     pub id: String,
@@ -748,8 +838,13 @@ fn default_content_status() -> String {
 }
 
 /// A marketing campaign: brief, schedule window, targets and linked content.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct Campaign {
     pub id: String,
     pub name: String,
@@ -788,8 +883,13 @@ pub struct Campaign {
     pub updated_at: String,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct CampaignPatch {
     pub name: Option<String>,
     pub objective: Option<String>,
@@ -816,8 +916,13 @@ fn default_campaign_metric() -> String {
 }
 
 /// An immutable snapshot of a content item, captured before each edit.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct ContentRevision {
     pub revision: u32,
     pub saved_at: String,
@@ -833,8 +938,13 @@ pub struct ContentRevision {
 }
 
 /// Lightweight list row (no body/revisions) for the studio sidebar.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct ContentSummary {
     pub id: String,
     pub title: String,
@@ -849,7 +959,9 @@ pub struct ContentSummary {
     pub published_at: Option<String>,
     pub scheduled_for: Option<String>,
     pub version: u32,
+    #[ts(type = "number")]
     pub revision_count: usize,
+    #[ts(type = "number")]
     pub word_count: usize,
 }
 
@@ -875,8 +987,13 @@ impl Content {
     }
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct ContentPatch {
     /// Version the client last read — required for the concurrency check.
     pub version: Option<u32>,
@@ -932,21 +1049,36 @@ impl ContentPatch {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct ScheduleBody {
     pub version: u32,
     pub scheduled_for: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct VersionBody {
     pub version: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(
+    export,
+    export_to = "../../app/src/api/types/",
+    rename_all = "camelCase"
+)]
 pub struct NewAccountBody {
     pub name: String,
     pub email: String,

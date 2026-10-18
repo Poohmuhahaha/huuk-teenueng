@@ -4,6 +4,7 @@
 //! in-memory store plus optional JSON snapshots. Swap `store::Store` for a
 //! database repository later; the handlers and the HTTP contract stay the same.
 pub mod ads;
+pub mod db;
 pub mod error;
 pub mod handlers;
 pub mod live;
@@ -26,11 +27,10 @@ use axum::{
     Json, Router,
 };
 
-use error::ApiError;
-use serde_json::json;
+use error::{ApiError, ApiErrorResponse};
 use tokio::sync::RwLock;
 use tower_http::{
-    cors::{AllowOrigin, CorsLayer},
+    cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer},
     trace::TraceLayer,
 };
 
@@ -73,6 +73,7 @@ pub fn app(state: AppState) -> Router {
 pub fn app_with_static(state: AppState, static_dir: Option<PathBuf>) -> Router {
     let fallback_dir = static_dir.clone();
     let mut router = Router::new()
+        .route("/healthz", get(handlers::healthz))
         .route("/api/health", get(handlers::health))
         .route("/api/ready", get(handlers::ready))
         .route(
@@ -86,6 +87,7 @@ pub fn app_with_static(state: AppState, static_dir: Option<PathBuf>) -> Router {
         .route("/api/setup/roles/{name}", delete(handlers::remove_role))
         .route("/api/auth/register", post(handlers::register))
         .route("/api/auth/login", post(handlers::login))
+        .route("/api/auth/refresh", post(handlers::refresh))
         .route("/api/auth/me", get(handlers::me))
         .route("/api/auth/logout", post(handlers::logout))
         .route("/api/auth/logout-all", post(handlers::logout_all))
@@ -294,8 +296,10 @@ fn docs_enabled() -> bool {
 }
 
 /// Origins allowed to call the API. `CORS_ORIGINS` (comma-separated) wins;
-/// otherwise demo mode stays permissive and production only trusts the
-/// configured frontend origin (plus the local Vite dev server).
+/// otherwise demo mode mirrors the request origin and production only trusts
+/// the configured frontend origin (plus the local Vite dev server). Credential
+/// support is on so the HttpOnly session cookie flows to cross-origin dev and
+/// desktop frontends; browsers reject `*` with credentials, hence mirroring.
 fn cors_layer() -> CorsLayer {
     let configured = std::env::var("CORS_ORIGINS")
         .ok()
@@ -309,8 +313,11 @@ fn cors_layer() -> CorsLayer {
         .filter(|origins| !origins.is_empty());
 
     let base = CorsLayer::new()
-        .allow_methods(tower_http::cors::Any)
-        .allow_headers(tower_http::cors::Any);
+        // `*` cannot be combined with credentials; mirroring echoes whatever
+        // the (explicitly vetted) origin asked for.
+        .allow_methods(AllowMethods::mirror_request())
+        .allow_headers(AllowHeaders::mirror_request())
+        .allow_credentials(true);
 
     if let Some(origins) = configured {
         return base.allow_origin(AllowOrigin::list(origins));
@@ -319,7 +326,7 @@ fn cors_layer() -> CorsLayer {
         .map(|v| matches!(v.trim(), "1" | "true"))
         .unwrap_or(false)
     {
-        return base.allow_origin(tower_http::cors::Any);
+        return base.allow_origin(AllowOrigin::mirror_request());
     }
 
     let mut origins = vec![
@@ -423,7 +430,10 @@ async fn timeout_middleware(req: Request, next: Next) -> Response {
             tracing::warn!("request timed out");
             (
                 StatusCode::GATEWAY_TIMEOUT,
-                Json(json!({ "error": "request timed out" })),
+                Json(ApiErrorResponse::new(
+                    "GATEWAY_TIMEOUT",
+                    "request timed out",
+                )),
             )
                 .into_response()
         }

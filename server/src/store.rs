@@ -131,6 +131,8 @@ pub struct Store {
     pub fonts_dir: Option<PathBuf>,
     /// Uploaded brand images (logos, moodboard), beside the snapshot.
     pub images_dir: Option<PathBuf>,
+    /// Optional PostgreSQL connection pool for durable persistence and `/healthz`.
+    pub db: Option<sqlx::PgPool>,
 }
 
 /// Hashes a password with Argon2id (default params); returns a PHC string.
@@ -138,8 +140,8 @@ pub fn hash_password(pw: &str) -> String {
     let salt = SaltString::generate(&mut OsRng);
     Argon2::default()
         .hash_password(pw.as_bytes(), &salt)
-        .expect("argon2 hashing cannot fail with valid params")
-        .to_string()
+        .map(|h| h.to_string())
+        .unwrap_or_default()
 }
 
 pub fn verify_password(pw: &str, hash: &str) -> bool {
@@ -174,10 +176,11 @@ pub fn session_token() -> String {
 /// sessions across restarts without ever holding a usable bearer token.
 pub fn session_key(token: &str) -> String {
     use blake2::digest::{Update, VariableOutput};
-    let mut hasher = blake2::Blake2bVar::new(32).expect("32-byte blake2b");
-    hasher.update(token.as_bytes());
     let mut out = [0u8; 32];
-    hasher.finalize_variable(&mut out).expect("32-byte output");
+    if let Ok(mut hasher) = blake2::Blake2bVar::new(32) {
+        hasher.update(token.as_bytes());
+        let _ = hasher.finalize_variable(&mut out);
+    }
     out.iter().map(|b| format!("{b:02x}")).collect()
 }
 
@@ -200,6 +203,7 @@ pub fn plus_days(days: i64) -> String {
 fn post(
     id: &str,
     month: u32,
+    year: u32,
     topic: &str,
     pillar: &str,
     format: &str,
@@ -217,6 +221,7 @@ fn post(
     Post {
         id: id.into(),
         month,
+        year,
         topic: topic.into(),
         pillar: pillar.into(),
         format: format.into(),
@@ -995,8 +1000,14 @@ impl Store {
         }
         let bytes =
             std::fs::read(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-        let snapshot: Snapshot = serde_json::from_slice(&bytes)
-            .map_err(|e| format!("{} is not a valid snapshot: {e}", path.display()))?;
+        Self::from_snapshot_bytes(&bytes)
+            .map_err(|e| format!("{} is not a valid snapshot: {e}", path.display()))
+    }
+
+    /// Restores a store from serialized snapshot JSON bytes.
+    pub fn from_snapshot_bytes(bytes: &[u8]) -> Result<Self, String> {
+        let snapshot: Snapshot =
+            serde_json::from_slice(bytes).map_err(|e| format!("invalid snapshot JSON: {e}"))?;
         // v1 predates workspaces and is migrated below; v2 is current.
         if snapshot.version != 1 && snapshot.version != SNAPSHOT_VERSION {
             return Err(format!(
@@ -1007,6 +1018,13 @@ impl Store {
         let mut store = Self::seed();
         store.setup = snapshot.setup;
         store.posts = snapshot.posts;
+        // Snapshots saved before per-post years load every year as 0 —
+        // attribute those rows to the workspace year.
+        for p in &mut store.posts {
+            if p.year == 0 {
+                p.year = store.setup.year as u32;
+            }
+        }
         store.ideas = snapshot.ideas;
         store.hashtags = snapshot.hashtags;
         store.metrics = snapshot.metrics;
@@ -1330,6 +1348,7 @@ impl Store {
                     post(
                         "p-morning",
                         2,
+                        2026,
                         "Morning Vlog",
                         "Pillar II",
                         "Short-video",
@@ -1347,6 +1366,7 @@ impl Store {
                     post(
                         "p-night",
                         2,
+                        2026,
                         "Self-Care Night Routine",
                         "Pillar I",
                         "Long-video",
@@ -1364,6 +1384,7 @@ impl Store {
                     post(
                         "p-desk",
                         2,
+                        2026,
                         "Desk Setup Tour",
                         "Pillar III",
                         "Short-video",
@@ -1381,6 +1402,7 @@ impl Store {
                     post(
                         "p-budget",
                         2,
+                        2026,
                         "Budget Breakfast",
                         "Pillar I",
                         "Short-video",
@@ -1398,6 +1420,7 @@ impl Store {
                     post(
                         "p-feed",
                         2,
+                        2026,
                         "Feed Aesthetic Tips",
                         "Pillar II",
                         "Long-video",
@@ -1415,6 +1438,7 @@ impl Store {
                     post(
                         "p-march",
                         3,
+                        2026,
                         "March Teaser",
                         "Pillar I",
                         "Short-video",
@@ -1647,6 +1671,7 @@ impl Store {
             admin_token: None,
             fonts_dir: None,
             images_dir: None,
+            db: None,
         }
     }
 

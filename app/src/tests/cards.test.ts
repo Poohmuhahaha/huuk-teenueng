@@ -2,8 +2,8 @@
 // Settings). Related features live as tabs inside a hub; legacy deep links
 // redirect into the owning hub + tab.
 // @vitest-environment happy-dom
-import { describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { screens, screenIndexOf } from '@/core/screens'
@@ -102,7 +102,7 @@ describe('compact navbar', () => {
   })
 })
 
-describe('avatar toggle (connect + workspace)', () => {
+describe('avatar shortcut', () => {
   function mountShell() {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const router = createRouter({
@@ -112,30 +112,23 @@ describe('avatar toggle (connect + workspace)', () => {
         { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
       ],
     })
-    return mount(AppShell, {
+    const w = mount(AppShell, {
       global: { plugins: [router, [VueQueryPlugin, { queryClient: qc }]] },
       slots: { default: '<div />' },
     })
+    return { w, router }
   }
 
-  it('shows the connect section and the workspace switcher inside the toggle', async () => {
+  it('navigates to the Settings workspace tab instead of opening a popup', async () => {
     await login('owner@studio.local', 'demo1234')
-    const w = mountShell()
+    const { w, router } = mountShell()
     try {
       await w.find('.avatar').trigger('click')
-      await vi.waitFor(() => {
-        expect(w.find('.avatar-menu').exists()).toBe(true)
-        expect(w.find('.pop-connect').exists()).toBe(true)
-      }, { timeout: 8000 })
-      // One row per platform, each opening the connection dialog…
-      expect(w.findAll('.conn-row')).toHaveLength(3)
-      // …and the workspace switcher right below it.
-      expect(w.find('.avatar-menu .ws-trigger').exists()).toBe(true)
-
-      await w.findAll('.conn-btn')[0].trigger('click')
-      await vi.waitFor(() => {
-        expect(w.find('.plogin').exists()).toBe(true)
-      }, { timeout: 8000 })
+      await flushPromises()
+      expect(router.currentRoute.value.path).toBe('/settings')
+      expect(router.currentRoute.value.query.tab).toBe('workspace')
+      // No popup anymore.
+      expect(w.find('.avatar-menu').exists()).toBe(false)
     } finally {
       w.unmount()
       await logout().catch(() => undefined)

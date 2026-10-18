@@ -6,6 +6,7 @@ import {
 } from '@tanstack/vue-table'
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { Txn } from '@/mock/db'
+import TableFrame from '@/components/tables/TableFrame.vue'
 
 const props = defineProps<{ rows: Txn[]; currency: string }>()
 
@@ -45,32 +46,30 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
 </script>
 
 <template>
-  <div class="overflow-x-auto border border-faint bg-surface rounded-none">
-    <table class="tbl w-full border-collapse text-md [&_tr:last-child_td]:border-b-0">
-      <thead>
-        <tr>
-          <th v-for="header in table.getHeaderGroups()[0]?.headers ?? []" :key="header.id" class="cursor-pointer border-b border-faint px-3.5 py-2.5 uppercase tracking-[0.05em] text-muted bg-surface-2 text-[11.5px] font-bold whitespace-nowrap hover:text-ink"
-            :class="header.column.id === 'amount' ? 'text-right' : 'text-left'"
-            :aria-sort="ariaSort(header.column.getCanSort(), header.column.getIsSorted())"
-            :tabindex="header.column.getCanSort() ? 0 : undefined"
-            @click="toggleSort(header.column)"
-            @keydown.enter.prevent="toggleSort(header.column)"
-            @keydown.space.prevent="toggleSort(header.column)">
-            <FlexRender v-if="!header.isPlaceholder" :header="header" />
-            {{ header.column.getIsSorted() === 'asc' ? '↑' : header.column.getIsSorted() === 'desc' ? '↓' : '' }}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-if="!rows.length">
-          <td colspan="5" class="text-center text-muted text-sm border-b border-faint px-3.5 py-2.5">No transactions yet.</td>
-        </tr>
-        <tr v-for="row in table.getRowModel().rows" :key="row.id" class="transition-colors hover:bg-surface-2">
-          <td v-for="cell in row.getAllCells()" :key="cell.id" class="text-left border-b border-faint px-3.5 py-2.5" :class="cell.column.id === 'amount' ? 'num text-right tabular-nums' : ''">
-            <FlexRender :cell="cell" />
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <TableFrame>
+    <thead>
+      <tr>
+        <th v-for="header in table.getHeaderGroups()[0]?.headers ?? []" :key="header.id"
+          :class="[header.column.id === 'amount' ? 'text-right' : '', header.column.getCanSort() ? 'sortable' : '']"
+          :aria-sort="ariaSort(header.column.getCanSort(), header.column.getIsSorted())"
+          :tabindex="header.column.getCanSort() ? 0 : undefined"
+          @click="toggleSort(header.column)"
+          @keydown.enter.prevent="toggleSort(header.column)"
+          @keydown.space.prevent="toggleSort(header.column)">
+          <FlexRender v-if="!header.isPlaceholder" :header="header" />
+          {{ header.column.getIsSorted() === 'asc' ? '↑' : header.column.getIsSorted() === 'desc' ? '↓' : '' }}
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-if="!rows.length">
+        <td colspan="5" class="text-center text-muted">No transactions yet.</td>
+      </tr>
+      <tr v-for="row in table.getRowModel().rows" :key="row.id">
+        <td v-for="cell in row.getAllCells()" :key="cell.id" :class="cell.column.id === 'amount' ? 'num' : ''">
+          <FlexRender :cell="cell" />
+        </td>
+      </tr>
+    </tbody>
+  </TableFrame>
 </template>

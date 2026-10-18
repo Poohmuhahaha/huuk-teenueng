@@ -1,26 +1,28 @@
 # Content Planner — Rust backend
 
-REST API for the Content Planner wireframe app (`../../archive/wireframe`). Built with **Axum 0.8 + Tokio**,
-in-memory state with atomic JSON snapshots, JSON with camelCase fields — the exact contract the
-frontend's mock API exposes, so the app can switch between mock and backend with one env var.
+REST API for the Content Planner app (`../app`). Built with **Axum 0.8 + Tokio + SQLx 0.8 (PostgreSQL 16) + mimalloc + ts-rs**,
+in-memory state backed by PostgreSQL (`DATABASE_URL` + SQLx migrations) and/or atomic JSON snapshots (`DATA_FILE`), JSON with camelCase fields — the exact contract the
+frontend's mock API exposes, with TypeScript DTO contracts auto-generated via `ts-rs` into `../app/src/api/types/`.
 
 Production-ready defaults: demo mode is explicit (`DEMO_MODE=1`), auth is required otherwise,
-passwords are Argon2id with login rate-limiting, every input is validated, request size/timeouts
-and security headers are enforced, CORS is configurable, and state survives restarts via
+passwords are Argon2id (`spawn_blocking`) with login rate-limiting, every input is validated, request size/timeouts
+and security headers are enforced, CORS is configurable, and state survives restarts via PostgreSQL and/or
 `DATA_FILE`.
 
 ```
 server/
 ├─ Cargo.toml
+├─ migrations/     # SQLx relational schema migrations (users, workspaces, sessions, campaigns, ideas, finance_items, app_state_snapshots)
 ├─ src/
-│  ├─ main.rs      # binary: config from env, persistence loop, graceful shutdown
-│  ├─ lib.rs       # Router (all routes), layered middleware, AppState, new_state()
-│  ├─ model.rs     # domain types + partial-update payloads (camelCase serde)
+│  ├─ main.rs      # binary: mimalloc allocator, config from env, PG pool + migrations, persistence loop, graceful shutdown
+│  ├─ lib.rs       # Router (all routes + /healthz), layered middleware, AppState, new_state()
+│  ├─ db.rs        # SQLx PgPool init (statement/lock timeouts), migrations, health check, DB snapshot persistence
+│  ├─ model.rs     # domain types + partial-update payloads (camelCase serde + ts-rs export)
 │  ├─ store.rs     # Store + seed data + snapshots + id/session/password helpers
 │  ├─ handlers.rs  # one handler per endpoint (validation + permission gates)
 │  ├─ oauth.rs     # credential-optional OAuth 2.0 authorization-code flow
-│  └─ error.rs     # ApiError + JSON-aware extractors → uniform {"error": …}
-└─ tests/api.rs    # 59 integration tests (tower::ServiceExt oneshot)
+│  └─ error.rs     # ApiError + ApiErrorResponse (error_code, message, details, error) + ts-rs export
+└─ tests/api.rs    # 101 integration tests (tower::ServiceExt oneshot)
 ```
 
 ## Quick start

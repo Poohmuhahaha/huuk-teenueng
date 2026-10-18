@@ -31,8 +31,24 @@
 
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1.45;
+  --text-2xs-plus: 0.71875rem;
+  --text-2xs-plus--line-height: 1.45;
+  --text-xs-mid: 0.78125rem;
+  --text-xs-mid--line-height: 1.45;
+  --text-xs-plus: 0.8125rem;
+  --text-xs-plus--line-height: 1.45;
+  --text-sm-minus: 0.84375rem;
+  --text-sm-minus--line-height: 1.5;
   --text-md: 0.9375rem;
   --text-md--line-height: 1.6;
+  --spacing-tight: 0.1875rem;
+  --spacing-touch: 2.75rem;
+  --container-form: 21.25rem;
+  --container-feed: 38.75rem;
+  --container-article: 47.5rem;
+  --radius-card: var(--radius, 12px);
+  --radius-media: 0.625rem;
+  --radius-panel: 0.875rem;
 }
 
 /* Shadows share names with the runtime vars, so they resolve inline (no
@@ -48,6 +64,7 @@
 @keyframes sheet-in-left { from { transform: translateX(-100%); } to { transform: none; } }
 @keyframes sheet-in-up { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes topbar-item-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 @utility animate-sheet-right {
   animation: sheet-in-right 0.24s cubic-bezier(0.16, 1, 0.3, 1);
@@ -61,6 +78,35 @@
 @utility animate-fade-in {
   animation: fade-in 0.2s ease-out;
 }
+@utility grid-auto-cards {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+@utility grid-kv {
+  grid-template-columns: auto 1fr;
+}
+@utility grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+@utility dialog-sheet {
+  width: min(520px, 92vw);
+  max-height: 88vh;
+}
+@utility form-onboarding {
+  width: min(460px, 100%);
+}
+@utility shadow-selected-bar {
+  box-shadow: inset 2px 0 0 var(--ink);
+}
+
+/* Engine compat: Tailwind v4 emits rounded-full as a giant radius that
+   old Edge engines drop, leaving square corners. 9999px renders an
+   identical pill and is valid everywhere. Unlayered so it beats the utility. */
+.rounded-full { border-radius: 9999px; }
+
+/* Picker dialogs (month grid, date picker) follow the popup language:
+   18px like the topbar dropdown, not square. Unlayered beats rounded-none. */
+.month-modal { border-radius: 20px 20px 0 0; }
+.dp-modal { border-radius: 18px; }
 
 /* Global p-drawer transition classes */
 .p-drawer-anim-enter-active,
@@ -387,6 +433,25 @@ button.wire { font-family: inherit; cursor: pointer; }
 .avatar-menu .ws-trigger:hover { background: var(--wash); }
 .avatar-menu .ws-menu { position: static; box-shadow: none; border: 0; padding: 0; min-width: 0; }
 
+/* Settings workspace tab — the account sections moved out of the avatar
+   popup render here as full-width card sections (same hook classes). */
+.settings-stack { display: flex; flex-direction: column; gap: 20px; width: 100%; min-width: 0; }
+.settings-stack .pop-block { padding: 8px 10px 4px; }
+.settings-stack .pop-actions { display: flex; flex-direction: column; border-top: 1px solid var(--faint); margin-top: 8px; padding-top: 6px; }
+.settings-stack .menubtn {
+  text-align: left; font: inherit; font-size: 14px; padding: 8px 10px;
+  border: 0; border-radius: var(--radius-sm); background: none; color: inherit; cursor: pointer;
+}
+.settings-stack .menubtn:hover { background: var(--wash); }
+.settings-stack .ws-wrap { display: flex; flex-direction: column; width: 100%; }
+.settings-stack .ws-trigger {
+  width: 100%; justify-content: space-between;
+  font: inherit; font-size: 14px; padding: 8px 10px;
+  border: 0; border-radius: var(--radius-sm); background: none; color: inherit; cursor: pointer;
+}
+.settings-stack .ws-trigger:hover { background: var(--wash); }
+.settings-stack .ws-menu { position: static; box-shadow: none; border: 0; padding: 0; min-width: 0; }
+
 /* guide overlay — not a deck card */
 .guide-overlay {
   position: fixed; inset: 0; z-index: 60; padding: 24px;
@@ -403,10 +468,6 @@ button.wire { font-family: inherit; cursor: pointer; }
 /* settings popup — reuses the guide overlay shell */
 .settings-body { max-height: 68vh; overflow-y: auto; padding-right: 4px; }
 .main { flex: 1; width: 100%; max-width: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
-.footer {
-  border-top: 1px solid var(--faint); padding: 12px 18px; font-size: 12px;
-  color: var(--muted); text-align: center; background: var(--surface);
-}
 
 /* ---- primitives ---- */
 h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 6px; }
@@ -480,8 +541,10 @@ label.lbl { display: block; font-size: 13px; font-weight: 650; color: var(--mute
 /* inline form/action errors */
 .autherr { margin: 10px 0 0; font-size: 13.5px; font-weight: 600; color: var(--danger); }
 
-/* tables (TanStack) */
-.tblwrap { overflow-x: auto; border: 1px solid var(--faint); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); }
+/* tables — one chrome for TanStack tables and plain tables alike, owned by
+   the TableFrame component (bordered scrolling frame + table.tbl).
+   Tables stay at a fixed 18px corner (flat theme keeps no shadow). */
+.tblwrap { overflow-x: auto; border: 1px solid var(--faint); border-radius: 18px; background: var(--surface); box-shadow: none; }
 table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 .tbl th, .tbl td { border-bottom: 1px solid var(--faint); padding: 10px 14px; text-align: left; }
 .tbl thead th {
@@ -558,6 +621,9 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
   backdrop-filter: blur(4px);
   display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
 }
+/* Month picker bottom sheet: the same backdrop pins the sheet to the
+   bottom edge instead of centering it (unlayered so it beats utilities). */
+.backdrop.p-drawer-side-bottom { justify-content: flex-end; padding: 0; }
 .modal {
   background: var(--surface); border: 1px solid var(--faint); border-radius: var(--radius-lg);
   padding: 22px; max-width: 440px; width: 100%; box-shadow: var(--shadow-lg);
@@ -730,9 +796,43 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
   margin: 0;
 }
 @media (max-width: 640px) {
-  .deck { scroll-padding-inline: 0; }
-  .slide { flex-basis: min(402px, 88vw); }
-  .slide.spacer { flex-basis: 12px; }
+  .deck { scroll-padding-inline: 10px; gap: 20px; height: 100%; margin-top: 0; }
+  /* Phones: 10px under the topbar, then the card sits flush under the pills
+     (no margin). 10 + 61 + 61 + 0 + 10 chrome = 142;
+     no tab row: 10 + 61 + 0 + 10 = 81.
+     Card content starts 10px under the card edge (was 40px). */
+  .app header.topbar { margin-top: 10px; top: 10px; }
+  .card-scroll { padding: 10px 18px 18px; }
+  .slide-card { height: calc(100vh - 142px); }
+  .app:not(:has(> nav.subnavbar)) .slide-card { height: calc(100vh - 81px); }
+  /* Phones: every dockbar lives below its card, outside it — the card
+     shrinks by that 72px zone (10 gap + ~52 buttons + 10 pad) so the total
+     display height stays the same. Cards without a dock keep full height. */
+  .slide:has(.dock) .slide-card { height: calc(100vh - 214px); }
+  .app:not(:has(> nav.subnavbar)) .slide:has(.dock) .slide-card { height: calc(100vh - 153px); }
+  .slide:has(.dock) .dock {
+    position: fixed; bottom: 10px; left: 0; right: 0; z-index: 30;
+    margin: 0; background: transparent; border: 0;
+  }
+  .slide:not(.active):has(.dock) .dock { display: none; }
+  /* Uniform dock height so the card→buttons gap is 10px on every page. */
+  .slide:has(.dock) .dock-bar { min-height: 62px; }
+  /* No full-page expand on phones — the card already fills the viewport. */
+  .expand-btn { display: none; }
+  /* Snap pins every card's left edge at 10px, so full-bleed-minus-margins
+     width gives symmetric 10/10 breathing (optically centered). */
+  .slide { flex-basis: min(402px, calc(100vw - 20px)); }
+  .slide.spacer { flex-basis: 10px; }
+  /* Phone finger-swipe between cards: let horizontal pans chain out of the
+     card to the deck (the swipe dies under `contain`). Vertical stays
+     contained. Desktop keeps `contain` on both axes — untouched. */
+  .card-scroll,
+  .card-scroll.studio-scroll .studio-main,
+  .card-scroll.perf-scroll .perf-main,
+  .card-scroll.planner-scroll .planner-detail,
+  .card-scroll.camp-scroll .camp-detail,
+  .card-scroll.planner-scroll .planner-grid > .p-drawer,
+  .card-scroll.dash-scroll .dash-main { overscroll-behavior-x: auto; }
 }
 
 /* native shell grid — 1 : 3 : 3 : 1, full screen (04 §1) */
@@ -889,10 +989,17 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
+  align-content: start;
   gap: 20px;
   min-width: 0;
+  height: 100%;
+  text-align: left;
 }
 .brandpage > * { min-width: 0; }
+/* The wizard footer used to pin to the card bottom via margin-top:auto, which
+   needed the hub stretched past the card (+58px) — that stretch is gone with
+   the footer (Next now floats in the dock), so short steps no longer scroll.
+   Tall steps still scroll naturally. */
 /* A narrow card stacks the multi-column rows, like a phone. */
 @container screen (max-width: 520px) {
   .brandpage .grid2,
@@ -1217,7 +1324,7 @@ select {
   color: var(--ink);
 }
 .field::placeholder, input::placeholder, textarea::placeholder { color: var(--muted); }
-.field:focus, input:focus, select:focus, textarea:focus {
+.field:focus, input.field:focus, select.field:focus, textarea.field:focus {
   outline: none; box-shadow: none; border-bottom-color: var(--ink);
 }
 textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; padding: 12px; }
@@ -1241,34 +1348,16 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .navlink { border-radius: var(--radius-pill); }
 .navlink.active { background: transparent; color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
 
-/* footer reads as part of the paper, not an inverted island */
-.footer { background: var(--surface); color: var(--muted); }
-
 /* =========================================================================
    Brand Identity card — minimal layout (match the reference):
    centered narrow column · huge serif uppercase title · borderless sections ·
    label + underline fields · generous whitespace · pill actions.
    ========================================================================= */
-.brandpage {
-  max-width: 430px;
-  margin: 0 auto;
-  min-height: 932px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  padding: 44px 32px 0;
-}
+/* Brand Identity fills its card like every other hub: the fluid grid at the
+   top of this file owns the box (single column, gap, fit guards). */
 .brandpage .brand-head {
   text-align: center;
   margin: 0 0 24px;
-}
-.brandpage .brand-step {
-  display: block;
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 14px;
 }
 .brandpage h1 {
   font-family: var(--font-display);
@@ -1285,16 +1374,24 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   margin: 0 0 22px;
   font-size: 14px;
 }
+/* Step 0 is one question + one field: everything centered, nothing else. */
+.brandpage .brand-hero { text-align: center; }
+.brandpage .brand-hero .lbl { text-align: center; }
+.brandpage .brand-hero .field { text-align: center; font-size: 22px; }
 .brandpage .brand-prompt {
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: clamp(17px, 4.4vw, 21px);
+  line-height: 1.3;
+  text-align: center;
   color: var(--ink);
-  margin: 0 0 28px;
+  margin: 0 0 8px;
 }
 .brandpage .brand-body {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  display: grid;
+  gap: 20px;
+  align-content: safe center;
+  min-width: 0;
+  flex: 1 0 auto;
 }
 .brandpage .brand-body .field {
   width: 100%;
@@ -1324,7 +1421,6 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .brandpage .grid3,
 .brandpage .grid4,
 .brandpage .grid6 {
-  grid-template-columns: 1fr !important;
   gap: 26px;
 }
 .brandpage .lbl {
@@ -1343,11 +1439,6 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   margin-bottom: 26px;
   font-size: 16px;
 }
-.brandpage .panel {
-  border: 0 !important;
-  padding: 0 !important;
-  background: transparent;
-}
 .brandpage .row { gap: 16px; }
 .brandpage .logo-preview,
 .brandpage .mood-item img {
@@ -1362,7 +1453,6 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   height: 24px;
   line-height: 1;
 }
-.brandpage .palette-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; }
 .brandpage .font-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .brandpage .font-choice { border: 1px solid var(--line); border-radius: 0; padding: 14px; }
 .brandpage .font-choice.active { background: var(--ink); color: #fff; }
@@ -1434,7 +1524,7 @@ select {
   color: var(--ink);
 }
 .field::placeholder, input::placeholder, textarea::placeholder { color: var(--muted); }
-.field:focus, input:focus, select:focus, textarea:focus {
+.field:focus, input.field:focus, select.field:focus, textarea.field:focus {
   outline: none; box-shadow: none; border-bottom-color: var(--ink);
 }
 textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; padding: 12px; }
@@ -1458,34 +1548,16 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .navlink { border-radius: var(--radius-pill); }
 .navlink.active { background: transparent; color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
 
-/* footer reads as part of the paper, not an inverted island */
-.footer { background: var(--surface); color: var(--muted); }
-
 /* =========================================================================
    Brand Identity card — minimal layout (match the reference):
    centered narrow column · huge serif uppercase title · borderless sections ·
    label + underline fields · generous whitespace · pill actions.
    ========================================================================= */
-.brandpage {
-  max-width: 430px;
-  margin: 0 auto;
-  min-height: 932px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  padding: 44px 32px 0;
-}
+/* Brand Identity fills its card like every other hub: the fluid grid at the
+   top of this file owns the box (single column, gap, fit guards). */
 .brandpage .brand-head {
   text-align: center;
   margin: 0 0 24px;
-}
-.brandpage .brand-step {
-  display: block;
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 14px;
 }
 .brandpage h1 {
   font-family: var(--font-display);
@@ -1502,16 +1574,24 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   margin: 0 0 22px;
   font-size: 14px;
 }
+/* Step 0 is one question + one field: everything centered, nothing else. */
+.brandpage .brand-hero { text-align: center; }
+.brandpage .brand-hero .lbl { text-align: center; }
+.brandpage .brand-hero .field { text-align: center; font-size: 22px; }
 .brandpage .brand-prompt {
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: clamp(17px, 4.4vw, 21px);
+  line-height: 1.3;
+  text-align: center;
   color: var(--ink);
-  margin: 0 0 28px;
+  margin: 0 0 8px;
 }
 .brandpage .brand-body {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  display: grid;
+  gap: 20px;
+  align-content: safe center;
+  min-width: 0;
+  flex: 1 0 auto;
 }
 .brandpage .brand-body .field {
   width: 100%;
@@ -1541,7 +1621,6 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .brandpage .grid3,
 .brandpage .grid4,
 .brandpage .grid6 {
-  grid-template-columns: 1fr !important;
   gap: 26px;
 }
 .brandpage .lbl {
@@ -1560,11 +1639,6 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   margin-bottom: 26px;
   font-size: 16px;
 }
-.brandpage .panel {
-  border: 0 !important;
-  padding: 0 !important;
-  background: transparent;
-}
 .brandpage .row { gap: 16px; }
 .brandpage .logo-preview,
 .brandpage .mood-item img {
@@ -1579,7 +1653,6 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   height: 24px;
   line-height: 1;
 }
-.brandpage .palette-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; }
 .brandpage .font-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .brandpage .font-choice { border: 1px solid var(--line); border-radius: 0; padding: 14px; }
 .brandpage .font-choice.active { background: var(--ink); color: #fff; }
@@ -1920,6 +1993,18 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   text-align: left;
   padding-right: 220px;
 }
+/* Narrow cards stack side/main/detail with no grid styles of their own —
+   give them breathing room so the controls never touch the table. */
+.planner-grid {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+/* Grid items default to min-width:auto (content floor) which lets a wide
+   controls row blow out a narrow card — unblock shrinking. */
+.planner-grid > * {
+  min-width: 0;
+}
 .card-scroll.planner-scroll .planner-grid,
 .card-scroll.camp-scroll .camp-grid {
   flex: 1;
@@ -1947,8 +2032,8 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 }
 .card-scroll.perf-scroll .perf-side {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 12px;
 }
 .card-scroll.planner-scroll .planner-main,
@@ -2025,3 +2110,298 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
+
+/* ---- Liquid Glass navbar ----
+   Adaptation of Framer's "Liquid Glass Navbar": a floating frosted pill with
+   a chrome edge, glass link pills and a dark-glass CTA. This block sits last
+   so it wins over the flat-theme navbar overrides above (same reason every
+   selector is scoped under header.topbar). */
+header.topbar {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+  width: calc(100% - 160px);
+  margin: 12px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 14px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 250, 252, 0.9) 55%, rgba(243, 243, 246, 0.9) 100%) padding-box,
+    linear-gradient(180deg, #ffffff 0%, #e6e6e6 25%, #c9c9c9 50%, #e6e6e6 75%, #ffffff 100%) border-box;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 24px -6px rgba(0, 0, 0, 0.12),
+    0 24px 48px -12px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+}
+header.topbar .brand { display: inline-flex; align-items: center; }
+header.topbar .brand-logo { height: 30px; }
+header.topbar .links { display: flex; align-items: center; justify-content: center; flex: 1; min-width: 0; }
+header.topbar .nav-toggle-group {
+  background: transparent; border: 0; box-shadow: none;
+  padding: 0; gap: 4px; overflow: visible; max-width: 100%;
+}
+header.topbar .navlink {
+  font-size: 14px; font-weight: 500; letter-spacing: 0.01em;
+  color: rgba(20, 20, 25, 0.55);
+  padding: 10px 15px; border: 0; border-radius: 999px;
+  transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+header.topbar .navlink:hover,
+header.topbar .navlink.active {
+  color: #0a0a0c;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 20px -6px rgba(148, 160, 181, 0.45),
+    -4px -4px 12px rgba(255, 255, 255, 0.6);
+}
+header.topbar .navlink.active { font-weight: 600; text-decoration: none; }
+/* dark-glass CTA */
+header.topbar .side .btn { width: auto; }
+header.topbar .side .btn-primary {
+  background: linear-gradient(180deg, #26262a 0%, #08080a 100%);
+  border: 0; color: #fff;
+  font-size: 14px; font-weight: 600; letter-spacing: 0.01em; text-transform: none;
+  padding: 11px 24px; border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+    0 7px 16px -6px rgba(0, 0, 0, 0.38);
+}
+header.topbar .side .btn-primary:hover {
+  background: linear-gradient(180deg, rgba(37, 37, 41, 0.85) 0%, rgba(8, 8, 10, 0.85) 100%);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+    0 12px 24px -6px rgba(0, 0, 0, 0.58);
+}
+/* hamburger (phone sizes) */
+header.topbar .nav-burger {
+  display: none; position: relative; flex: 0 0 auto;
+  width: 40px; height: 40px; padding: 0; cursor: pointer;
+  border: 0; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 8px 20px -6px rgba(148, 160, 181, 0.45),
+    -4px -4px 12px rgba(255, 255, 255, 0.5);
+}
+header.topbar .nav-burger span {
+  position: absolute; left: 11px; width: 18px; height: 2px; border-radius: 2px;
+  background: #0a0a0c;
+  transition: transform 0.35s cubic-bezier(0.3, 1.2, 0.4, 1), top 0.35s cubic-bezier(0.3, 1.2, 0.4, 1);
+}
+header.topbar .nav-burger span:first-child { top: 15px; }
+header.topbar .nav-burger span:last-child { top: 23px; }
+header.topbar .nav-burger.open span:first-child { top: 19px; transform: rotate(45deg); }
+header.topbar .nav-burger.open span:last-child { top: 19px; transform: rotate(-45deg); }
+/* Main-nav picker: on phones the ≡ burger is replaced by one long
+   tabselect-style button (current hub + caret) opening the hub menu.
+   Desktop always keeps the logo + links row, so the picker hides there. */
+header.topbar .in-topbar { display: none; }
+header.topbar .in-topbar .tabselect-btn { width: 100%; display: flex; justify-content: center; align-items: center; padding: 8px 4px; }
+/* Picker label reads as the page h1: serif display, uppercase. All-caps sits
+   optically high in its line box, so nudge it down (transform: no layout). */
+header.topbar .in-topbar .tabselect-label {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  transform: translateY(0.08em);
+}
+header.topbar .in-topbar .tabselect-menu { left: 50%; transform: translateX(-50%); }
+/* Main menu reads bigger: roomier rows for the hub list. */
+header.topbar .in-topbar .tabselect-menu { min-width: 240px; padding: 10px; }
+header.topbar .in-topbar .tabselect-item { font-size: 16px; padding: 12px 14px; border-radius: 14px; }
+header.topbar .in-topbar .tabselect-check { font-size: 14px; }
+.app.on-brand header.topbar .nav-burger { display: none; }
+.app.on-brand .brandpage .brand-head { display: none; }
+/* Single-button tab picker (select mode): ghost button + dropdown menu. */
+.tabselect { position: relative; min-width: 0; }
+.tabselect-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; border: 0; padding: 6px 2px; cursor: pointer;
+  font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); white-space: nowrap;
+}
+.tabselect-caret { font-size: 11px; color: var(--muted); transition: transform 0.25s ease; }
+.tabselect-btn.expanded .tabselect-caret { transform: rotate(180deg); }
+.tabselect-menu {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 30;
+  display: flex; flex-direction: column; min-width: 160px; padding: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 16px 40px -12px rgba(10, 10, 12, 0.25);
+}
+.tabselect-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: transparent; border: 0; border-radius: 12px; cursor: pointer;
+  padding: 8px 10px; font: inherit; font-size: 14px; color: var(--muted); text-align: left;
+}
+.tabselect-item:hover { background: var(--wash); color: var(--ink); }
+.tabselect-item.active { color: var(--ink); font-weight: 700; }
+.tabselect-check { font-size: 12px; }
+/* Brand header hosts the picker centred under the title slot. */
+.brandpage .brand-head .tabselect-menu { left: 50%; transform: translateX(-50%); }
+@media (max-width: 900px) {
+  /* Open: shape snaps to sheet instantly; close: waits for the menu to
+     collapse first (delay) so a round pill never clips a shrinking list.
+     row-gap is 0: the collapsed links row must not add phantom height to
+     the bar (it pushed the picker 4px high); the open menu brings its own
+     8px top margin instead. */
+  header.topbar { flex-wrap: wrap; width: calc(100% - 24px); row-gap: 0; transition: border-radius 0.2s ease 0.22s; }
+  header.topbar.open { border-radius: 30px; transition: border-radius 0.12s ease 0s; }
+  header.topbar .nav-burger { display: block; order: 2; }
+  /* Phones: the hub picker replaces the ≡ burger on every page. */
+  header.topbar .in-topbar { display: flex; flex: 1 1 auto; min-width: 0; order: 2; }
+  /* Phones have no logo — the picker owns the topbar on every page. */
+  header.topbar .brand { display: none; }
+  /* …and it expands the pill in place (Framer "Phone Open") — never a
+     floating dropdown on phones. */
+  header.topbar .in-topbar .tabselect-menu { display: none; }
+  header.topbar .nav-burger { display: none; }
+  /* Phones: the account cluster floats top-right, out of the flex flow,
+     so the long button truly centers on the bar (not on leftover space).
+     It stacks above the full-width button so the avatar stays tappable. */
+  header.topbar .side { order: 3; position: absolute; right: 10px; top: 12px; z-index: 2; margin: 0; }
+  header.topbar .links {
+    order: 4; flex-basis: 100%; display: flex;
+    max-height: 0; opacity: 0; transform: translateY(-8px);
+    overflow: hidden; pointer-events: none; margin-top: 0;
+    transition: max-height 0.3s ease, opacity 0.22s ease, transform 0.3s cubic-bezier(0.3, 1.2, 0.4, 1), margin-top 0.3s ease;
+  }
+  header.topbar.open .links {
+    max-height: 420px; opacity: 1; transform: none; pointer-events: auto; margin-top: 8px;
+  }
+  header.topbar.open .nav-toggle-group a.navlink { animation: topbar-item-in 0.26s ease both; }
+  header.topbar.open .nav-toggle-group a.navlink:nth-child(2) { animation-delay: 0.03s; }
+  header.topbar.open .nav-toggle-group a.navlink:nth-child(3) { animation-delay: 0.06s; }
+  header.topbar.open .nav-toggle-group a.navlink:nth-child(4) { animation-delay: 0.09s; }
+  header.topbar.open .nav-toggle-group a.navlink:nth-child(5) { animation-delay: 0.12s; }
+  header.topbar.open .nav-toggle-group a.navlink:nth-child(6) { animation-delay: 0.15s; }
+  /* Menu open pushes the card down while dockbars stay viewport-fixed —
+     fade them out so they never overlap card content mid-panel. */
+  .app:has(> header.topbar.open) .dock { opacity: 0; pointer-events: none; }
+  .app .dock { transition: opacity 0.2s ease; }
+  header.topbar .nav-toggle-group {
+    flex-direction: column; align-items: stretch;
+    width: 100%; gap: 2px; padding-bottom: 6px;
+  }
+  header.topbar .navlink { text-align: left; }
+  /* Open panel reads as an index, not a dropdown: full-width uppercase rows
+     with hairline separators, flat hover, no glass selected-pill. The active
+     hub carries a small ink dot instead. */
+  header.topbar.open .nav-toggle-group { gap: 0; padding: 2px 4px 10px; }
+  header.topbar.open .navlink {
+    display: flex; align-items: center;
+    font-size: 15px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink); background: transparent; border: 0; border-radius: 12px; box-shadow: none;
+    padding: 13px 12px; text-decoration: none;
+    border-top: 1px solid var(--faint);
+  }
+  header.topbar.open .nav-toggle-group .navlink:first-child { border-top: 0; }
+  header.topbar.open .navlink:hover { background: var(--wash); box-shadow: none; color: var(--ink); }
+  header.topbar.open .navlink.active { background: transparent; box-shadow: none; font-weight: 700; }
+  header.topbar.open .navlink.active::before {
+    content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ink); margin-right: 10px;
+  }
+  /* Phones: the pill row floats on its own — drop the bar's hairline. */
+  .subnavbar.below-topbar { border-bottom-width: 0; overflow: hidden; padding-left: 12px; padding-right: 12px; }
+  /* Phones: 4 enlarged pills overflow 390px viewports. Let the row swipe
+     (scroll starts at the left, never center-clipped) with a hidden bar. */
+  .hubtabs { width: 100%; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .hubtabs::-webkit-scrollbar { display: none; }
+  .hubtabs > div { flex: none; margin: 0 auto; }
+  /* Phones: the topbar picker already names the hub — drop every in-card
+     h1 so pages start at their content. */
+  .app h1 { display: none; }
+  /* Mobile only: taller dashboard KPI cards so the half-empty gap above the
+     sparkline breathes and short decks fill the viewport. */
+  .dash-main .grid6 > * { min-height: 168px; }
+}
+/* Very small phones: shave the enlarged pills just enough that 4 tabs
+   (Brand/Workspace/Members/Connections) fit a 390px viewport. */
+@media (max-width: 420px) {
+  .hubtabs [role="tab"] { font-size: 13px; padding-left: 12px; padding-right: 12px; padding-top: 7px; padding-bottom: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  header.topbar, header.topbar .links, header.topbar .navlink, header.topbar .nav-burger span { transition: none; }
+  header.topbar.open .links, header.topbar.open .nav-toggle-group a.navlink { animation: none; }
+}
+
+/* ---- Card footer (shared by every hub card) ----
+   Each page drops its primary controls in a DockBar and it closes the card
+   as a real footer: in normal flow (never hovering over content), pinned to
+   the card bottom on short pages via margin-top:auto and kept visible while
+   scrolling via sticky. The flex chain scroller > hub > page > grid carries
+   the height; the dock rides last inside its grid via order. */
+.card-scroll { display: flex; flex-direction: column; }
+.card-scroll > .hubpage,
+.card-scroll > .dash-page {
+  flex: 1 0 auto; display: flex; flex-direction: column;
+  width: 100%; min-width: 0; margin-bottom: 0;
+}
+.hubpage > .planner-page,
+.hubpage > .camp-page,
+.hubpage > .studio-page,
+.hubpage > .perf-page,
+.hubpage > .brandpage {
+  flex: 1 0 auto; display: flex; flex-direction: column;
+  width: 100%; min-width: 0; margin-bottom: 0;
+}
+.hubpage > .brandpage { gap: 20px; align-items: stretch; }
+.dash-grid { display: flex; flex-direction: column; }
+.perf-grid { display: flex; flex-direction: column; }
+.dash-grid,
+.planner-grid,
+.camp-grid,
+.perf-grid,
+.studio-page > .grid {
+  flex: 1 0 auto; width: 100%; min-width: 0;
+}
+.dash-grid > *,
+.studio-page > .grid > * { min-width: 0; }
+.planner-page > .planner-grid,
+.studio-page > .grid { margin-bottom: 0; }
+.planner-grid > .dock,
+.camp-grid > .dock { grid-column: 1 / -1; }
+.dock {
+  order: 999; flex: none; margin-top: auto;
+  position: sticky; bottom: 0; z-index: 30;
+  display: flex; background: var(--surface); border-top: 1px solid var(--line);
+}
+.dock-bar {
+  flex: 1 1 auto; max-width: none;
+  background: transparent; border: 0; border-radius: 0; box-shadow: none;
+  display: flex; align-items: center; gap: 4px;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+/* Dock toggle keeps its pill (border + surface + curve) instead of bare
+   segments, so the month control reads as one control in the dock. */
+.dock .month-toggle {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 9999px; box-shadow: none;
+  padding: 2px; height: 44px; width: auto; flex: 1 1 auto; min-width: 0;
+}
+/* Fixed label width (fits "September 2026" + padding + ▾) so the dock never resizes on month change. */
+.dock .month-toggle > span, .dock .month-toggle > button.month-label { flex: none; width: 156px; }
+/* Month label centering must not depend on utilities alone: keep the text
+   centered and the ▾ pinned right even if utility CSS is stale/missing. */
+.month-toggle .month-label { display: flex; align-items: center; justify-content: center; text-align: center; position: relative; width: 100%; }
+.month-toggle .month-label > span[aria-hidden="true"] { position: static; transform: none; margin-left: 4px; flex: none; }
+.dock-sep { width: 1px; align-self: stretch; margin: 6px 0; background: var(--faint); }
+.dock .btn-icon { width: 44px; height: 44px; flex: none; font-size: 22px; }
+/* Wizard footer: keep step buttons centred as a pair. */
+.brandpage .dock-bar { justify-content: center; }
+.card-scroll.dash-scroll .dash-grid { grid-template-columns: minmax(0, 1fr); }
+.card-scroll.planner-scroll .planner-grid,
+.card-scroll.camp-scroll .camp-grid { grid-template-columns: 340px minmax(0, 1fr); }

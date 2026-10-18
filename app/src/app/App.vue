@@ -8,7 +8,7 @@ import LoginPage from '@/pages/LoginPage.vue'
 import WorkspaceSetupPage from '@/pages/WorkspaceSetupPage.vue'
 import { restore } from '@/core/auth'
 import { useBrand, useBrandFonts, usePermission, useSetup, useWorkspaces } from '@/core/queries'
-import { applyBrandTheme } from '@/core/theme'
+import { applyBrandTheme, persistBrandTheme } from '@/core/theme'
 import { t } from '@/core/i18n'
 
 const route = useRoute()
@@ -23,7 +23,12 @@ const { data: workspaces, isSuccess: workspacesLoaded } = useWorkspaces()
 // The brand's palette/fonts (CI) theme the whole site — public data.
 const { data: brand } = useBrand()
 const { data: fontAssets } = useBrandFonts()
-watch([brand, fontAssets], () => applyBrandTheme(brand.value, fontAssets.value ?? []), { immediate: true, deep: true })
+watch([brand, fontAssets], () => {
+  applyBrandTheme(brand.value, fontAssets.value ?? [])
+  // Remember it for the next boot — but never persist the pending state
+  // (undefined), or a reload would wipe a good remembered theme.
+  if (brand.value !== undefined) persistBrandTheme(brand.value, fontAssets.value ?? [])
+}, { immediate: true, deep: true })
 
 // Restore the session once, before deciding between the login gate and the app.
 onMounted(async () => {

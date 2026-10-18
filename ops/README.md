@@ -6,8 +6,8 @@ folder holds what they act on.
 
 | Path | What it is |
 |---|---|
-| `docker-compose.yml` | Production stack: `api` (Rust) + `web` (nginx serving the built frontend) + optional Caddy TLS profile. Driven by `ops/scripts/deploy.sh` (it passes `-f ops/docker-compose.yml` for you) |
-| `nginx/` | `nginx.conf` + `nginx-api-proxy.inc` for the `web` image (copied in at image build from the repo-root context) |
+| `docker-compose.yml` | Production stack: `api` (Rust) + `web` (Caddy serving the built frontend + proxying `/api`) + optional Caddy TLS profile. Driven by `ops/scripts/deploy.sh` (it passes `-f ops/docker-compose.yml` for you) |
+| `caddy/` | `Caddyfile` for the `web` image (SPA fallback, `/api` proxy to `http://api:3001`, asset caching). Copied in at image build from the repo-root context |
 | `deploy/.env.production` | Live secrets + public URLs (git-ignored, mode 600 — create with `ops/scripts/deploy.sh init`) |
 | `deploy/.env.production.example` | Template with generated `__ADMIN_PASSWORD__` / `__ADMIN_TOKEN__` placeholders |
 | `deploy/Caddyfile` / `Caddyfile.standalone` | Caddy front for the compose TLS profile / one-line example for bare-metal installs |

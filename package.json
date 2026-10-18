@@ -2,7 +2,8 @@
   "name": "content-planner",
   "private": true,
   "version": "0.1.0",
-  "description": "Content Planner \u2014 Vue frontend (app/) + Rust backend (server/)",
+  "license": "MIT",
+  "description": "Content Planner — Vue frontend (app/) + Rust backend (server/)",
   "scripts": {
     "dev": "bash ops/scripts/dev.sh",
     "dev:mock": "bash ops/scripts/dev.sh --mock",

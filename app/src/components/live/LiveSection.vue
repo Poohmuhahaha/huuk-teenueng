@@ -6,6 +6,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useLive, usePlatforms, useSyncPlatform, usePermission, useAds } from '@/core/queries'
 import { beginOAuth } from '@/core/oauth'
 import { t } from '@/core/i18n'
+import TableFrame from '@/components/tables/TableFrame.vue'
 
 const props = withDefaults(
   defineProps<{ variant?: 'cards' | 'grid' | 'table'; limit?: number }>(),
@@ -223,9 +224,8 @@ async function onReconnect(): Promise<void> {
     </div>
 
     <!-- compact table layout -->
-    <div v-else class="tblwrap">
-      <table class="tbl">
-        <thead>
+    <TableFrame v-else>
+      <thead>
           <tr>
             <!-- TODO(i18n): t('live.platform')/t('live.post')/t('live.date') have no
               core/i18n keys — literals until the keys land (t() would render
@@ -259,7 +259,6 @@ async function onReconnect(): Promise<void> {
             </td>
           </tr>
         </tbody>
-      </table>
-    </div>
+    </TableFrame>
   </section>
 </template>

@@ -60,7 +60,7 @@ describe('post locking (US-014)', () => {
 
   it('creates new posts unlocked regardless of client input', async () => {
     const created = await api.addPost({
-      month: 2, topic: 'Fresh Draft', pillar: 'Pillar I', format: 'Short-video', goal: '10K subscribe',
+      month: 2, year: 2026, topic: 'Fresh Draft', pillar: 'Pillar I', format: 'Short-video', goal: '10K subscribe',
       date: null, time: '09:00', status: 'Start', hook: '', caption: '', cta: '',
       hashtagGroup: 'Reach', hashtags: [], imageUrl: '', note: '', done: false, platforms: [],
       lockedBy: 'Ghost',

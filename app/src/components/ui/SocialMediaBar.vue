@@ -8,6 +8,7 @@ import { activePlatforms, PLATFORMS, profileUrl, togglePlatform } from '@/core/p
 import type { PlatformId } from '@/core/platforms'
 import { t } from '@/core/i18n'
 import PlatformLogin from '@/components/overlays/PlatformLogin.vue'
+import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 
 const { data: connections } = usePlatforms()
 const loginFor = ref<PlatformId | null>(null)
@@ -42,6 +43,7 @@ function linkOf(id: PlatformId): string | null {
       <input type="checkbox" class="m-0 accent-accent" :checked="activePlatforms.includes(p.id)" :aria-label="`Include ${p.name}`"
         @change="onToggle(p.id, $event)" />
       <span class="flex-none inline-block w-2 h-2 rounded-full border-[1.5px]" :class="statusOf(p.id) === 'connected' ? (activePlatforms.includes(p.id) ? 'bg-accent-ink border-accent-ink' : 'bg-success border-success') : statusOf(p.id) === 'connecting' ? 'bg-warning border-warning' : statusOf(p.id) === 'error' ? 'border-dashed border-danger bg-surface' : 'bg-surface border-muted'" />
+      <PlatformLogo :id="p.id" :size="15" />
       <template v-if="linkOf(p.id)">
         <a class="socialname text-inherit cursor-pointer bg-transparent border-0 p-0 hover:underline w-auto" :href="linkOf(p.id) as string" target="_blank" rel="noopener noreferrer"
           :title="`${p.name} — ${t('social.openProfile')}`">{{ p.name }}</a>

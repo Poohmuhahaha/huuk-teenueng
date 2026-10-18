@@ -1,132 +1,28 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
 import {
-  useSetup, usePermission, useOAuthPending, useChooseOAuthPage, qk,
-  useWorkspaces, useCreateWorkspace, useRenameWorkspace, useDeleteWorkspace,
-  usePlatforms,
+  useOAuthPending, useChooseOAuthPage, qk,
 } from '@/core/queries'
-import { activeWorkspaceId, setActiveWorkspace } from '@/core/workspace'
-import { currentRole, currentUser, logout, logoutAll } from '@/core/auth'
+import { currentRole, currentUser } from '@/core/auth'
 import { t } from '@/core/i18n'
-import { PLATFORM_META, PLATFORMS } from '@/core/platforms'
+import { PLATFORM_META } from '@/core/platforms'
 import type { PlatformId } from '@/core/platforms'
-import ChangePasswordModal from '@/components/overlays/ChangePasswordModal.vue'
-import GuideHero from '@/components/ui/GuideHero.vue'
 import LoginModal from '@/components/overlays/LoginModal.vue'
-import PlatformLogin from '@/components/overlays/PlatformLogin.vue'
-import ProfilePanel from '@/components/overlays/ProfilePanel.vue'
-import SettingsPanel from '@/components/overlays/SettingsPanel.vue'
+import MainNavPicker from './MainNavPicker.vue'
 import Subnavbar from './Subnavbar.vue'
 
 const route = useRoute()
 const router = useRouter()
-const qc = useQueryClient()
-const { data: setup } = useSetup()
-const { can } = usePermission()
-
-// ---- workspace switcher ----
-// Every workspace owns its own brand + connections, so switching invalidates
-// all queries; the HTTP client sends the active id on every request.
-const { data: workspaces } = useWorkspaces()
-const createWorkspace = useCreateWorkspace()
-const renameWorkspace = useRenameWorkspace()
-const deleteWorkspace = useDeleteWorkspace()
-
-const wsOpen = ref(false)
-const wsError = ref('')
-const wsNewName = ref('')
-const wsRenameDraft = ref('')
-const wsRenaming = ref(false)
-const wsRenameInput = ref<HTMLInputElement | null>(null)
-const canManageWs = computed(() => can('platforms.manage'))
-
-const activeWs = computed(() => {
-  const list = workspaces.value ?? []
-  return list.find((w) => w.id === activeWorkspaceId.value) ?? list[0] ?? null
-})
-const activeWsName = computed(() => activeWs.value?.name ?? setup.value?.workspaceName ?? 'workspace')
-
-// A stored id can point at a deleted workspace: fall back to the first one.
-watch(
-  () => workspaces.value,
-  (list) => {
-    if (!list?.length) return
-    if (!list.some((w) => w.id === activeWorkspaceId.value)) {
-      setActiveWorkspace(list[0].id)
-    }
-  },
-  { immediate: true },
+// Brand tab owns the topbar (long main-nav picker, no logo/burger); its
+// settings tabs live in the shared below-bar like every other hub.
+// Missing/invalid ?tab= falls back to 'brand', mirroring useHubTab.
+const onBrand = computed(
+  () => (route.path === '/settings' || route.path.startsWith('/settings/'))
+    && !['workspace', 'members', 'connections'].includes(route.query.tab as string),
 )
-
-function toggleWsMenu(): void {
-  wsOpen.value = !wsOpen.value
-  wsError.value = ''
-  wsRenaming.value = false
-}
-
-function switchWs(id: string): void {
-  wsOpen.value = false
-  if (id === activeWs.value?.id) return
-  setActiveWorkspace(id)
-  // Everything the app shows is workspace-scoped — refetch it all.
-  qc.invalidateQueries()
-}
-
-async function submitWsCreate(): Promise<void> {
-  const name = wsNewName.value.trim()
-  if (!name) return
-  wsError.value = ''
-  try {
-    const ws = await createWorkspace.mutateAsync(name)
-    wsNewName.value = ''
-    setActiveWorkspace(ws.id)
-    qc.invalidateQueries()
-    wsOpen.value = false
-  } catch (e) {
-    wsError.value = e instanceof Error ? e.message : String(e)
-  }
-}
-
-function startRenameWs(): void {
-  wsRenaming.value = true
-  wsRenameDraft.value = activeWs.value?.name ?? ''
-  void nextTick(() => {
-    wsRenameInput.value?.focus()
-    wsRenameInput.value?.select()
-  })
-}
-
-async function submitRenameWs(): Promise<void> {
-  const name = wsRenameDraft.value.trim()
-  const current = activeWs.value
-  if (!current || !name || name === current.name) {
-    wsRenaming.value = false
-    return
-  }
-  wsError.value = ''
-  try {
-    await renameWorkspace.mutateAsync({ id: current.id, name })
-    wsRenaming.value = false
-  } catch (e) {
-    wsError.value = e instanceof Error ? e.message : String(e)
-  }
-}
-
-async function removeWs(): Promise<void> {
-  const current = activeWs.value
-  if (!current) return
-  wsError.value = ''
-  try {
-    const res = await deleteWorkspace.mutateAsync(current.id)
-    setActiveWorkspace(res.fallback || null)
-    wsOpen.value = false
-    qc.invalidateQueries()
-  } catch (e) {
-    wsError.value = e instanceof Error ? e.message : String(e)
-  }
-}
+const qc = useQueryClient()
 
 // OAuth callback landing: /#/setup?oauth=meta&status=ok (redirects to /profile)
 const notice = ref('')
@@ -202,62 +98,27 @@ watch(
 )
 onBeforeUnmount(() => window.clearTimeout(noticeTimer))
 
-const profileOpen = ref(false)
-const settingsOpen = ref(false)
-const guideOpen = ref(false)
 const authOpen = ref(false)
 const authMode = ref<'login' | 'register'>('login')
-const changeOpen = ref(false)
-
-// ---- connect section (avatar toggle) ----
-// The social connect/manage entry lives in the profile toggle, next to the
-// workspace switcher — never loose in the navbar. The dialog itself enforces
-// the platforms.manage permission.
-const { data: connections } = usePlatforms()
-const loginFor = ref<PlatformId | null>(null)
-const canManagePlatforms = computed(() => can('platforms.manage'))
-
-function connStatus(id: PlatformId): string {
-  return connections.value?.find((c) => c.id === id)?.status ?? 'disconnected'
-}
-
-function connLabel(id: PlatformId): string {
-  return connStatus(id) === 'connected' ? t('social.manageShort') : t('social.connect')
-}
 
 const avatarLetter = computed(() =>
   currentUser.value ? currentUser.value.name.slice(0, 1).toUpperCase() : 'O',
 )
 
-async function doLogout(): Promise<void> {
-  profileOpen.value = false
-  await logout()
-}
-
-async function doLogoutAll(): Promise<void> {
-  profileOpen.value = false
-  await logoutAll()
-}
-
 function openLogin(mode: 'login' | 'register'): void {
-  profileOpen.value = false
   authMode.value = mode
   authOpen.value = true
 }
 
-function openGuide(): void {
-  profileOpen.value = false
-  guideOpen.value = true
-}
-
-function openSettings(): void {
-  profileOpen.value = false
-  settingsOpen.value = true
-}
-
-function openChange(): void {
-  profileOpen.value = false
-  changeOpen.value = true
+// The avatar is a shortcut to the account sections on the Settings
+// workspace tab — never a popup.
+function goAccount(): void {
+  navOpen.value = false
+  if (!currentUser.value) {
+    openLogin('login')
+    return
+  }
+  void router.push({ path: '/settings', query: { tab: 'workspace' } })
 }
 
 function onAuthSuccess(mode: 'login' | 'register'): void {
@@ -268,15 +129,10 @@ function onAuthSuccess(mode: 'login' | 'register'): void {
     return
   }
   if (mode !== 'register') return
-  profileOpen.value = true
   showNotice(t('profile.welcome'))
+  void router.push({ path: '/settings', query: { tab: 'workspace' } })
 }
 
-function onDocClick(e: MouseEvent): void {
-  const target = e.target as HTMLElement | null
-  if (!target?.closest?.('.avatar-wrap')) profileOpen.value = false
-  if (!target?.closest?.('.ws-wrap')) wsOpen.value = false
-}
 // Client accounts belong in the studio: steer them away from planner pages.
 watch(currentRole, (role) => {
   if (role !== 'Client') return
@@ -284,22 +140,8 @@ watch(currentRole, (role) => {
   void router.replace('/content')
 })
 
-function onKeyGlobal(e: KeyboardEvent): void {
-  if (e.key !== 'Escape') return
-  if (guideOpen.value) guideOpen.value = false
-  else if (settingsOpen.value) settingsOpen.value = false
-  else if (wsOpen.value) wsOpen.value = false
-  else if (profileOpen.value) profileOpen.value = false
-}
-
 onMounted(() => {
   document.documentElement.lang = 'en'
-  document.addEventListener('click', onDocClick)
-  window.addEventListener('keydown', onKeyGlobal)
-})
-onBeforeUnmount(() => {
-  document.removeEventListener('click', onDocClick)
-  window.removeEventListener('keydown', onKeyGlobal)
 })
 
 interface NavLink {
@@ -330,16 +172,25 @@ function isActive(l: NavLink): boolean {
   return route.path === l.to || route.path.startsWith(l.to + '/')
 }
 
+// Liquid-glass navbar: phone sizes collapse the links behind a hamburger
+// (Framer "Phone Open" variant); navigating always closes the menu.
+const navOpen = ref(false)
+watch(
+  () => route.path,
+  () => { navOpen.value = false },
+)
+
 </script>
 
 <template>
-  <div class="app">
-    <header class="topbar">
+  <div class="app" :class="{ 'on-brand': onBrand }">
+    <header class="topbar" :class="{ open: navOpen }">
       <div class="brand">
         <RouterLink to="/" class="brand-home">
           <img class="brand-logo" src="/huuk-logo.svg" alt="Huuk by teenueng" />
         </RouterLink>
       </div>
+      <MainNavPicker :links="navLinks" :expanded="navOpen" @toggle="navOpen = !navOpen" />
       <nav class="links">
         <div class="nav-toggle-group">
           <RouterLink v-for="l in navLinks" :key="l.to" :to="l.to" class="navlink"
@@ -349,78 +200,26 @@ function isActive(l: NavLink): boolean {
           </RouterLink>
         </div>
       </nav>
+      <button type="button" class="nav-burger" :class="{ open: navOpen }"
+        :aria-expanded="navOpen ? 'true' : 'false'" aria-label="Menu"
+        @click="navOpen = !navOpen">
+        <span aria-hidden="true" />
+        <span aria-hidden="true" />
+      </button>
       <div class="side">
         <template v-if="!currentUser">
           <button class="btn btn-primary" @click="openLogin('register')">{{ t('auth.signup') }}</button>
           <button class="btn" @click="openLogin('login')">{{ t('auth.login') }}</button>
         </template>
         <div class="avatar-wrap">
-          <button class="avatar" title="Owner menu" aria-label="Owner menu" aria-haspopup="dialog"
-            :aria-expanded="profileOpen" @click.stop="profileOpen = !profileOpen">
+          <button class="avatar" :title="t('profile.settings')" :aria-label="t('profile.settings')"
+            @click="goAccount">
             {{ avatarLetter }}
           </button>
-          <div v-if="profileOpen" class="avatar-menu" role="dialog" aria-label="Account menu">
-            <div class="pop-block"><ProfilePanel /></div>
-            <div v-if="canManagePlatforms" class="pop-connect">
-              <div class="ws-head">{{ t('social.title') }}</div>
-              <div v-for="p in PLATFORMS" :key="p.id" class="conn-row">
-                <span class="status-dot" :class="connStatus(p.id)" aria-hidden="true" />
-                <span class="conn-name">{{ p.name }}</span>
-                <button type="button" class="conn-btn" @click="loginFor = p.id">{{ connLabel(p.id) }}</button>
-              </div>
-            </div>
-            <div class="ws-wrap">
-              <button type="button" class="wire ws-trigger" :title="t('ws.switch')"
-                aria-haspopup="menu" :aria-expanded="wsOpen" @click.stop="toggleWsMenu">
-                {{ activeWsName }}
-                <span class="ws-caret" aria-hidden="true">▾</span>
-              </button>
-              <div v-if="wsOpen" class="ws-menu" role="menu" :aria-label="t('ws.title')" @click.stop>
-                <div class="ws-head">{{ t('ws.title') }}</div>
-                <button v-for="w in workspaces ?? []" :key="w.id" type="button" class="ws-item" role="menuitem"
-                  :class="{ active: w.id === activeWs?.id }" @click="switchWs(w.id)">
-                  <span class="ws-name">{{ w.name }}</span>
-                  <span class="ws-count">{{ w.connected }}/{{ w.total }}</span>
-                  <span v-if="w.id === activeWs?.id" class="ws-check" aria-hidden="true">✓</span>
-                </button>
-                <p v-if="!(workspaces ?? []).length" class="muted" style="padding: 6px 10px;">{{ t('common.loading') }}</p>
-
-                <div v-if="canManageWs" class="ws-actions">
-                  <template v-if="wsRenaming">
-                    <input ref="wsRenameInput" v-model="wsRenameDraft" class="field" maxlength="80"
-                      :aria-label="t('ws.rename')" @keydown.enter.prevent="submitRenameWs"
-                      @keydown.esc.prevent="wsRenaming = false" @blur="submitRenameWs" />
-                  </template>
-                  <template v-else>
-                    <button type="button" class="menubtn" @click="startRenameWs">{{ t('ws.rename') }}</button>
-                    <button type="button" class="menubtn danger" :disabled="(workspaces ?? []).length <= 1"
-                      @click="removeWs">{{ t('ws.delete') }}</button>
-                  </template>
-                </div>
-
-                <form v-if="canManageWs" class="ws-form" @submit.prevent="submitWsCreate">
-                  <input v-model="wsNewName" class="field" maxlength="80" :placeholder="t('ws.newPlaceholder')"
-                    :aria-label="t('ws.new')" />
-                  <button type="submit" class="btn btn-primary" :disabled="!wsNewName.trim()">{{ t('ws.new') }}</button>
-                </form>
-                <p v-if="wsError" class="autherr" role="alert" style="margin: 6px 8px 0;">{{ wsError }}</p>
-              </div>
-            </div>
-            <div class="pop-actions">
-              <button class="menubtn" @click="openSettings">{{ t('profile.settings') }}</button>
-              <button class="menubtn" @click="openGuide">{{ t('nav.guide') }}</button>
-              <template v-if="currentUser">
-                <button class="menubtn" @click="openChange">{{ t('auth.change') }}</button>
-                <button class="menubtn" @click="doLogoutAll">{{ t('auth.logoutAll') }}</button>
-                <button class="menubtn" @click="doLogout">{{ t('auth.logout') }}</button>
-              </template>
-              <button v-else class="menubtn" @click="openLogin('login')">{{ t('auth.login') }}</button>
-            </div>
-          </div>
         </div>
       </div>
     </header>
-    <Subnavbar />
+    <Subnavbar class="below-topbar" />
     <div v-if="notice" class="oauth-banner" role="status" aria-live="polite">
       <span>{{ notice }}</span>
       <button class="btn" @click="notice = ''">{{ t('common.close') }}</button>
@@ -452,29 +251,6 @@ function isActive(l: NavLink): boolean {
     <main class="main">
       <div class="shellgrid"><slot /></div>
     </main>
-    <footer class="footer">
-      Huuk by Teeneung v0.1(Beta)
-    </footer>
-    <div v-if="guideOpen" class="guide-overlay" @click.self="guideOpen = false">
-      <div class="guide-panel" role="dialog" aria-modal="true" aria-label="Guide">
-        <div class="guide-head">
-          <strong style="font-size: 20px;">{{ t('nav.guide') }}</strong>
-          <button class="btn" @click="guideOpen = false">{{ t('common.close') }}</button>
-        </div>
-        <GuideHero />
-      </div>
-    </div>
-    <div v-if="settingsOpen" class="guide-overlay" @click.self="settingsOpen = false">
-      <div class="guide-panel" role="dialog" aria-modal="true" aria-label="Workspace settings">
-        <div class="guide-head">
-          <strong style="font-size: 20px;">{{ t('profile.settings') }}</strong>
-          <button class="btn" @click="settingsOpen = false">{{ t('common.close') }}</button>
-        </div>
-        <div class="settings-body"><SettingsPanel /></div>
-      </div>
-    </div>
     <LoginModal :open="authOpen" :initial-mode="authMode" @close="authOpen = false" @success="onAuthSuccess" />
-    <ChangePasswordModal :open="changeOpen" @close="changeOpen = false" />
-    <PlatformLogin :platform="loginFor" @close="loginFor = null" />
   </div>
 </template>

@@ -3,14 +3,17 @@ import { computed, ref } from 'vue'
 import { useIdeas, useAddIdea, useToggleIdea, usePromoteIdea, usePermission } from '@/core/queries'
 import type { Idea } from '@/mock/db'
 import { t } from '@/core/i18n'
-import { activeMonth } from '@/core/navdate'
+import { activeMonth, activeYear } from '@/core/navdate'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
+import TableFrame from '@/components/tables/TableFrame.vue'
 
-const { data: ideas, isPending } = useIdeas()
+const { data: ideas, isPending, isError, error: loadError, refetch } = useIdeas()
+const isEmpty = computed(() => !ideas.value || ideas.value.length === 0)
 const addIdea = useAddIdea()
 const toggleIdea = useToggleIdea()
 const promoteMonth = activeMonth
-const promote = usePromoteIdea(promoteMonth)
+const promoteYear = activeYear
+const promote = usePromoteIdea(promoteMonth, promoteYear)
 const { can } = usePermission()
 const canWrite = computed(() => can('ideas.write'))
 
@@ -57,7 +60,7 @@ async function onPromote(it: Idea): Promise<void> {
   notice.value = ''
   try {
     await promote.mutateAsync(it.id)
-    notice.value = `Promoted “${it.topic}” to month ${promoteMonth.value}.`
+    notice.value = `Promoted “${it.topic}” to ${promoteMonth.value}/${promoteYear.value}.`
   } catch (e) {
     actionError.value = e instanceof Error ? e.message : String(e)
   }
@@ -69,24 +72,27 @@ async function onPromote(it: Idea): Promise<void> {
   <p v-if="notice" class="muted" role="status">{{ notice }}</p>
   <p v-if="actionError" class="autherr" role="alert">{{ actionError }}</p>
   <div v-if="isPending" class="muted">Loading ideas…</div>
-  <div v-else class="tblwrap">
-    <table class="tbl">
-      <thead><tr><th>Topic</th><th>Format</th><th>Idea</th><th>Link</th><th>Done</th><th></th></tr></thead>
-      <tbody>
-        <tr v-for="it in ideas" :key="it.id" style="cursor: default;">
-          <td>{{ it.topic }}</td>
-          <td>{{ it.format }}</td>
-          <td>{{ it.idea }}</td>
-          <td class="muted">{{ it.link || '—' }}</td>
-          <td><input type="checkbox" :checked="it.done" :disabled="!canWrite || toggleIdea.isPending.value"
-            :aria-label="`Mark ${it.topic} done`" :title="canWrite ? '' : t('auth.noPerm')"
-            @change="onToggle(it, $event)" /></td>
-          <td><button class="btn" :disabled="!canWrite || promote.isPending.value"
-            :title="canWrite ? '' : t('auth.noPerm')" @click="onPromote(it)">Promote</button></td>
-        </tr>
-      </tbody>
-    </table>
+  <div v-else-if="isError" class="card" role="alert">
+    <p class="muted">Could not load ideas: {{ loadError?.message }}</p>
+    <button type="button" class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
   </div>
+  <div v-else-if="isEmpty" class="muted">No ideas captured yet.</div>
+  <TableFrame v-else>
+    <thead><tr><th>Topic</th><th>Format</th><th>Idea</th><th>Link</th><th>Done</th><th></th></tr></thead>
+    <tbody>
+      <tr v-for="it in ideas" :key="it.id" style="cursor: default;">
+        <td>{{ it.topic }}</td>
+        <td>{{ it.format }}</td>
+        <td>{{ it.idea }}</td>
+        <td class="muted">{{ it.link || '—' }}</td>
+        <td><input type="checkbox" :checked="it.done" :disabled="!canWrite || toggleIdea.isPending.value"
+          :aria-label="`Mark ${it.topic} done`" :title="canWrite ? '' : t('auth.noPerm')"
+          @change="onToggle(it, $event)" /></td>
+        <td><button class="btn" :disabled="!canWrite || promote.isPending.value"
+          :title="canWrite ? '' : t('auth.noPerm')" @click="onPromote(it)">Promote</button></td>
+      </tr>
+    </tbody>
+  </TableFrame>
   <h2>Capture</h2>
   <div class="grid3">
     <div><label class="lbl" for="idea-topic">Topic</label><input id="idea-topic" class="field" v-model="topic"
@@ -95,7 +101,7 @@ async function onPromote(it: Idea): Promise<void> {
       :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')" /></div>
     <div>
       <label class="lbl">Promote to month</label>
-      <MonthToggle v-model="promoteMonth" :disabled="!canWrite" />
+      <MonthToggle v-model="promoteMonth" v-model:year="promoteYear" :disabled="!canWrite" />
     </div>
   </div>
   <label class="lbl" for="idea-idea">Idea</label><input id="idea-idea" class="field" v-model="idea" :disabled="!canWrite"

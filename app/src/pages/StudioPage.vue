@@ -7,6 +7,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useContentList, useCreateContent, usePermission } from '@/core/queries'
 import { t } from '@/core/i18n'
 import InfoTip from '@/components/ui/InfoTip.vue'
+import DockBar from '@/components/ui/DockBar.vue'
 import DropdownMenu from '@/components/ui/DropdownMenu.vue'
 import type { ContentStatus, ContentSummary } from '@/mock/db'
 import ContentEditor from '@/components/editor/ContentEditor.vue'
@@ -108,25 +109,22 @@ function updatedLabel(row: ContentSummary): string {
   <div v-else ref="root" class="studio-page">
     <h1>{{ t('studio.title') }}<InfoTip :text="t('studio.subtitle')" /></h1>
 
-    <div class="grid grid-cols-[minmax(0,1fr)] gap-4 items-start">
-    <aside class="p-0 grid gap-2.5">
-      <div>
-        <button type="button" class="btn btn-primary inline-flex items-center justify-center gap-2 w-full h-[38px]" :title="t('studio.new')" aria-label="New content"
-          :disabled="!canWrite || create.isPending.value" @click="newContent">
-          <span>+</span>
-          <span>{{ t('studio.new') }}</span>
-        </button>
-      </div>
-      <div class="block m-0 [&_.p-menu]:w-full [&_.p-menu-trigger]:w-full [&_.p-menu-panel]:w-full [&_.p-menu-panel]:min-w-0">
+    <div class="grid grid-single gap-4 items-start">
+    <DockBar label="Studio controls">
+      <div class="flex-1 min-w-0 m-0 [&>div]:w-full [&>div>button]:w-full">
         <DropdownMenu :items="statusMenuItems" @select="onStatus">
           <template #trigger>
-            <span class="btn inline-flex items-center justify-center gap-2 w-full h-[38px]" :aria-label="t('studio.filter')">
+            <span class="btn inline-flex items-center justify-center gap-2 w-full h-touch" :aria-label="t('studio.filter')">
               {{ currentStatusLabel }} <span aria-hidden="true">▾</span>
             </span>
           </template>
         </DropdownMenu>
       </div>
-    </aside>
+      <button type="button" class="btn btn-primary btn-icon" :title="t('studio.new')" :aria-label="t('studio.new')"
+        :disabled="!canWrite || create.isPending.value" @click="newContent">
+        {{ create.isPending.value ? '…' : '+' }}
+      </button>
+    </DockBar>
 
     <div class="studio-main">
       <div v-if="listQ.isPending.value" class="muted">{{ t('studio.loading') }}</div>
@@ -137,15 +135,15 @@ function updatedLabel(row: ContentSummary): string {
       <p v-else-if="!rows.length" class="muted">{{ t('studio.empty') }}</p>
       <ul v-else class="list-none m-0 p-0 grid gap-1.5">
         <li v-for="row in rows" :key="row.id">
-          <button class="w-full text-center justify-items-center bg-transparent border-0 border-b border-faint rounded-none py-2.5 px-1 cursor-pointer grid gap-[3px] hover:bg-wash transition"
-            :class="row.id === selectedId ? 'bg-wash shadow-[inset_2px_0_0_var(--ink)]' : ''"
+          <button class="w-full text-center justify-items-center bg-transparent border-0 border-b border-faint rounded-none py-2.5 px-1 cursor-pointer grid gap-tight hover:bg-wash transition"
+            :class="row.id === selectedId ? 'bg-wash shadow-selected-bar' : ''"
             @click="select(row.id)">
             <span class="flex justify-center gap-2 items-baseline">
               <strong>{{ row.title || t('studio.untitled') }}</strong>
               <span class="statuschip" :class="`st-${row.status}`">{{ statusLabel(row.status) }}</span>
             </span>
             <span class="muted text-xs line-clamp-2">{{ row.excerpt || t('studio.noExcerpt') }}</span>
-            <span class="text-[11px] text-muted">
+            <span class="text-2xs text-muted">
               {{ row.author }} · {{ updatedLabel(row) }} · {{ row.wordCount }} {{ t('studio.words') }}
               <template v-if="row.tags.length"> · {{ row.tags.join(', ') }}</template>
             </span>

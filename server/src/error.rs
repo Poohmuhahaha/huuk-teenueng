@@ -5,12 +5,36 @@
 //! rejections.
 use axum::{
     extract::{rejection::JsonRejection, FromRequest, FromRequestParts, Request},
-    http::{request::Parts, StatusCode},
+    http::{header::HeaderValue, request::Parts, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
-use serde::de::DeserializeOwned;
-use serde_json::json;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use ts_rs::TS;
+
+/// Standardized API error contract per Master Engineering SOP §3.2.
+/// Includes `error` alongside `error_code`, `message`, and `details` for backwards compatibility.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../app/src/api/types/")]
+pub struct ApiErrorResponse {
+    pub error_code: String,
+    pub message: String,
+    #[ts(type = "Record<string, unknown> | null")]
+    pub details: Option<serde_json::Value>,
+    pub error: String,
+}
+
+impl ApiErrorResponse {
+    pub fn new(error_code: impl Into<String>, message: impl Into<String>) -> Self {
+        let msg = message.into();
+        Self {
+            error_code: error_code.into(),
+            error: msg.clone(),
+            message: msg,
+            details: None,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum ApiError {
@@ -49,27 +73,28 @@ impl ApiError {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        let (status, msg) = match self {
-            ApiError::NotFound(m) => (StatusCode::NOT_FOUND, m),
-            ApiError::BadRequest(m) => (StatusCode::BAD_REQUEST, m),
-            ApiError::Unauthorized(m) => (StatusCode::UNAUTHORIZED, m),
-            ApiError::Forbidden(m) => (StatusCode::FORBIDDEN, m),
-            ApiError::Conflict(m) => (StatusCode::CONFLICT, m),
-            ApiError::TooManyRequests(m) => (StatusCode::TOO_MANY_REQUESTS, m),
+        let (status, error_code, msg) = match self {
+            ApiError::NotFound(m) => (StatusCode::NOT_FOUND, "NOT_FOUND", m),
+            ApiError::BadRequest(m) => (StatusCode::BAD_REQUEST, "BAD_REQUEST", m),
+            ApiError::Unauthorized(m) => (StatusCode::UNAUTHORIZED, "UNAUTHORIZED", m),
+            ApiError::Forbidden(m) => (StatusCode::FORBIDDEN, "FORBIDDEN", m),
+            ApiError::Conflict(m) => (StatusCode::CONFLICT, "CONFLICT", m),
+            ApiError::TooManyRequests(m) => (StatusCode::TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS", m),
             ApiError::Internal(m) => {
                 tracing::error!(error = %m, "internal server error");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
+                    "INTERNAL_ERROR",
                     "internal server error".to_string(),
                 )
             }
         };
-        let mut response = (status, Json(json!({ "error": msg }))).into_response();
+        let payload = ApiErrorResponse::new(error_code, msg);
+        let mut response = (status, Json(payload)).into_response();
         if status == StatusCode::UNAUTHORIZED {
-            response.headers_mut().insert(
-                "www-authenticate",
-                "Bearer".parse().expect("static header value"),
-            );
+            response
+                .headers_mut()
+                .insert("www-authenticate", HeaderValue::from_static("Bearer"));
         }
         response
     }

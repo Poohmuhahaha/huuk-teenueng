@@ -7,6 +7,7 @@ export type TxnKind = 'IN' | 'OUT'
 export type Post = {
   id: string
   month: number // 1–12
+  year: number // planning year, e.g. 2026
   topic: string
   pillar: string
   format: string
@@ -229,14 +230,14 @@ export const setup: SetupConfig = {
 
 export const posts: Post[] = [
   {
-    id: 'p-morning', month: 2, topic: 'Morning Vlog', pillar: 'Pillar II',
+    id: 'p-morning', month: 2, year: 2026, topic: 'Morning Vlog', pillar: 'Pillar II',
     format: 'Short-video', goal: '10K subscribe', date: '2026-02-03', time: '08:00',
     status: 'Done', hook: 'POV: slow mornings', caption: 'A slow morning routine before the city wakes.',
     cta: 'Save for later', hashtagGroup: 'Reach', hashtags: ['morning', 'vlog', 'slow'],
     imageUrl: '', note: '', done: true, platforms: ['Instagram', 'TikTok'],
   },
   {
-    id: 'p-night', month: 2, topic: 'Self-Care Night Routine', pillar: 'Pillar I',
+    id: 'p-night', month: 2, year: 2026, topic: 'Self-Care Night Routine', pillar: 'Pillar I',
     format: 'Long-video', goal: '10K subscribe', date: '2026-02-05', time: '20:00',
     status: 'Design', hook: 'Unwind with me', caption: 'Full night routine, no cuts.',
     cta: 'Subscribe', hashtagGroup: 'Niche', hashtags: ['selfcare', 'night'],
@@ -244,28 +245,28 @@ export const posts: Post[] = [
     lockedBy: 'Editor Earn',
   },
   {
-    id: 'p-desk', month: 2, topic: 'Desk Setup Tour', pillar: 'Pillar III',
+    id: 'p-desk', month: 2, year: 2026, topic: 'Desk Setup Tour', pillar: 'Pillar III',
     format: 'Short-video', goal: '10K subscribe', date: '2026-02-06', time: '12:00',
     status: 'Start', hook: 'My 2026 desk', caption: 'Everything on my desk and why.',
     cta: 'Comment yours', hashtagGroup: 'Reach', hashtags: ['desksetup'],
     imageUrl: '', note: '', done: false, platforms: ['TikTok', 'Instagram'],
   },
   {
-    id: 'p-budget', month: 2, topic: 'Budget Breakfast', pillar: 'Pillar I',
+    id: 'p-budget', month: 2, year: 2026, topic: 'Budget Breakfast', pillar: 'Pillar I',
     format: 'Short-video', goal: '10K subscribe', date: '2026-02-10', time: '07:30',
     status: 'Dev', hook: 'Eat for under $2', caption: 'Three cheap breakfasts that slap.',
     cta: 'Share this', hashtagGroup: 'Niche', hashtags: ['budget', 'food'],
     imageUrl: '', note: '', done: false, platforms: ['Facebook', 'Instagram'],
   },
   {
-    id: 'p-feed', month: 2, topic: 'Feed Aesthetic Tips', pillar: 'Pillar II',
+    id: 'p-feed', month: 2, year: 2026, topic: 'Feed Aesthetic Tips', pillar: 'Pillar II',
     format: 'Long-video', goal: '10K subscribe', date: '2026-02-12', time: '18:00',
     status: 'Start', hook: 'Fix your grid', caption: 'Five rules for a coherent feed.',
     cta: 'Follow', hashtagGroup: 'Branded', hashtags: ['feed', 'aesthetic'],
     imageUrl: '', note: '', done: false, platforms: ['Instagram'],
   },
   {
-    id: 'p-march', month: 3, topic: 'March Teaser', pillar: 'Pillar I',
+    id: 'p-march', month: 3, year: 2026, topic: 'March Teaser', pillar: 'Pillar I',
     format: 'Short-video', goal: '10K subscribe', date: '2026-03-02', time: '09:00',
     status: 'Start', hook: 'Coming soon', caption: 'What March looks like.',
     cta: 'Stay tuned', hashtagGroup: 'Event', hashtags: ['march'],

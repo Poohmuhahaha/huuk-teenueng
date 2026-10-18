@@ -12,7 +12,9 @@ import type { BrandImageKind } from '@/core/images'
 export type OptionList = 'pillars' | 'formats' | 'goals' | 'statuses' | 'platforms'
 
 export interface AuthResult {
-  token: string
+  /** Bearer token for non-browser clients; the web app authenticates with the
+   * HttpOnly session cookie and must never persist this value. */
+  token?: string
   user: User
 }
 
@@ -90,7 +92,7 @@ export interface ContentPatchInput {
 }
 
 export interface Api {
-  listPosts(month?: number): Promise<Post[]>
+  listPosts(month?: number, year?: number): Promise<Post[]>
   getSetup(): Promise<SetupConfig>
   saveSetup(patch: Partial<SetupConfig>): Promise<SetupConfig>
   addOption(list: OptionList, item: string): Promise<SetupConfig>
@@ -104,8 +106,8 @@ export interface Api {
   changePassword(oldPassword: string, newPassword: string): Promise<{ ok: boolean }>
   updateProfile(name: string): Promise<{ user: User }>
   setPlan(plan: string): Promise<{ user: User }>
-  me(token: string): Promise<{ user: User }>
-  logout(token: string): Promise<{ ok: boolean }>
+  me(token?: string): Promise<{ user: User }>
+  logout(token?: string): Promise<{ ok: boolean }>
   listAccounts(): Promise<AccountInfo[]>
   deleteAccount(email: string): Promise<{ ok: boolean }>
   logoutAll(token?: string): Promise<{ ok: boolean }>
@@ -119,13 +121,13 @@ export interface Api {
   listIdeas(): Promise<Idea[]>
   addIdea(draft: Omit<Idea, 'id'>): Promise<Idea>
   toggleIdea(id: string): Promise<Idea>
-  promoteIdea(id: string, month: number): Promise<Post>
+  promoteIdea(id: string, month: number, year?: number): Promise<Post>
 
   listTags(): Promise<HashtagGroup[]>
   addTag(groupId: string, tag: string): Promise<HashtagGroup>
 
   listMetrics(): Promise<Metric[]>
-  importMetrics(platform: string, month: number): Promise<ImportResult>
+  importMetrics(platform: string, month: number, year?: number): Promise<ImportResult>
 
   listTxns(): Promise<Txn[]>
   addTxn(draft: Omit<Txn, 'id'>): Promise<Txn>

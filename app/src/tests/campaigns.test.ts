@@ -84,7 +84,8 @@ describe('campaigns page', () => {
   function mountPage() {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     return mount(CampaignsPage, {
-      global: { plugins: [router, [VueQueryPlugin, { queryClient: qc }]] },
+      // Render teleported popups inline so wrapper.find() can reach the month grid.
+      global: { plugins: [router, [VueQueryPlugin, { queryClient: qc }]], stubs: { teleport: true } },
     })
   }
 
@@ -92,7 +93,12 @@ describe('campaigns page', () => {
     await router.push('/campaigns')
     await router.isReady()
     const w = mountPage()
-    await vi.waitFor(() => expect(w.findAll('.camp-item').length).toBeGreaterThanOrEqual(2), { timeout: 5000 })
+    // The list follows the shared (year, month) filter: pick March in the
+    // toggle grid, where the Spring Launch seed lives.
+    await w.find('.month-label').trigger('click')
+    await w.findAll('.month-cell').find((b) => b.text() === 'March')!.trigger('click')
+    expect(w.find('.month-toggle').text()).toContain('March')
+    await vi.waitFor(() => expect(w.findAll('.camp-item').length).toBe(1), { timeout: 5000 })
     await w.findAll('.camp-item')[0].trigger('click')
     await vi.waitFor(() => expect(w.find('#camp-name').exists()).toBe(true), { timeout: 5000 })
     expect((w.find('#camp-name').element as HTMLInputElement).value).toBe('Spring Launch')

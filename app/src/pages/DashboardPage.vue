@@ -5,20 +5,22 @@ import { useAds, useDashboard } from '@/core/queries'
 import { guardSuppressed } from '@/core/protected'
 import { t } from '@/core/i18n'
 import { useHubTab } from '@/core/subnav'
-import { activeMonth } from '@/core/navdate'
+import { activeMonth, activeYear } from '@/core/navdate'
 import { useWidePane } from '@/composables/useWidePane'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
+import TableFrame from '@/components/tables/TableFrame.vue'
+import DockBar from '@/components/ui/DockBar.vue'
 import KpiCard from '@/components/ui/KpiCard.vue'
 import BarChart from '@/components/ui/BarChart.vue'
 import LineChart from '@/components/ui/LineChart.vue'
 import LiveSection from '@/components/live/LiveSection.vue'
 import ProtectedModal from '@/components/overlays/ProtectedModal.vue'
-import { monthName } from '@/core/i18n'
 
 const router = useRouter()
 // The deck works on one month: this is the shared value every card follows.
 const month = activeMonth
-const { stats, postsQ, metricsQ } = useDashboard(month)
+const year = activeYear
+const { stats, postsQ, metricsQ } = useDashboard(month, year)
 const { data: adsView } = useAds()
 const guardOpen = ref(false)
 
@@ -28,34 +30,6 @@ useWidePane(root, 'dash-scroll')
 // Hub tab (subnavbar) — sections come from HUB_TABS['/dashboard'].
 const { active: section } = useHubTab('/dashboard')
 
-// What actually needs action this month: topics past their date that are not
-// posted yet, and posted topics that still have no metric rows.
-const todayIso = (() => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-})()
-const metricPostIds = computed(() => new Set((metricsQ.data.value ?? []).map((m) => m.postId)))
-const attention = computed(() => {
-  const rows = postsQ.data.value ?? []
-  const late = rows.filter((p) => p.date && p.date < todayIso && p.status !== 'Done')
-  const noMetrics = rows.filter(
-    (p) => p.date && p.date <= todayIso && p.status === 'Done' && !metricPostIds.value.has(p.id),
-  )
-  const out: { text: string; to: string }[] = []
-  if (late.length) {
-    out.push({
-      text: `${late.length} topic${late.length === 1 ? '' : 's'} past due, not posted yet`,
-      to: '/plan?tab=monthly',
-    })
-  }
-  if (noMetrics.length) {
-    out.push({
-      text: `${noMetrics.length} posted topic${noMetrics.length === 1 ? '' : 's'} still without metrics`,
-      to: '/analyze?tab=performance',
-    })
-  }
-  return out
-})
 const postedPct = computed(() =>
   stats.value?.total ? Math.round((stats.value.posted / stats.value.total) * 100) : 0,
 )
@@ -156,8 +130,7 @@ const trendData = computed(() => {
     postMetrics.set(m.postId, cur)
   }
 
-  const year = new Date().getFullYear()
-  const daysInMonth = new Date(year, month.value, 0).getDate()
+  const daysInMonth = new Date(year.value, month.value, 0).getDate()
 
   const dailyViews = new Array(daysInMonth).fill(0)
   const dailyLikes = new Array(daysInMonth).fill(0)
@@ -222,26 +195,17 @@ function goMaster(): void {
     <h1>Dashboard</h1>
 
     <div class="dash-grid">
-      <aside class="grid gap-2.5 content-start">
-        <div class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 items-center [&>*]:min-w-0">
-          <MonthToggle v-model="month" />
-          <RouterLink class="btn btn-icon" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
-            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
-              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
-            </svg>
-          </RouterLink>
-          <RouterLink class="btn btn-primary btn-icon" to="/plan?tab=monthly" title="New topic" aria-label="New topic">+</RouterLink>
-        </div>
-        <div v-if="attention.length" class="border-t border-line pt-3">
-          <h3 class="m-0 mb-2 text-[11.5px] font-bold tracking-wider uppercase text-muted">Needs attention</h3>
-          <ul class="m-0 p-0 list-none grid gap-2">
-            <li v-for="a in attention" :key="a.text">
-              <RouterLink :to="a.to" class="text-[13px] leading-relaxed underline underline-offset-3 decoration-faint hover:decoration-ink transition">{{ a.text }}</RouterLink>
-            </li>
-          </ul>
-        </div>
-      </aside>
+      <DockBar label="Dashboard controls">
+        <MonthToggle v-model="month" v-model:year="year" />
+        <span class="dock-sep" aria-hidden="true" />
+        <RouterLink class="btn btn-icon" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
+            stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
+          </svg>
+        </RouterLink>
+        <RouterLink class="btn btn-primary btn-icon" to="/plan?tab=monthly" title="New topic" aria-label="New topic">+</RouterLink>
+      </DockBar>
 
       <div class="dash-main">
         <div v-if="postsQ.isError.value || metricsQ.isError.value" class="card">
@@ -262,24 +226,23 @@ function goMaster(): void {
             <!-- Views & Engagement Line Chart -->
             <div class="mt-6">
               <div class="flex items-center justify-between mb-2">
-                <h2 class="m-0 text-[15px] font-bold tracking-tight">Views & Engagement Growth</h2>
-                <span class="text-xs text-muted font-medium">{{ monthName(month) }} Daily Timeline</span>
+                <h2 class="m-0 text-md font-bold tracking-tight">Views & Engagement Growth</h2>
               </div>
               <LineChart :labels="trendData.labels" :series="trendData.series" :height="160" />
             </div>
 
             <div class="mt-6">
-              <h2 class="mb-2 text-[15px] font-bold tracking-tight">Planned vs posted · by pillar</h2>
+              <h2 class="mb-2 text-md font-bold tracking-tight">Planned vs posted · by pillar</h2>
               <BarChart :items="pillarBars" unit="topics" />
             </div>
 
             <div class="grid2 mt-5">
               <div>
-                <h2 class="mb-2 text-[15px] font-bold tracking-tight" style="margin-top: 0;">By platform</h2>
+                <h2 class="mb-2 text-md font-bold tracking-tight" style="margin-top: 0;">By platform</h2>
                 <BarChart :items="platformBars" unit="posts" />
               </div>
               <div>
-                <h2 class="mb-2 text-[15px] font-bold tracking-tight" style="margin-top: 0;">By status</h2>
+                <h2 class="mb-2 text-md font-bold tracking-tight" style="margin-top: 0;">By status</h2>
                 <BarChart :items="statusBars" unit="topics" />
               </div>
             </div>
@@ -296,21 +259,19 @@ function goMaster(): void {
                 <RouterLink class="btn ml-0" to="/ads">{{ t('ads.open') }}</RouterLink>
               </div>
               <template v-if="activeCampaigns.length || adsAlerts.length">
-                <ul v-if="adsAlerts.length" class="mt-2.5 pl-4.5 text-warning text-[13.5px]">
+                <ul v-if="adsAlerts.length" class="mt-2.5 pl-4.5 text-warning text-sm-minus">
                   <li v-for="(a, i) in adsAlerts" :key="i">{{ a }}</li>
                 </ul>
-                <div class="tblwrap mt">
-                  <table class="tbl">
-                    <thead><tr><th>{{ t('ads.campaign') }}</th><th>{{ t('ads.status') }}</th><th class="num">{{ t('ads.spend') }}</th></tr></thead>
-                    <tbody>
-                      <tr v-for="c in activeCampaigns" :key="c.id" style="cursor: default;">
-                        <td>{{ c.name }}</td>
-                        <td><span class="badge badge-success">{{ c.status }}</span></td>
-                        <td class="num">{{ adsMoney(adSpend(c.id) * 100) }}</td>
+                <TableFrame>
+                  <thead><tr><th>{{ t('ads.campaign') }}</th><th>{{ t('ads.status') }}</th><th class="num">{{ t('ads.spend') }}</th></tr></thead>
+                  <tbody>
+                    <tr v-for="c in activeCampaigns" :key="c.id" style="cursor: default;">
+                      <td>{{ c.name }}</td>
+                      <td><span class="badge badge-success">{{ c.status }}</span></td>
+                      <td class="num">{{ adsMoney(adSpend(c.id) * 100) }}</td>
                       </tr>
                     </tbody>
-                  </table>
-                </div>
+                </TableFrame>
               </template>
               <p v-else class="muted">No active campaigns.</p>
             </section>
@@ -318,19 +279,17 @@ function goMaster(): void {
 
           <template v-else>
             <h2 style="margin-top: 0;">Top 5 by views</h2>
-            <div class="tblwrap">
-              <table class="tbl">
-                <thead><tr><th>Topic</th><th>Status</th><th class="num">Views</th><th></th></tr></thead>
-                <tbody>
-                  <tr v-for="t in stats.top5" :key="t.post.id" style="cursor: default;">
-                    <td>{{ t.post.topic }}</td>
-                    <td>{{ t.post.status }}</td>
-                    <td class="num">{{ t.views.toLocaleString('en-US') }}</td>
-                    <td><button class="btn" @click="askEdit">Edit</button></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <TableFrame>
+              <thead><tr><th>Topic</th><th>Status</th><th class="num">Views</th><th></th></tr></thead>
+              <tbody>
+                <tr v-for="t in stats.top5" :key="t.post.id" style="cursor: default;">
+                  <td>{{ t.post.topic }}</td>
+                  <td>{{ t.post.status }}</td>
+                  <td class="num">{{ t.views.toLocaleString('en-US') }}</td>
+                  <td><button class="btn" @click="askEdit">Edit</button></td>
+                </tr>
+              </tbody>
+            </TableFrame>
           </template>
         </template>
       </div>

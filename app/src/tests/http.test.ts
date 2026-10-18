@@ -2,8 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, isAuthError, normalizeBase } from '@/api/http'
 import * as api from '@/api/http'
-import { currentUser, startSession } from '@/core/session'
-import { setToken, token } from '@/core/token'
+import { clearSession, currentUser, startSession } from '@/core/session'
 import { setActiveWorkspace } from '@/core/workspace'
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -31,14 +30,12 @@ describe('HTTP client', () => {
   beforeEach(() => {
     fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
-    setToken(null)
-    currentUser.value = null
+    clearSession()
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
-    setToken(null)
-    currentUser.value = null
+    clearSession()
   })
 
   it('surfaces the server error message, not the raw body', async () => {
@@ -59,6 +56,8 @@ describe('HTTP client', () => {
     const headers = init.headers as Record<string, string>
     expect(headers.Authorization).toBeUndefined()
     expect(headers['Content-Type']).toBeUndefined()
+    // The session cookie rides on same-origin credentials (SOP §2.3).
+    expect(init.credentials).toBe('same-origin')
   })
 
   it('does not send Content-Type on authenticated GETs', async () => {
@@ -69,12 +68,33 @@ describe('HTTP client', () => {
     expect(headers['Content-Type']).toBeUndefined()
   })
 
-  it('clears the session when an authenticated request returns 401', async () => {
-    startSession('session-token', { name: 'Studio Owner', role: 'Owner' })
+  it('drops the session when a 401 survives the silent refresh', async () => {
+    startSession({ name: 'Studio Owner', role: 'Owner' })
     fetchMock.mockResolvedValue(jsonResponse({ error: 'invalid token' }, 401))
     await expect(api.listAccounts()).rejects.toThrow('invalid token')
-    expect(token.value).toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(2) // original + refresh attempt
     expect(currentUser.value).toBeNull()
+  })
+
+  it('refreshes single-flight and replays every queued 401 request', async () => {
+    startSession({ name: 'Studio Owner', role: 'Owner' })
+    let firstBurst = 0
+    let refreshes = 0
+    fetchMock.mockImplementation((url: string) => {
+      if (String(url).includes('/api/auth/refresh')) {
+        refreshes += 1
+        return Promise.resolve(jsonResponse({ ok: true }))
+      }
+      firstBurst += 1
+      if (firstBurst <= 2) return Promise.resolve(jsonResponse({ error: 'invalid token' }, 401))
+      return Promise.resolve(jsonResponse([]))
+    })
+
+    const [posts, accounts] = await Promise.all([api.listPosts(), api.listAccounts()])
+    expect(posts).toEqual([])
+    expect(accounts).toEqual([])
+    expect(refreshes).toBe(1) // exactly one refresh for the whole burst
+    expect(currentUser.value?.name).toBe('Studio Owner')
   })
 
   it('handles empty (204) responses', async () => {

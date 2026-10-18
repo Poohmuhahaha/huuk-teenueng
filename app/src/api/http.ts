@@ -1,6 +1,7 @@
 // HTTP client for the Rust backend (`server/`).
 // Implements the same `Api` contract as `src/mock/api.ts`, so the app can switch
 // at runtime via VITE_API_URL (see src/api/index.ts).
+import { z } from 'zod'
 import type {
   Post, SetupConfig, Idea, HashtagGroup, Metric, Txn, Brand,
   PlatformConnection, PlatformId, User, WorkspaceSummary, WorkspaceMembers,
@@ -11,20 +12,33 @@ import type {
   Api, OptionList, AuthResult, ImportResult, OauthStatus, OauthStart, OauthPending, AccountInfo,
   ContentDraft, ContentPatchInput, CreatedAccount,
 } from './contract'
-import { clearSession } from '@/core/session'
-import { token } from '@/core/token'
 import { activeWorkspaceId } from '@/core/workspace'
+import {
+  ApiError,
+  BASE,
+  CREDENTIALS,
+  customFetch,
+  normalizeBase,
+  parseApiError,
+  refreshSession,
+  validatePayload,
+} from './client'
+import {
+  BrandSchema,
+  CampaignSchema,
+  ContentSchema,
+  ContentSummarySchema,
+  FontAssetSchema,
+  HashtagGroupSchema,
+  IdeaSchema,
+  MetricSchema,
+  PlatformConnectionSchema,
+  PostSchema,
+  SetupConfigSchema,
+  TxnSchema,
+} from './schemas'
 
-/** Error carrying the HTTP status and the server's `{"error": ...}` message. */
-export class ApiError extends Error {
-  readonly status: number
-
-  constructor(status: number, message: string) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-  }
-}
+export { ApiError, BASE, customFetch, normalizeBase, validatePayload }
 
 /** True when an error means the session is invalid/forbidden. */
 export function isAuthError(error: unknown): boolean {
@@ -33,53 +47,21 @@ export function isAuthError(error: unknown): boolean {
   return /401|403|invalid session|invalid token|unauthorized/i.test(message)
 }
 
-/** Normalize the API origin: strip trailing slashes and a trailing `/api`. */
-export function normalizeBase(raw: string | undefined | null): string {
-  const trimmed = (raw ?? '').trim()
-  if (!trimmed || trimmed === '/') return ''
-  let base = trimmed.replace(/\/+$/, '')
-  if (base.endsWith('/api')) base = base.slice(0, -4)
-  if (!base.startsWith('/') && !/^https?:\/\//i.test(base)) base = `/${base}`
-  return base.replace(/\/+$/, '')
-}
-
-const RAW_BASE = import.meta.env.VITE_API_URL
-
-if (import.meta.env.PROD && !RAW_BASE && import.meta.env.VITE_USE_MOCK !== 'true') {
-  // A production bundle without VITE_API_URL talks to the same origin
-  // (`/api/...`) — the reverse proxy must forward it to the Rust server.
-  console.info('[content-planner] VITE_API_URL is unset — using same-origin /api')
-}
-
-export const BASE = normalizeBase(RAW_BASE)
-
 const DEFAULT_TIMEOUT_MS = 15_000
 
-async function errorMessage(res: Response): Promise<string> {
-  const text = await res.text().catch(() => '')
-  if (text) {
-    try {
-      const body = JSON.parse(text) as { error?: unknown }
-      if (typeof body?.error === 'string' && body.error) return body.error
-    } catch {
-      // not JSON — fall through to the raw text
-    }
-    if (text.length < 300) return text
-  }
-  return `Request failed (${res.status})`
-}
-
-interface RequestOptions {
-  /** Explicit token: `null` disables auth for this call, `undefined` uses the session. */
-  token?: string | null
+interface RequestOptions<T = unknown> {
   /** Keep the session even on 401 (login, wrong old password). */
   keepSessionOn401?: boolean
+  /** Internal: a request already replayed after a silent refresh never loops. */
+  retried?: boolean
+  /** Optional Zod schema returning T directly. */
+  schema?: z.ZodType<T>
+  /** Optional Zod runtime validator when T uses narrower client union types. */
+  validate?: (data: unknown) => unknown
 }
 
-async function req<T>(path: string, init: RequestInit = {}, opts: RequestOptions = {}): Promise<T> {
+async function req<T>(path: string, init: RequestInit = {}, opts: RequestOptions<T> = {}): Promise<T> {
   const { headers, ...rest } = init
-  const bearer = opts.token !== undefined ? opts.token : token.value
-  const auth: Record<string, string> = bearer ? { Authorization: `Bearer ${bearer}` } : {}
   const contentType: Record<string, string> = rest.body !== undefined ? { 'Content-Type': 'application/json' } : {}
   const workspace: Record<string, string> = activeWorkspaceId.value
     ? { 'X-Workspace-Id': activeWorkspaceId.value }
@@ -89,71 +71,112 @@ async function req<T>(path: string, init: RequestInit = {}, opts: RequestOptions
   try {
     res = await fetch(`${BASE}${path}`, {
       ...rest,
+      credentials: CREDENTIALS,
       signal: rest.signal ?? AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
-      headers: { ...contentType, ...auth, ...workspace, ...(headers as Record<string, string> | undefined) },
+      headers: { ...contentType, ...workspace, ...(headers as Record<string, string> | undefined) },
     })
   } catch (error) {
     const name = error instanceof DOMException ? error.name : ''
     if (name === 'TimeoutError' || name === 'AbortError') {
-      throw new ApiError(0, 'The server took too long to respond. Please try again.')
+      throw new ApiError(0, 'The server took too long to respond. Please try again.', 'TIMEOUT')
     }
-    throw new ApiError(0, 'Network error — check your connection and that the API is reachable.')
+    throw new ApiError(
+      0,
+      'Network error — check your connection and that the API is reachable.',
+      'NETWORK_ERROR',
+    )
   }
 
   if (!res.ok) {
-    const message = await errorMessage(res)
-    if (res.status === 401 && bearer && !opts.keepSessionOn401) clearSession()
-    throw new ApiError(res.status, message)
+    const apiError = await parseApiError(res)
+    const canRefresh =
+      res.status === 401 &&
+      !opts.keepSessionOn401 &&
+      !opts.retried &&
+      path !== '/api/auth/refresh'
+    if (canRefresh) {
+      try {
+        await refreshSession()
+      } catch {
+        // Refresh failed (no live session) — surface the original error; the
+        // queue was already cleared and the UI session dropped.
+        throw apiError
+      }
+      return req<T>(path, init, { ...opts, retried: true })
+    }
+    throw apiError
   }
 
   if (res.status === 204) return undefined as T
   const text = await res.text()
   if (!text) return undefined as T
+
+  let parsed: unknown
   try {
-    return JSON.parse(text) as T
+    parsed = JSON.parse(text)
   } catch {
-    return text as unknown as T
+    throw new ApiError(res.status, 'Invalid JSON response from server', 'INVALID_JSON')
   }
+
+  if (opts.schema) {
+    return opts.schema.parse(parsed)
+  }
+  if (opts.validate) {
+    opts.validate(parsed)
+  }
+  return parsed as T
 }
 
 const send = <T>(
   path: string,
   method: string,
   body?: unknown,
-  opts: RequestOptions = {},
+  opts: RequestOptions<T> = {},
 ): Promise<T> =>
   req<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) }, opts)
 
-const bearer = (value: string): RequestOptions => ({ token: value })
+export const listPosts = (month?: number, year?: number): Promise<Post[]> => {
+  const q = [
+    month === undefined ? '' : `month=${month}`,
+    year === undefined ? '' : `year=${year}`,
+  ].filter(Boolean).join('&')
+  return req(q ? `/api/posts?${q}` : '/api/posts', {}, {
+    validate: (d) => z.array(PostSchema).parse(d),
+  })
+}
 
-export const listPosts = (month?: number): Promise<Post[]> =>
-  req(month === undefined ? '/api/posts' : `/api/posts?month=${month}`)
-
-export const getSetup = (): Promise<SetupConfig> => req('/api/setup')
+export const getSetup = (): Promise<SetupConfig> =>
+  req('/api/setup', {}, { validate: (d) => SetupConfigSchema.parse(d) })
 
 export const saveSetup = (patch: Partial<SetupConfig>): Promise<SetupConfig> =>
-  send('/api/setup', 'PATCH', patch)
+  send('/api/setup', 'PATCH', patch, { validate: (d) => SetupConfigSchema.parse(d) })
 
 export const addOption = (list: OptionList, item: string): Promise<SetupConfig> =>
-  send('/api/setup/options', 'POST', { list, item })
+  send('/api/setup/options', 'POST', { list, item }, { validate: (d) => SetupConfigSchema.parse(d) })
 
 export const addUser = (name: string, role: string): Promise<SetupConfig> =>
-  send('/api/setup/users', 'POST', { name, role })
+  send('/api/setup/users', 'POST', { name, role }, { validate: (d) => SetupConfigSchema.parse(d) })
 
 export const removeUser = (name: string): Promise<SetupConfig> =>
-  send(`/api/setup/users/${encodeURIComponent(name)}`, 'DELETE')
+  send(`/api/setup/users/${encodeURIComponent(name)}`, 'DELETE', undefined, {
+    validate: (d) => SetupConfigSchema.parse(d),
+  })
 
 export const addRole = (name: string, permissions: string[] = []): Promise<SetupConfig> =>
-  send('/api/setup/roles', 'POST', { name, permissions })
+  send('/api/setup/roles', 'POST', { name, permissions }, {
+    validate: (d) => SetupConfigSchema.parse(d),
+  })
 
 export const removeRole = (name: string): Promise<SetupConfig> =>
-  send(`/api/setup/roles/${encodeURIComponent(name)}`, 'DELETE')
+  send(`/api/setup/roles/${encodeURIComponent(name)}`, 'DELETE', undefined, {
+    validate: (d) => SetupConfigSchema.parse(d),
+  })
 
 export const register = (v: { name: string; email: string; password: string }): Promise<AuthResult> =>
-  send('/api/auth/register', 'POST', v, { token: null, keepSessionOn401: true })
+  send('/api/auth/register', 'POST', v, { keepSessionOn401: true })
 
 export const login = (email: string, password: string): Promise<AuthResult> =>
-  send('/api/auth/login', 'POST', { email, password }, { token: null, keepSessionOn401: true })
+  send('/api/auth/login', 'POST', { email, password }, { keepSessionOn401: true })
 
 export const changePassword = (oldPassword: string, newPassword: string): Promise<{ ok: boolean }> =>
   send('/api/auth/change-password', 'POST', { oldPassword, newPassword }, { keepSessionOn401: true })
@@ -164,19 +187,19 @@ export const updateProfile = (name: string): Promise<{ user: User }> =>
 export const setPlan = (plan: string): Promise<{ user: User }> =>
   send('/api/auth/plan', 'POST', { plan })
 
-export const me = (value: string): Promise<{ user: User }> =>
-  req('/api/auth/me', {}, bearer(value))
+// Cookie-authenticated: the token parameter exists only for the mock API.
+export const me = (): Promise<{ user: User }> => req('/api/auth/me')
 
-export const logout = (value: string): Promise<{ ok: boolean }> =>
-  send('/api/auth/logout', 'POST', undefined, { ...bearer(value), keepSessionOn401: true })
+export const logout = (): Promise<{ ok: boolean }> =>
+  send('/api/auth/logout', 'POST', undefined, { keepSessionOn401: true })
 
 export const listAccounts = (): Promise<AccountInfo[]> => req('/api/auth/accounts')
 
 export const deleteAccount = (email: string): Promise<{ ok: boolean }> =>
   send(`/api/auth/accounts/${encodeURIComponent(email)}`, 'DELETE')
 
-export const logoutAll = (value?: string): Promise<{ ok: boolean }> =>
-  send('/api/auth/logout-all', 'POST', undefined, value ? { ...bearer(value), keepSessionOn401: true } : {})
+export const logoutAll = (): Promise<{ ok: boolean }> =>
+  send('/api/auth/logout-all', 'POST', undefined, { keepSessionOn401: true })
 
 export const lockPost = (id: string, user: string): Promise<Post> =>
   send(`/api/posts/${id}/lock`, 'POST', { user })
@@ -193,55 +216,64 @@ export const deletePost = (id: string): Promise<{ ok: boolean }> =>
 export const addPost = (draft: Omit<Post, 'id'>): Promise<Post> =>
   send('/api/posts', 'POST', draft)
 
-export const listIdeas = (): Promise<Idea[]> => req('/api/ideas')
+export const listIdeas = (): Promise<Idea[]> =>
+  req('/api/ideas', {}, { schema: z.array(IdeaSchema) })
 
 export const addIdea = (draft: Omit<Idea, 'id'>): Promise<Idea> =>
-  send('/api/ideas', 'POST', draft)
+  send('/api/ideas', 'POST', draft, { schema: IdeaSchema })
 
 export const toggleIdea = (id: string): Promise<Idea> =>
-  send(`/api/ideas/${id}/toggle`, 'POST')
+  send(`/api/ideas/${id}/toggle`, 'POST', undefined, { schema: IdeaSchema })
 
-export const promoteIdea = (id: string, month: number): Promise<Post> =>
-  send(`/api/ideas/${id}/promote?month=${month}`, 'POST')
+export const promoteIdea = (id: string, month: number, year?: number): Promise<Post> =>
+  send(`/api/ideas/${id}/promote?month=${month}${year === undefined ? '' : `&year=${year}`}`, 'POST', undefined, {
+    validate: (d) => PostSchema.parse(d),
+  })
 
-export const listTags = (): Promise<HashtagGroup[]> => req('/api/tags')
+export const listTags = (): Promise<HashtagGroup[]> =>
+  req('/api/tags', {}, { schema: z.array(HashtagGroupSchema) })
 
 export const addTag = (groupId: string, tag: string): Promise<HashtagGroup> =>
-  send(`/api/tags/${groupId}`, 'POST', { tag })
+  send(`/api/tags/${groupId}`, 'POST', { tag }, { schema: HashtagGroupSchema })
 
-export const listMetrics = (): Promise<Metric[]> => req('/api/metrics')
+export const listMetrics = (): Promise<Metric[]> =>
+  req('/api/metrics', {}, { schema: z.array(MetricSchema) })
 
-export const importMetrics = (platform: string, month: number): Promise<ImportResult> =>
-  send('/api/metrics/import', 'POST', { platform, month })
+export const importMetrics = (platform: string, month: number, year?: number): Promise<ImportResult> =>
+  send('/api/metrics/import', 'POST', { platform, month, ...(year === undefined ? {} : { year }) })
 
-export const listTxns = (): Promise<Txn[]> => req('/api/txns')
+export const listTxns = (): Promise<Txn[]> =>
+  req('/api/txns', {}, { validate: (d) => z.array(TxnSchema).parse(d) })
 
 export const addTxn = (draft: Omit<Txn, 'id'>): Promise<Txn> =>
-  send('/api/txns', 'POST', draft)
+  send('/api/txns', 'POST', draft, { validate: (d) => TxnSchema.parse(d) })
 
-export const getBrand = (): Promise<Brand> => req('/api/brand')
+export const getBrand = (): Promise<Brand> =>
+  req('/api/brand', {}, { schema: BrandSchema })
 
-export const listCampaigns = (): Promise<Campaign[]> => req('/api/campaigns')
+export const listCampaigns = (): Promise<Campaign[]> =>
+  req('/api/campaigns', {}, { validate: (d) => z.array(CampaignSchema).parse(d) })
 
 export const getCampaign = (id: string): Promise<Campaign> =>
-  req(`/api/campaigns/${encodeURIComponent(id)}`)
+  req(`/api/campaigns/${encodeURIComponent(id)}`, {}, { validate: (d) => CampaignSchema.parse(d) })
 
 export const createCampaign = (patch: Partial<Campaign>): Promise<Campaign> =>
-  send('/api/campaigns', 'POST', patch)
+  send('/api/campaigns', 'POST', patch, { validate: (d) => CampaignSchema.parse(d) })
 
 export const updateCampaign = (id: string, patch: Partial<Campaign>): Promise<Campaign> =>
-  send(`/api/campaigns/${encodeURIComponent(id)}`, 'PATCH', patch)
+  send(`/api/campaigns/${encodeURIComponent(id)}`, 'PATCH', patch, { validate: (d) => CampaignSchema.parse(d) })
 
 export const deleteCampaign = (id: string): Promise<{ ok: boolean }> =>
   send(`/api/campaigns/${encodeURIComponent(id)}`, 'DELETE')
 
-export const listFonts = (): Promise<FontAsset[]> => req('/api/brand/fonts')
+export const listFonts = (): Promise<FontAsset[]> =>
+  req('/api/brand/fonts', {}, { schema: z.array(FontAssetSchema) })
 
 export const uploadFont = (name: string, data: string): Promise<FontAsset[]> =>
-  send('/api/brand/fonts', 'POST', { name, data })
+  send('/api/brand/fonts', 'POST', { name, data }, { schema: z.array(FontAssetSchema) })
 
 export const deleteFont = (name: string): Promise<FontAsset[]> =>
-  send(`/api/brand/fonts/${encodeURIComponent(name)}`, 'DELETE')
+  send(`/api/brand/fonts/${encodeURIComponent(name)}`, 'DELETE', undefined, { schema: z.array(FontAssetSchema) })
 
 export const uploadBrandImage = (
   name: string,
@@ -254,9 +286,10 @@ export const deleteBrandImage = (name: string): Promise<{ ok: boolean }> =>
   send(`/api/brand/images/${encodeURIComponent(name)}`, 'DELETE')
 
 export const saveBrand = (patch: Partial<Brand>): Promise<Brand> =>
-  send('/api/brand', 'PATCH', patch)
+  send('/api/brand', 'PATCH', patch, { schema: BrandSchema })
 
-export const listPlatforms = (): Promise<PlatformConnection[]> => req('/api/platforms')
+export const listPlatforms = (): Promise<PlatformConnection[]> =>
+  req('/api/platforms', {}, { validate: (d) => z.array(PlatformConnectionSchema).parse(d) })
 
 export const getLive = (): Promise<LiveData> => req('/api/live')
 
@@ -344,11 +377,15 @@ export const listContent = (params?: { status?: string; q?: string }): Promise<C
   if (params?.status) query.set('status', params.status)
   if (params?.q) query.set('q', params.q)
   const suffix = query.toString()
-  return req(`/api/content${suffix ? `?${suffix}` : ''}`)
+  return req(`/api/content${suffix ? `?${suffix}` : ''}`, {}, {
+    validate: (d) => z.array(ContentSummarySchema).parse(d),
+  })
 }
 
 export const getContent = (id: string): Promise<Content> =>
-  req(`/api/content/${encodeURIComponent(id)}`)
+  req(`/api/content/${encodeURIComponent(id)}`, {}, {
+    validate: (d) => ContentSchema.parse(d),
+  })
 
 export const createContent = (draft: ContentDraft): Promise<Content> =>
   send('/api/content', 'POST', draft)

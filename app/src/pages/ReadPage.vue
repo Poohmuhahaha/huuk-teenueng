@@ -26,7 +26,7 @@ function formatStamp(stamp: string | null | undefined): string {
 </script>
 
 <template>
-  <div class="max-w-[760px] mx-auto px-4 pt-5 pb-15">
+  <div class="max-w-article mx-auto px-4 pt-5 pb-15">
     <header class="flex justify-between items-center gap-3 mb-6">
       <RouterLink class="font-bold no-underline text-inherit" to="/">Huuk <span class="text-muted">· Studio</span></RouterLink>
       <nav class="flex gap-1.5">
@@ -44,14 +44,14 @@ function formatStamp(stamp: string | null | undefined): string {
         <RouterLink class="btn" to="/read">{{ t('read.all') }}</RouterLink>
       </div>
       <article v-else-if="itemQ.data.value">
-        <p class="text-[13px] text-muted">
+        <p class="text-xs-plus text-muted">
           {{ itemQ.data.value.author }}
           <template v-if="itemQ.data.value.publishedAt"> · {{ formatStamp(itemQ.data.value.publishedAt) }}</template>
         </p>
         <h1 class="text-2xl font-bold my-2">{{ itemQ.data.value.title }}</h1>
         <p v-if="itemQ.data.value.excerpt" class="text-lg text-muted my-2">{{ itemQ.data.value.excerpt }}</p>
         <img v-if="itemQ.data.value.heroImageUrl" :src="itemQ.data.value.heroImageUrl"
-          :alt="itemQ.data.value.title" class="max-w-full rounded-[10px] my-3" />
+          :alt="itemQ.data.value.title" class="max-w-full rounded-media my-3" />
         <!-- sanitized by renderMarkdown -->
         <div class="markdown" v-html="bodyHtml" />
         <p v-if="itemQ.data.value.tags.length" class="flex gap-1.5 flex-wrap mt-5">
@@ -67,10 +67,10 @@ function formatStamp(stamp: string | null | undefined): string {
       <p v-else-if="!listQ.data.value?.length" class="text-muted">{{ t('read.empty') }}</p>
       <ul v-else class="list-none p-0 grid gap-2.5">
         <li v-for="item in listQ.data.value" :key="item.id">
-          <RouterLink :to="`/read/${item.slug}`" class="grid gap-[3px] py-3 px-3.5 no-underline text-inherit border border-faint rounded-[var(--radius,10px)] bg-surface shadow-xs transition hover:bg-surface-2 hover:shadow-sm">
+          <RouterLink :to="`/read/${item.slug}`" class="grid gap-tight py-3 px-3.5 no-underline text-inherit border border-faint rounded-card bg-surface shadow-xs transition hover:bg-surface-2 hover:shadow-sm">
             <strong>{{ item.title }}</strong>
             <span class="text-muted text-sm">{{ item.excerpt }}</span>
-            <span class="text-[13px] text-muted">{{ item.author }} · {{ formatStamp(item.publishedAt) }}</span>
+            <span class="text-xs-plus text-muted">{{ item.author }} · {{ formatStamp(item.publishedAt) }}</span>
           </RouterLink>
         </li>
       </ul>

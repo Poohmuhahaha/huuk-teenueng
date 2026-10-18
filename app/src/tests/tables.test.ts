@@ -7,7 +7,7 @@ import type { Post, Txn } from '@/mock/db'
 
 function post(over: Partial<Post> & { id: string; topic: string }): Post {
   return {
-    month: 2, pillar: 'Pillar I', format: 'Short-video', goal: '10K subscribe',
+    month: 2, year: 2026, pillar: 'Pillar I', format: 'Short-video', goal: '10K subscribe',
     date: '2026-02-03', time: '08:00', status: 'Start', hook: '', caption: '',
     cta: '', hashtagGroup: 'Reach', hashtags: [], imageUrl: '', note: '',
     done: false, platforms: ['Instagram'], ...over,

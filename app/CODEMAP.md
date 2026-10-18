@@ -61,14 +61,15 @@ Read in this order — each layer only talks to the one below it:
 
 | Order | File | What you learn |
 |---|---|---|
-| 7b | `src/api/index.ts` | Data-source switch: mock by default, HTTP when `VITE_API_URL` is set (Rust backend in `../server`) |
-| 7c | `src/auth.ts` + `src/token.ts` | Real auth: `login(email, password)`, `register`, `changePassword`, `logoutAll`, `restore()`; token persisted in `localStorage`, attached by `api/http.ts`; token module separate to avoid the http↔auth import cycle |
+| 7a | `src/api/types/*` + `src/api/schemas/index.ts` | Auto-generated `ts-rs` TypeScript DTOs from Rust (`just gen-types`) paired with Zod runtime validation schemas and compile-time `AssertEqual<z.infer<typeof Schema>, TsRsType>` assertions |
+| 7b | `src/api/client.ts` + `src/api/http.ts` + `src/api/index.ts` | `client.ts` implements `customFetch` with single-flight 401 refresh (`isRefreshing` + `failedQueue`) and `validatePayload`; `http.ts` calls the Rust API and validates responses with Zod; `index.ts` switches between mock and HTTP via `VITE_API_URL` |
+| 7c | `src/auth.ts` + `src/token.ts` | Real auth: `login(email, password)`, `register`, `changePassword`, `logoutAll`, `restore()`; browser session uses HttpOnly `cp_session` cookie (Bearer token in memory only for non-cookie callers) |
 | 7d | account admin | `GET/DELETE /api/auth/accounts` (Workspace settings popup, `users.manage`) — list name/email/sessions, delete revokes sessions; directory entry stays |
 | 7d | `src/i18n.ts` | EN/TH dictionaries (identical keys), `t()`, `monthName()`; language is a personal pref in `localStorage` (`cp.lang`), seeded from `setup.language`, toggled in the navbar |
 | 7e | Profile & setup popups | avatar click → compact popup (`ProfilePanel`: rename) + "Workspace settings" popup (`SettingsPanel`); neither is a deck card; register success reopens the popup with a welcome banner |
 | 7e | `usePermission()` in `src/core/queries.ts` | `can('posts.write')` — demo mode open, otherwise role → permissions from `setup.roles`. Enforcement twins: `require_perm` (server) / `requirePerm` (mock) |
 | 8 | `src/mock/db.ts` | Domain **types** (`Post`, `Txn`, `Status`…) + **seed data**. `Post`/`Txn` are `type` aliases (not `interface`) — TanStack Table v9 requires that |
-| 9 | `src/mock/api.ts` | Async functions over the store (`listPosts`, `updatePost`, `promoteIdea`…). Returns copies like a real API. **This file is the only one you replace when the backend arrives** |
+| 9 | `src/mock/api.ts` | Async functions over the store (`listPosts`, `updatePost`, `promoteIdea`…). Returns copies like a real API |
 | 10 | `src/core/queries.ts` | TanStack Query hooks (`usePosts`, `useUpdatePost`…). Pages must never import `mock/` directly. Mutations invalidate their query keys — stale UI almost always means a missing invalidation here |
 
 Fix-it: wrong seed values → `db.ts`. UI doesn't refresh after save → the mutation in `queries.ts` isn't invalidating the right key. API-shaped problem → `api.ts`.

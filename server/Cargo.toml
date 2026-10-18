@@ -2,6 +2,7 @@
 name = "content-planner-server"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 description = "REST backend for the Content Planner wireframe app"
 
 [dependencies]
@@ -22,6 +23,11 @@ reqwest = { version = "0.13.5", default-features = false, features = ["json", "r
 chacha20poly1305 = "0.10"
 # Session tokens are persisted as hashes (see store::session_key).
 blake2 = "0.10"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "migrate", "macros", "json", "chrono"] }
+mimalloc = "0.1"
+axum-extra = { version = "0.10", features = ["cookie"] }
+time = "0.3"
+ts-rs = "10"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
@@ -29,5 +35,8 @@ http-body-util = "0.1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 [profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
 strip = true
-lto = true

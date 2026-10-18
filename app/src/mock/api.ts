@@ -39,6 +39,10 @@ function checkMonth(month: number): void {
   if (!Number.isInteger(month) || month < 1 || month > 12) throw new Error('month must be between 1 and 12')
 }
 
+function checkYear(year: number): void {
+  if (!Number.isInteger(year) || year < 1970 || year > 9999) throw new Error('year must be between 1970 and 9999')
+}
+
 function checkList(field: string, values: string[]): void {
   if (values.length > MAX_LIST_ITEMS) throw new Error(`${field} must have at most ${MAX_LIST_ITEMS} items`)
   for (const value of values) checkLen(field, value, MAX_LIST_ITEM)
@@ -46,6 +50,7 @@ function checkList(field: string, values: string[]): void {
 
 function checkPost(post: Post): void {
   checkMonth(post.month)
+  checkYear(post.year)
   if (!post.topic.trim()) throw new Error('topic is required')
   checkLen('topic', post.topic, MAX_TEXT)
   checkLen('pillar', post.pillar, MAX_TEXT)
@@ -65,10 +70,11 @@ function checkPost(post: Post): void {
   }
 }
 
-export async function listPosts(month?: number): Promise<Post[]> {
+export async function listPosts(month?: number, year?: number): Promise<Post[]> {
   await wait()
   if (month !== undefined) checkMonth(month)
-  return clone(month === undefined ? posts : posts.filter((p) => p.month === month))
+  if (year !== undefined) checkYear(year)
+  return clone(posts.filter((p) => (month === undefined || p.month === month) && (year === undefined || p.year === year)))
 }
 
 export async function getSetup(): Promise<SetupConfig> {
@@ -112,8 +118,13 @@ export async function addOption(list: OptionList, item: string): Promise<SetupCo
   await wait()
   const value = item.trim()
   checkLen('option', value, MAX_LIST_ITEM)
-  const target = setup[list] as unknown as string[]
-  if (value && !target.includes(value)) target.push(value)
+  if (list === 'statuses') {
+    const statusValue = value as Status
+    if (statusValue && !setup.statuses.includes(statusValue)) setup.statuses.push(statusValue)
+  } else {
+    const target: string[] = setup[list]
+    if (value && !target.includes(value)) target.push(value)
+  }
   return clone(setup)
 }
 
@@ -299,19 +310,20 @@ export async function setPlan(plan: string): Promise<{ user: User }> {
   return { user: clone(accountUser(account)) }
 }
 
-export async function me(token: string): Promise<{ user: User }> {
+export async function me(token?: string): Promise<{ user: User }> {
   await wait(60)
-  const user = sessionUser(token)
+  const user = sessionUser(token ?? activeToken)
   if (!user) throw new Error('invalid session')
-  activeToken = token
+  activeToken = token ?? activeToken
   return { user: clone(user) }
 }
 
-export async function logout(token: string): Promise<{ ok: boolean }> {
+export async function logout(token?: string): Promise<{ ok: boolean }> {
   await wait(60)
-  if (!sessions.has(token)) throw new Error('401 unauthorized')
-  sessions.delete(token)
-  if (activeToken === token) activeToken = null
+  const key = token ?? activeToken
+  if (!key || !sessions.has(key)) throw new Error('401 unauthorized')
+  sessions.delete(key)
+  if (activeToken === key) activeToken = null
   return { ok: true }
 }
 
@@ -391,6 +403,12 @@ export async function updatePost(id: string, patch: Partial<Post> & { user?: str
   if (!p) throw new Error('post not found')
   if (p.lockedBy && p.lockedBy !== actor) throw new Error(`post is locked by ${p.lockedBy}`)
   const { user: _user, ...fields } = patch
+  // Mirrors the server: retargeting the date without an explicit year moves
+  // the post along, so keep the year in sync.
+  if (typeof fields.date === 'string' && fields.year === undefined) {
+    const y = Number(/^(\d{4})-\d{2}-\d{2}/.exec(fields.date)?.[1])
+    if (y >= 1970 && y <= 9999) fields.year = y
+  }
   const candidate = { ...p, ...fields } as Post
   checkPost(candidate)
   Object.assign(p, fields)
@@ -400,7 +418,9 @@ export async function updatePost(id: string, patch: Partial<Post> & { user?: str
 export async function addPost(draft: Omit<Post, 'id'>): Promise<Post> {
   requirePerm('posts.write')
   await wait()
-  const p: Post = { ...clone(draft), id: uid('p'), lockedBy: null }
+  // Drafts that predate the year field carry 0 — assume the workspace year.
+  const year = draft.year === 0 ? setup.year : draft.year
+  const p: Post = { ...clone(draft), year, id: uid('p'), lockedBy: null }
   checkPost(p)
   posts.push(p)
   return clone(p)
@@ -449,14 +469,16 @@ export async function toggleIdea(id: string): Promise<Idea> {
   return clone(it)
 }
 
-export async function promoteIdea(id: string, month: number): Promise<Post> {
+export async function promoteIdea(id: string, month: number, year?: number): Promise<Post> {
   requirePerm('ideas.write')
   await wait()
   checkMonth(month)
+  const y = year ?? setup.year
+  checkYear(y)
   const it = ideas.find((x) => x.id === id)
   if (!it) throw new Error('idea not found')
   const p: Post = {
-    id: uid('p'), month, topic: it.topic, pillar: setup.pillars[0] ?? 'Pillar I',
+    id: uid('p'), month, year: y, topic: it.topic, pillar: setup.pillars[0] ?? 'Pillar I',
     format: it.format, goal: setup.goals[0] ?? '', date: null, time: '09:00',
     status: 'Start' as Status, hook: '', caption: it.idea, cta: '',
     hashtagGroup: hashtagGroups[0]?.title ?? '', hashtags: [],
@@ -497,15 +519,17 @@ function metricHash(postId: string, platform: string): number {
   return h
 }
 
-export async function importMetrics(platform: string, month: number): Promise<ImportResult> {
+export async function importMetrics(platform: string, month: number, year?: number): Promise<ImportResult> {
   requirePerm('metrics.import')
   await wait(400)
   const p = platform.trim()
   if (!p) throw new Error('platform is required')
   checkMonth(month)
+  const y = year ?? setup.year
+  checkYear(y)
   if (setup.platforms.length && !setup.platforms.includes(p)) throw new Error(`unknown platform '${p}'`)
   const affected: Metric[] = []
-  for (const post of posts.filter((x) => x.month === month && x.platforms.includes(p))) {
+  for (const post of posts.filter((x) => x.month === month && x.year === y && x.platforms.includes(p))) {
     const h = metricHash(post.id, p)
     const views = 1000 + (h % 9000)
     const row: Metric = { postId: post.id, platform: p, likes: Math.floor(views / 12), views }
@@ -1538,4 +1562,5 @@ const _api: Api = {
   scheduleContent, deleteContent, duplicateContent, listContentRevisions, getContentRevision,
   restoreContentRevision, listPublicContent, getPublicContent,
 }
-void _api
+export const mockApi: Api = _api
+export default mockApi

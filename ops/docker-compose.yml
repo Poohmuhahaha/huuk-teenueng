@@ -1,118 +1,114 @@
-# Production stack: API + static web host. Optional Caddy TLS front (profile "tls").
+# Production stack: Caddy 2 reverse proxy + one-off Migration job + Rust API + PostgreSQL 16 (Master Engineering SOP §3.3 & §5.5).
 #
-#   ops/scripts/deploy.sh init      # create ops/deploy/.env.production (generated secrets)
-#   ops/scripts/deploy.sh up        # build + start on http://host:${WEB_PORT:-8080}
-#   ops/scripts/deploy.sh up --tls  # also start Caddy (80/443, auto-HTTPS for SITE_ADDRESS)
-#
-# All settings live in deploy/.env.production (passed with --env-file by ops/scripts/deploy.sh).
-name: content-planner
+# Usage (from repo root):
+#   cp ops/.env.example ops/.env        # edit secrets & domain
+#   docker compose --env-file ops/.env -f ops/docker-compose.yml up -d --build
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-huuk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-huuk_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-huuk_db}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-huuk} -d ${POSTGRES_DB:-huuk_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  migration:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    command: ["/app/server", "--run-migrations-only"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-huuk}:${POSTGRES_PASSWORD:-huuk_dev_password}@postgres:5432/${POSTGRES_DB:-huuk_db}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
   api:
     build:
       context: ../server
       dockerfile: Dockerfile
-    image: content-planner-api:latest
-    env_file:
-      - path: ./deploy/.env.production
-        required: false
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
     environment:
-      # Container-internal overrides (keep the data path stable for backups).
-      BIND_ADDR: 0.0.0.0
       PORT: "8787"
+      BIND_ADDR: "0.0.0.0"
+      DATABASE_URL: postgres://${POSTGRES_USER:-huuk}:${POSTGRES_PASSWORD:-huuk_dev_password}@postgres:5432/${POSTGRES_DB:-huuk_db}
       DATA_FILE: /app/data/content-planner.json
+      RUST_LOG: ${RUST_LOG:-info,tower_http=info}
+      DEMO_MODE: ${DEMO_MODE:-0}
+      AUTH_REQUIRED: ${AUTH_REQUIRED:-1}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-0}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-}
+      FRONTEND_URL: ${FRONTEND_URL:-}
+      OAUTH_BASE_URL: ${OAUTH_BASE_URL:-}
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY:-}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
+      LIVE_REFRESH_MIN: ${LIVE_REFRESH_MIN:-15}
     volumes:
-      - cp-data:/app/data
+      - api-data:/app/data
     expose:
       - "8787"
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    read_only: true
-    tmpfs:
-      - /tmp
-    mem_limit: 512m
-    cpus: 1.0
     logging:
-      driver: json-file
+      driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8787/api/health"]
-      interval: 30s
-      timeout: 5s
-      start_period: 10s
-      retries: 5
+        max-size: "50m"
+        max-file: "5"
 
-  web:
-    build:
-      # Root context so app/Dockerfile can also copy ops/nginx/*.
-      context: ..
-      dockerfile: app/Dockerfile
-      args:
-        # Empty => same-origin /api (recommended behind the proxy).
-        VITE_API_URL: ${VITE_API_URL:-}
-        VITE_USE_MOCK: ${VITE_USE_MOCK:-}
-    image: content-planner-web:latest
-    depends_on:
-      api:
-        condition: service_healthy
-    ports:
-      # Localhost-only by default. Set WEB_BIND=0.0.0.0 to expose on the LAN,
-      # or WEB_BIND=<host-ip> for a specific interface.
-      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:8080"
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    read_only: true
-    tmpfs:
-      - /var/cache/nginx
-      - /var/run
-      - /tmp
-    mem_limit: 256m
-    cpus: 1.0
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
-      interval: 30s
-      timeout: 5s
-      start_period: 5s
-      retries: 5
-
-  # Optional TLS termination (docker compose --profile tls up -d).
-  # Set SITE_ADDRESS=app.example.com in the env file for automatic HTTPS,
-  # or leave empty for HTTP-only on port 80.
-  proxy:
+  caddy:
     image: caddy:2-alpine
-    profiles: ["tls"]
+    restart: unless-stopped
     depends_on:
-      web:
-        condition: service_healthy
-      api:
-        condition: service_healthy
+      - api
     environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      APP_DOMAIN: ${APP_DOMAIN:-:80}
+      API_UPSTREAM: api:8787
+      FRONTEND_ROOT: /srv/frontend
     ports:
-      - "80:80"
-      - "443:443"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../app/dist:/srv/frontend:ro
       - caddy-data:/data
       - caddy-config:/config
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
 volumes:
-  cp-data:
+  pg-data:
+  api-data:
   caddy-data:
   caddy-config:

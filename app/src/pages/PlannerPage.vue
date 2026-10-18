@@ -9,12 +9,13 @@ import { currentName } from '@/core/auth'
 import { t } from '@/core/i18n'
 import { activePlatforms, platformIdBySetupName } from '@/core/platforms'
 import { deckFull } from '@/core/deck'
-import { activeMonth } from '@/core/navdate'
+import { activeMonth, activeYear } from '@/core/navdate'
 import { useWidePane } from '@/composables/useWidePane'
 import type { Post, Status } from '@/mock/db'
 import { guardSuppressed } from '@/core/protected'
 import MasterTable from '@/components/tables/MasterTable.vue'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
+import DockBar from '@/components/ui/DockBar.vue'
 import StatusFunnel from '@/components/ui/StatusFunnel.vue'
 import CopyBar from '@/components/ui/CopyBar.vue'
 import Drawer from '@/components/overlays/Drawer.vue'
@@ -34,10 +35,16 @@ function validMonth(value: unknown): number | null {
   return Number.isInteger(n) && n >= 1 && n <= 12 ? n : null
 }
 
+function validYear(value: unknown): number | null {
+  const n = Number(value)
+  return Number.isInteger(n) && n >= 1970 && n <= 9999 ? n : null
+}
+
 const currentMonth = new Date().getMonth() + 1
 const month = ref<number>(
   validMonth(props.month) ?? validMonth(route.params.month) ?? currentMonth,
 )
+const year = ref<number>(activeYear.value)
 const m = computed(() => month.value)
 
 // The deck works on one month: whatever month any card picks, every other
@@ -49,6 +56,13 @@ watch(month, (value) => {
 watch(activeMonth, (value) => {
   if (validMonth(value) !== null && value !== month.value) month.value = value
 })
+// Same shared-year contract as the month above (the route stays month-only).
+watch(year, (value) => {
+  activeYear.value = value
+})
+watch(activeYear, (value) => {
+  if (validYear(value) !== null && value !== year.value) year.value = value
+})
 
 // Keep the route param and the selected month in sync (deep links + tab clicks).
 watch(
@@ -59,13 +73,13 @@ watch(
   },
 )
 
-const { data: posts, isPending, isError, error: loadError, refetch } = usePosts(m)
+const { data: posts, isPending, isError, error: loadError, refetch } = usePosts(m, year)
 const { data: setup } = useSetup()
 const updatePost = useUpdatePost(m)
 const addPost = useAddPost(m)
-const deletePost = useDeletePost(m)
-const lockPost = useLockPost(m)
-const unlockPost = useUnlockPost(m)
+const deletePost = useDeletePost(m, year)
+const lockPost = useLockPost(m, year)
+const unlockPost = useUnlockPost(m, year)
 const { can } = usePermission()
 
 const canWrite = computed(() => can('posts.write'))
@@ -119,13 +133,13 @@ function defaultPlatforms(): string[] {
 /** Sensible defaults so a fresh month can be set up in one click. */
 function blankRow(): Omit<Post, 'id'> {
   const setupRow = setup.value
-  const year = setupRow?.year ?? new Date().getFullYear()
   const now = new Date()
-  const inMonth = now.getFullYear() === year && now.getMonth() + 1 === month.value
+  const inMonth = now.getFullYear() === year.value && now.getMonth() + 1 === month.value
   const pad = (n: number): string => String(n).padStart(2, '0')
-  const date = `${year}-${pad(month.value)}-${pad(inMonth ? now.getDate() : 1)}`
+  const date = `${year.value}-${pad(month.value)}-${pad(inMonth ? now.getDate() : 1)}`
   return {
     month: month.value,
+    year: year.value,
     topic: t('planner.defaultTopic'),
     pillar: setupRow?.pillars[0] ?? '',
     format: setupRow?.formats[0] ?? '',
@@ -213,6 +227,15 @@ function goMonth(value: string | number): void {
   else void router.replace({ path: `/planner/${next}`, query: route.query })
 }
 
+function setYear(value: number): void {
+  const next = validYear(value)
+  if (next === null || next === year.value) return
+  year.value = next
+  editorOpen.value = false
+  selectedId.value = null
+  // The route stays month-only; the shared year is the deep link for years.
+}
+
 const assembled = computed(() => {
   const c = (draft.value.caption ?? '').trim()
   const a = (draft.value.cta ?? '').trim()
@@ -272,13 +295,18 @@ watch(
   <h1>{{ t('planner.heading') }}</h1>
 
   <div class="planner-grid">
-    <aside class="planner-side">
-      <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center [&>*]:min-w-0">
-        <MonthToggle :model-value="m" @update:model-value="goMonth" />
-        <button class="btn btn-primary btn-icon ml-0" :disabled="!canWrite || busy"
-          :title="canWrite ? t('planner.addTopic') : t('auth.noPerm')" aria-label="Add new topic" @click="addRow">{{ busy || addPost.isPending.value ? '…' : '+' }}</button>
-      </div>
-    </aside>
+    <DockBar label="Planner controls">
+      <MonthToggle :model-value="m" :year="year" @update:model-value="goMonth" @update:year="setYear" />
+      <span class="dock-sep" aria-hidden="true" />
+      <RouterLink class="btn btn-icon" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
+        </svg>
+      </RouterLink>
+      <button class="btn btn-primary btn-icon" :disabled="!canWrite || busy"
+        :title="canWrite ? t('planner.addTopic') : t('auth.noPerm')" aria-label="Add new topic" @click="addRow">{{ busy || addPost.isPending.value ? '…' : '+' }}</button>
+    </DockBar>
 
     <div class="planner-main">
       <div v-if="isPending" class="muted">Loading rows…</div>

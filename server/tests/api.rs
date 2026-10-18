@@ -68,9 +68,22 @@ async fn login(app: axum::Router, email: &str, password: &str) -> String {
 
 #[tokio::test]
 async fn health_is_ok() {
-    let res = get(app(new_state()), "/api/health").await;
+    let router = app(new_state());
+    let res = get(router.clone(), "/api/health").await;
     assert_eq!(res.status(), StatusCode::OK);
     assert_eq!(body_json(res).await["status"], "ok");
+
+    let healthz = get(router.clone(), "/healthz").await;
+    assert_eq!(healthz.status(), StatusCode::OK);
+    let bytes = healthz.into_body().collect().await.unwrap().to_bytes();
+    assert_eq!(&bytes[..], b"OK");
+
+    let missing = get(router, "/api/does-not-exist").await;
+    assert_eq!(missing.status(), StatusCode::NOT_FOUND);
+    let err_json = body_json(missing).await;
+    assert_eq!(err_json["error_code"], "NOT_FOUND");
+    assert_eq!(err_json["message"], "route not found");
+    assert_eq!(err_json["error"], "route not found");
 }
 
 #[tokio::test]
@@ -110,6 +123,27 @@ async fn posts_are_filtered_by_month() {
     let posts = body_json(res).await;
     assert_eq!(posts.as_array().unwrap().len(), 5);
     assert_eq!(posts[0]["topic"], "Morning Vlog");
+}
+
+#[tokio::test]
+async fn posts_are_filtered_by_year() {
+    let app = app(new_state());
+    // Seed rows are all 2026.
+    let res = get(app.clone(), "/api/posts?month=2&year=2026").await;
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(body_json(res).await.as_array().unwrap().len(), 5);
+    // No 2025 rows yet.
+    let res = get(app.clone(), "/api/posts?month=2&year=2025").await;
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(body_json(res).await.as_array().unwrap().len(), 0);
+    // Year-only filter works too.
+    let res = get(app.clone(), "/api/posts?year=2026").await;
+    assert_eq!(res.status(), StatusCode::OK);
+    assert!(body_json(res).await.as_array().unwrap().len() >= 6);
+    // Garbage year behaves like garbage month: empty list, not a 400.
+    let res = get(app, "/api/posts?year=1800").await;
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(body_json(res).await.as_array().unwrap().len(), 0);
 }
 
 #[tokio::test]
@@ -190,6 +224,68 @@ async fn idea_can_be_promoted_to_a_post() {
     assert_eq!(post["month"], 4);
     assert_eq!(post["topic"], "Rainy Day Reads");
     assert_eq!(post["status"], "Start");
+}
+
+#[tokio::test]
+async fn promote_defaults_year_to_setup_and_accepts_an_explicit_year() {
+    let app = app(new_state());
+    let res = send(
+        app.clone(),
+        "POST",
+        "/api/ideas/i-1/promote?month=4",
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(body_json(res).await["year"], 2026);
+
+    let res = send(
+        app.clone(),
+        "POST",
+        "/api/ideas/i-2/promote?month=5&year=2025",
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(body_json(res).await["year"], 2025);
+
+    let res = send(
+        app,
+        "POST",
+        "/api/ideas/i-2/promote?month=5&year=1800",
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn patching_the_date_moves_the_post_year_along() {
+    let app = app(new_state());
+    let res = send(
+        app.clone(),
+        "PATCH",
+        "/api/posts/p-desk",
+        serde_json::json!({ "date": "2025-02-06" }),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(body_json(res).await["year"], 2025);
+    // The row now shows under the 2025 filter, not 2026.
+    let res = get(app.clone(), "/api/posts?month=2&year=2025").await;
+    assert!(body_json(res)
+        .await
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|p| p["id"] == "p-desk"));
+    let res = get(app, "/api/posts?month=2&year=2026").await;
+    assert!(!body_json(res)
+        .await
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|p| p["id"] == "p-desk"));
 }
 
 #[tokio::test]
@@ -912,6 +1008,164 @@ async fn auth_login_me_logout_flow() {
     assert_eq!(after.status(), StatusCode::UNAUTHORIZED);
 }
 
+fn set_cookie(res: &axum::response::Response) -> String {
+    res.headers()
+        .get("set-cookie")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default()
+        .to_string()
+}
+
+fn cookie_pair(set_cookie: &str) -> String {
+    set_cookie.split(';').next().unwrap_or_default().to_string()
+}
+
+async fn get_with_cookie(app: axum::Router, uri: &str, cookie: &str) -> axum::response::Response {
+    app.oneshot(
+        Request::builder()
+            .uri(uri)
+            .header("cookie", cookie)
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await
+    .unwrap()
+}
+
+async fn send_with_cookie(
+    app: axum::Router,
+    method: &str,
+    uri: &str,
+    cookie: &str,
+    body: serde_json::Value,
+) -> axum::response::Response {
+    app.oneshot(
+        Request::builder()
+            .method(method)
+            .uri(uri)
+            .header("content-type", "application/json")
+            .header("cookie", cookie)
+            .body(Body::from(body.to_string()))
+            .unwrap(),
+    )
+    .await
+    .unwrap()
+}
+
+#[tokio::test]
+async fn login_sets_an_httponly_session_cookie_that_authenticates() {
+    let app = app(new_state());
+    let res = send(
+        app.clone(),
+        "POST",
+        "/api/auth/login",
+        serde_json::json!({
+            "email": "owner@studio.local", "password": "demo1234"
+        }),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::OK);
+    let header = set_cookie(&res);
+    assert!(header.starts_with("cp_session="), "got: {header}");
+    assert!(header.contains("HttpOnly"));
+    assert!(header.contains("SameSite=Lax"));
+    assert!(header.contains("Path=/"));
+    assert!(header.contains("Max-Age="));
+    if std::env::var("COOKIE_SECURE").is_err() {
+        assert!(header.contains("Secure"), "got: {header}");
+    }
+
+    // The cookie alone authenticates; the token value is opaque and hex.
+    let cookie = cookie_pair(&header);
+    let token = cookie.strip_prefix("cp_session=").unwrap();
+    assert_eq!(token.len(), 64);
+    let me = get_with_cookie(app.clone(), "/api/auth/me", &cookie).await;
+    assert_eq!(me.status(), StatusCode::OK);
+    assert_eq!(body_json(me).await["user"]["role"], "Owner");
+
+    // Logout revokes the session and clears the cookie.
+    let out = send_with_cookie(
+        app.clone(),
+        "POST",
+        "/api/auth/logout",
+        &cookie,
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(out.status(), StatusCode::OK);
+    assert!(set_cookie(&out).contains("Max-Age=0"));
+    let after = get_with_cookie(app, "/api/auth/me", &cookie).await;
+    assert_eq!(after.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn refresh_rotates_the_cookie_session_and_revokes_the_old_token() {
+    let app = app(new_state());
+    let res = send(
+        app.clone(),
+        "POST",
+        "/api/auth/login",
+        serde_json::json!({
+            "email": "owner@studio.local", "password": "demo1234"
+        }),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::OK);
+    let old_header = set_cookie(&res);
+    let old_cookie = cookie_pair(&old_header);
+    let old_token = body_json(res).await["token"].as_str().unwrap().to_string();
+
+    let refresh = send_with_cookie(
+        app.clone(),
+        "POST",
+        "/api/auth/refresh",
+        &old_cookie,
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(refresh.status(), StatusCode::OK);
+    let new_header = set_cookie(&refresh);
+    assert!(new_header.starts_with("cp_session="));
+    assert_ne!(new_header, old_header, "the session token must rotate");
+    let new_cookie = cookie_pair(&new_header);
+
+    // The old token is dead; the rotated cookie still works.
+    let old_me = send_auth(
+        app.clone(),
+        "GET",
+        "/api/auth/me",
+        Some(&old_token),
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(old_me.status(), StatusCode::UNAUTHORIZED);
+    let new_me = get_with_cookie(app.clone(), "/api/auth/me", &new_cookie).await;
+    assert_eq!(new_me.status(), StatusCode::OK);
+
+    // Bearer clients get the rotated token in the JSON body instead.
+    let new_token = new_cookie.strip_prefix("cp_session=").unwrap().to_string();
+    let bearer_refresh = send_auth(
+        app,
+        "POST",
+        "/api/auth/refresh",
+        Some(&new_token),
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(bearer_refresh.status(), StatusCode::OK);
+    let body = body_json(bearer_refresh).await;
+    let rotated = body["token"].as_str().unwrap();
+    assert_eq!(rotated.len(), 64);
+    assert_ne!(rotated, new_token);
+}
+
+#[tokio::test]
+async fn refresh_without_a_session_is_rejected() {
+    let app = app(new_state());
+    let res = send(app, "POST", "/api/auth/refresh", serde_json::json!({})).await;
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+}
+
 #[tokio::test]
 async fn login_requires_correct_password() {
     let app = app(new_state());
@@ -1555,6 +1809,61 @@ async fn metrics_import_is_deterministic() {
     )
     .await;
     assert_eq!(empty.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn metrics_import_scopes_to_year() {
+    let app = app(new_state());
+    // Omitted year = the workspace year (2026 seeds).
+    let defaulted = send(
+        app.clone(),
+        "POST",
+        "/api/metrics/import",
+        serde_json::json!({
+            "platform": "Instagram", "month": 2
+        }),
+    )
+    .await;
+    assert_eq!(defaulted.status(), StatusCode::OK);
+    let defaulted = body_json(defaulted).await;
+    assert!(defaulted["imported"].as_u64().unwrap() >= 1);
+
+    // Explicit 2026 matches the default.
+    let res = send(
+        app.clone(),
+        "POST",
+        "/api/metrics/import",
+        serde_json::json!({
+            "platform": "Instagram", "month": 2, "year": 2026
+        }),
+    )
+    .await;
+    assert_eq!(body_json(res).await, defaulted);
+
+    // 2025 has no rows.
+    let res = send(
+        app.clone(),
+        "POST",
+        "/api/metrics/import",
+        serde_json::json!({
+            "platform": "Instagram", "month": 2, "year": 2025
+        }),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(body_json(res).await["imported"], 0);
+
+    // Garbage year → 400.
+    let res = send(
+        app,
+        "POST",
+        "/api/metrics/import",
+        serde_json::json!({
+            "platform": "Instagram", "month": 2, "year": 1800
+        }),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
 }
 
 #[tokio::test]
@@ -3160,6 +3469,7 @@ async fn store_snapshot_round_trips() {
     store.posts.push(content_planner_server::model::Post {
         id: "p-snapshot".into(),
         month: 4,
+        year: 2026,
         topic: "Persisted".into(),
         pillar: "Pillar I".into(),
         format: "Short-video".into(),

@@ -7,7 +7,7 @@ import { computed, ref, watch } from 'vue'
 import {
   useSetup, useAddPost, useImportMetrics, usePosts, useMetrics, usePermission,
 } from '@/core/queries'
-import { activeMonth } from '@/core/navdate'
+import { activeMonth, activeYear } from '@/core/navdate'
 import { monthName, t } from '@/core/i18n'
 import { activePlatforms, platformIdBySetupName } from '@/core/platforms'
 import type { Status } from '@/mock/db'
@@ -16,8 +16,9 @@ const props = defineProps<{ kind: '' | 'new' | 'import' | 'kpi'; kpi?: string }>
 const emit = defineEmits<{ close: []; done: [msg: string] }>()
 
 const month = activeMonth
+const year = activeYear
 const { data: setup } = useSetup()
-const { data: posts } = usePosts(month)
+const { data: posts } = usePosts(month, year)
 const { data: metrics } = useMetrics()
 const { can } = usePermission()
 const canWrite = computed(() => can('posts.write'))
@@ -48,14 +49,14 @@ function defaultPlatforms(): string[] {
 }
 
 watch(
-  [() => props.kind, () => props.kpi, setup, month],
+  [() => props.kind, () => props.kpi, setup, month, year],
   () => {
     const s = setup.value
     if (!s) return
     if (!nPillar.value) nPillar.value = s.pillars[0] ?? ''
     if (!nStatus.value) nStatus.value = s.statuses[0] ?? 'Start'
     if (!nPlatforms.value.length) nPlatforms.value = defaultPlatforms()
-    if (!nDate.value) nDate.value = `${s.year}-${pad(month.value)}-01`
+    if (!nDate.value) nDate.value = `${year.value}-${pad(month.value)}-01`
   },
   { immediate: true },
 )
@@ -75,11 +76,12 @@ async function addTopic(): Promise<void> {
   try {
     await addPost.mutateAsync({
       month: month.value,
+      year: year.value,
       topic,
       pillar: nPillar.value,
       format: setup.value?.formats[0] ?? '',
       goal: setup.value?.goals[0] ?? '',
-      date: nDate.value || `${setup.value?.year ?? new Date().getFullYear()}-${pad(month.value)}-01`,
+      date: nDate.value || `${year.value}-${pad(month.value)}-01`,
       time: nTime.value || '18:00',
       status: (nStatus.value || 'Start') as Status,
       hook: '',
@@ -212,7 +214,7 @@ const crossLink = computed(() =>
     </div>
     <div class="flex gap-2">
       <button class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" :disabled="!iPlatform || imp.isPending.value || !canImport"
-        :title="canImport ? '' : t('auth.noPerm')" @click="imp.mutate({ platform: iPlatform, month })">
+        :title="canImport ? '' : t('auth.noPerm')" @click="imp.mutate({ platform: iPlatform, month, year })">
         {{ imp.isPending.value ? t('common.loading') : t('dash.import') }}
       </button>
     </div>

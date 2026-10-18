@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Docker-free installer: builds Content Planner and installs it as a systemd
 # service. The binary serves the API *and* the built frontend (STATIC_DIR), so
-# no nginx/Docker is required. Put any TLS reverse proxy of your choice in
+# no Docker is required. Put any TLS reverse proxy of your choice in
 # front (see ops/deploy/Caddyfile.standalone for a one-line Caddy example).
 #
 #   sudo ops/scripts/install.sh [options]
@@ -180,7 +180,7 @@ log "Install dir : $PREFIX"
 log "Data file   : $DATA_DIR/store.json"
 log "Config      : $ENV_FILE"
 log "URL         : http://localhost:$PORT"
-log "TLS         : put Caddy/nginx in front (see ops/deploy/Caddyfile.standalone)"
+log "TLS         : put Caddy in front (see ops/deploy/Caddyfile.standalone)"
 if ((GENERATED)); then
   log ""
   log "Bootstrap Owner    : $ADMIN_EMAIL"

@@ -752,6 +752,11 @@ paths:
           required: false
           description: Filter by month (1–12). Omit to return every month.
           schema: { type: integer, minimum: 1, maximum: 12 }
+        - name: year
+          in: query
+          required: false
+          description: Filter by planning year (1970–9999). Omit to return every year.
+          schema: { type: integer, minimum: 1970, maximum: 9999 }
       responses:
         '200':
           description: Posts.
@@ -937,7 +942,7 @@ paths:
       operationId: promoteIdea
       tags: [Ideas]
       summary: Promote an idea into a dated planner post
-      description: The idea is marked done; the new post gets the requested month.
+      description: The idea is marked done; the new post gets the requested month and year (defaults to the workspace year).
       x-permission: ideas.write
       parameters:
         - name: id
@@ -948,6 +953,11 @@ paths:
           in: query
           required: true
           schema: { type: integer, minimum: 1, maximum: 12 }
+        - name: year
+          in: query
+          required: false
+          description: Planning year for the new post. Omit for the workspace year.
+          schema: { type: integer, minimum: 1970, maximum: 9999 }
       responses:
         '200':
           description: The created post.
@@ -1018,7 +1028,7 @@ paths:
       tags: [Metrics]
       summary: Import deterministic pseudo-metrics
       description: >-
-        Generates views/likes for every post of the month assigned to the
+        Generates views/likes for every post of the month and year assigned to the
         platform (same input → same numbers) and upserts them per post/platform.
         Real provider pulls are specified in `features/analytics.pdf`.
       x-permission: metrics.import
@@ -1957,6 +1967,7 @@ components:
       type: object
       required:
         - month
+        - year
         - topic
         - pillar
         - format
@@ -1975,6 +1986,7 @@ components:
       properties:
         id: { type: string }
         month: { type: integer, minimum: 1, maximum: 12 }
+        year: { type: integer, minimum: 1970, maximum: 9999 }
         topic: { type: string, description: Required and non-empty. }
         pillar: { type: string, description: Must exist in SetupConfig.pillars when the list is non-empty. }
         format: { type: string }
@@ -2017,6 +2029,7 @@ components:
         - platforms
       properties:
         month: { type: integer, minimum: 1, maximum: 12 }
+        year: { type: integer, minimum: 1970, maximum: 9999, description: Omit for the workspace year. }
         topic: { type: string }
         pillar: { type: string }
         format: { type: string }
@@ -2038,6 +2051,7 @@ components:
       description: Partial update — send only the fields to change.
       properties:
         month: { type: integer, minimum: 1, maximum: 12 }
+        year: { type: integer, minimum: 1970, maximum: 9999 }
         topic: { type: string }
         pillar: { type: string }
         format: { type: string }
@@ -2105,6 +2119,7 @@ components:
       properties:
         platform: { type: string, example: Instagram }
         month: { type: integer, minimum: 1, maximum: 12 }
+        year: { type: integer, minimum: 1970, maximum: 9999, description: Omit (or 0) for the workspace year. }
     ImportResult:
       type: object
       required: [imported, metrics]

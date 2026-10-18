@@ -87,7 +87,7 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
 
     <template v-else>
       <form class="members-add flex items-center flex-wrap mt-3.5 gap-2" @submit.prevent="submitAdd">
-        <input v-model="email" class="field flex-1 max-w-[340px]" type="text" inputmode="email" autocomplete="email"
+        <input v-model="email" class="field flex-1 max-w-form" type="text" inputmode="email" autocomplete="email"
           maxlength="254" :placeholder="t('members.emailPlaceholder')"
           :aria-label="t('members.emailPlaceholder')" :disabled="addMember.isPending.value" />
         <button type="submit" class="btn btn-primary"
@@ -106,7 +106,7 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
           <li v-for="m in rows" :key="m.email" class="panel member-row flex items-center gap-2.5 p-3 rounded-lg border border-faint bg-surface">
             <div class="flex flex-col min-w-0 mr-auto">
               <strong class="text-sm font-semibold">{{ m.name || m.email }}</strong>
-              <span class="text-muted text-[12.5px]">{{ m.email }}</span>
+              <span class="text-muted text-xs-mid">{{ m.email }}</span>
             </div>
             <span v-if="m.role" class="chip">{{ m.role }}</span>
             <span v-if="isOwnerRow(m)" class="badge badge-success">{{ t('members.owner') }}</span>

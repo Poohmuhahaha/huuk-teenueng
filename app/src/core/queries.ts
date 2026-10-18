@@ -4,6 +4,7 @@ import { computed, toRef, toValue, unref } from 'vue'
 import type { ComputedRef, MaybeRef } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import api from '@/api'
+import { activeYear } from './navdate'
 import { applyBrandTheme } from './theme'
 import { currentName, currentUser, isLoggedIn, updateProfile } from './auth'
 import type { Post, Metric, Permission, Brand, FontAsset, PlatformId, Campaign } from '@/mock/db'
@@ -13,7 +14,7 @@ import type { ContentPatchInput } from '@/api/contract'
 export const qk = {
   setup: ['setup'] as const,
   allPosts: ['posts'] as const,
-  posts: (m: number) => ['posts', m] as const,
+  posts: (m: number, y: number) => ['posts', m, y] as const,
   ideas: ['ideas'] as const,
   tags: ['tags'] as const,
   metrics: ['metrics'] as const,
@@ -130,9 +131,14 @@ function monthOf(m: MaybeRef<number>): number {
   return unref(m)
 }
 
-export function usePosts(month: MaybeRef<number>) {
+function yearOf(y: MaybeRef<number> = activeYear): number {
+  return unref(y)
+}
+
+export function usePosts(month: MaybeRef<number>, year: MaybeRef<number> = activeYear) {
   const m = computed(() => monthOf(month))
-  return useQuery({ queryKey: computed(() => qk.posts(m.value)), queryFn: () => api.listPosts(m.value) })
+  const y = computed(() => yearOf(year))
+  return useQuery({ queryKey: computed(() => qk.posts(m.value, y.value)), queryFn: () => api.listPosts(m.value, y.value) })
 }
 
 /** All posts across every month (shared by dashboard/performance views). */
@@ -154,21 +160,23 @@ export function useUpdatePost(_month: MaybeRef<number>) {
 
 // ---- post locking (US-014) ----
 
-export function useLockPost(month: MaybeRef<number>) {
+export function useLockPost(month: MaybeRef<number>, year: MaybeRef<number> = activeYear) {
   const qc = useQueryClient()
   const m = computed(() => monthOf(month))
+  const y = computed(() => yearOf(year))
   return useMutation({
     mutationFn: (id: string) => api.lockPost(id, currentName.value ?? ''),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.posts(m.value) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.posts(m.value, y.value) }),
   })
 }
 
-export function useUnlockPost(month: MaybeRef<number>) {
+export function useUnlockPost(month: MaybeRef<number>, year: MaybeRef<number> = activeYear) {
   const qc = useQueryClient()
   const m = computed(() => monthOf(month))
+  const y = computed(() => yearOf(year))
   return useMutation({
     mutationFn: (id: string) => api.unlockPost(id, currentName.value ?? ''),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.posts(m.value) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.posts(m.value, y.value) }),
   })
 }
 
@@ -180,13 +188,14 @@ export function useAddPost(_month: MaybeRef<number>) {
   })
 }
 
-export function useDeletePost(month: MaybeRef<number>) {
+export function useDeletePost(month: MaybeRef<number>, year: MaybeRef<number> = activeYear) {
   const qc = useQueryClient()
   const m = toRef(month)
+  const y = toRef(year)
   return useMutation({
     mutationFn: api.deletePost,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.posts(m.value) })
+      qc.invalidateQueries({ queryKey: qk.posts(m.value, y.value) })
       qc.invalidateQueries({ queryKey: qk.allPosts })
     },
   })
@@ -206,11 +215,12 @@ export function useToggleIdea() {
   return useMutation({ mutationFn: api.toggleIdea, onSuccess: () => qc.invalidateQueries({ queryKey: qk.ideas }) })
 }
 
-export function usePromoteIdea(month: MaybeRef<number>) {
+export function usePromoteIdea(month: MaybeRef<number>, year: MaybeRef<number> = activeYear) {
   const qc = useQueryClient()
   const m = computed(() => monthOf(month))
+  const y = computed(() => yearOf(year))
   return useMutation({
-    mutationFn: (id: string) => api.promoteIdea(id, m.value),
+    mutationFn: (id: string) => api.promoteIdea(id, m.value, y.value),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.ideas })
       qc.invalidateQueries({ queryKey: qk.allPosts })
@@ -237,7 +247,7 @@ export function useMetrics() {
 export function useImportMetrics() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (v: { platform: string; month: number }) => api.importMetrics(v.platform, v.month),
+    mutationFn: (v: { platform: string; month: number; year?: number }) => api.importMetrics(v.platform, v.month, v.year),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.metrics }),
   })
 }
@@ -350,8 +360,8 @@ function viewsOf(mets: Metric[], postId: string): number {
   return mets.filter((m) => m.postId === postId).reduce((s, m) => s + m.views, 0)
 }
 
-export function useDashboard(month: MaybeRef<number>) {
-  const postsQ = usePosts(month)
+export function useDashboard(month: MaybeRef<number>, year: MaybeRef<number> = activeYear) {
+  const postsQ = usePosts(month, year)
   const metricsQ = useMetrics()
   const stats = computed<DashStats | null>(() => {
     const rows = postsQ.data.value

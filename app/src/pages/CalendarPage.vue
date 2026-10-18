@@ -3,8 +3,8 @@
 // readout, and pastel day cards with a per-hour timeline of planned posts.
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePosts, useSetup } from '@/core/queries'
-import { navDate } from '@/core/navdate'
+import { usePosts } from '@/core/queries'
+import { navDate, yearOfDate } from '@/core/navdate'
 import { monthOfDate } from '@/core/deeplink'
 import { deckFull } from '@/core/deck'
 import { monthName } from '@/core/i18n'
@@ -14,8 +14,8 @@ const router = useRouter()
 const month = ref<number>(new Date().getMonth() + 1)
 const view = ref<'today' | 'calendar'>('today')
 
-const { data: posts } = usePosts(month)
-const { data: setup } = useSetup()
+const year = ref<number>(new Date().getFullYear())
+const { data: posts, isPending, isError, error: loadError, refetch } = usePosts(month, year)
 
 // The Smart Calendar follows the navbar date chooser.
 watch(
@@ -23,12 +23,13 @@ watch(
   (value) => {
     const m = monthOfDate(value)
     if (m !== null) month.value = m
+    const y = yearOfDate(value)
+    if (y !== null) year.value = y
   },
   { immediate: true },
 )
-
-const year = computed(() => setup.value?.year ?? new Date().getFullYear())
 const list = computed<Post[]>(() => posts.value ?? [])
+const isEmpty = computed(() => list.value.length === 0)
 
 function isoOf(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -126,6 +127,12 @@ function goAdd(): void {
       <button type="button" class="sc-add" aria-label="Add post" @click="goAdd">+</button>
     </div>
 
+    <div v-if="isPending" class="muted" role="status">Loading calendar…</div>
+    <div v-else-if="isError" class="card" role="alert">
+      <p class="muted">Could not load calendar: {{ loadError?.message }}</p>
+      <button type="button" class="btn" @click="() => refetch()">Retry</button>
+    </div>
+
     <!-- TODAY (always visible in full page, left column) -->
     <section v-if="view === 'today' || deckFull" class="sc-today">
       <div class="sc-weekday">{{ weekday(todayISO) }}</div>
@@ -198,7 +205,7 @@ function goAdd(): void {
           </div>
         </div>
       </div>
-      <p v-if="!days.length" class="muted">No posts in {{ monthName(month) }} {{ year }}.</p>
+      <p v-if="isEmpty || !days.length" class="muted">No posts in {{ monthName(month) }} {{ year }}.</p>
     </section>
   </div>
 </template>

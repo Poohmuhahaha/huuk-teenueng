@@ -35,11 +35,11 @@ async function submit(): Promise<void> {
 
 <template>
   <div class="min-h-screen grid place-items-center p-6 bg-wash">
-    <form class="w-[min(460px,100%)] flex flex-col gap-2.5 p-8 bg-surface border border-faint rounded-[14px] shadow-lg" @submit.prevent="submit">
+    <form class="form-onboarding flex flex-col gap-2.5 p-8 bg-surface border border-faint rounded-panel shadow-lg" @submit.prevent="submit">
       <div class="font-extrabold tracking-wide text-accent">Huuk</div>
       <h1 class="m-0 text-2xl font-bold text-ink">{{ t('ws.onboardingTitle') }}</h1>
       <p class="text-sm text-muted">{{ t('ws.onboardingBody') }}</p>
-      <p v-if="currentName" class="m-0 text-[13px] text-muted">{{ t('ws.onboardingHello') }} {{ currentName }}</p>
+      <p v-if="currentName" class="m-0 text-xs-plus text-muted">{{ t('ws.onboardingHello') }} {{ currentName }}</p>
 
       <label class="lbl text-sm font-medium text-ink" for="ws-onboarding-name">{{ t('ws.nameLabel') }}</label>
       <input id="ws-onboarding-name" v-model="name" class="field" maxlength="80" autofocus

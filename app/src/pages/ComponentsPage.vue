@@ -24,6 +24,7 @@ import { FEED_META, type FeedPlatformId } from '@/core/platforms'
 import type { HashtagGroup, Post, Status, Txn } from '@/mock/db'
 
 const month = ref(6)
+const year = ref(2026)
 const hubTab = ref('a')
 const hubTabs = [ { id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta' }, { id: 'c', label: 'Gamma' } ]
 const carousel = ref('Two')
@@ -33,8 +34,8 @@ const statuses: Status[] = ['Start', 'Design', 'Dev', 'Done']
 const bars = [ { label: 'Mon', value: 3 }, { label: 'Tue', value: 6 }, { label: 'Wed', value: 4 }, { label: 'Thu', value: 8 } ]
 const seg = ref('soft')
 const demoPosts: Post[] = [
-  { id: 'p-1', month: 12, topic: 'Morning routine', pillar: 'Pillar I', format: 'Reel', goal: 'Reach', date: '2026-12-13', time: '09:00', status: 'Design', hook: '', caption: '', cta: '', hashtagGroup: 'Niche', hashtags: [], imageUrl: '', note: '', done: false, platforms: ['Facebook'] },
-  { id: 'p-2', month: 12, topic: 'Desk setup', pillar: 'Pillar II', format: 'Carousel', goal: 'Engage', date: '2026-12-14', time: '18:00', status: 'Done', hook: '', caption: '', cta: '', hashtagGroup: 'Reach', hashtags: [], imageUrl: '', note: '', done: true, platforms: ['Instagram'] },
+  { id: 'p-1', month: 12, year: 2026, topic: 'Morning routine', pillar: 'Pillar I', format: 'Reel', goal: 'Reach', date: '2026-12-13', time: '09:00', status: 'Design', hook: '', caption: '', cta: '', hashtagGroup: 'Niche', hashtags: [], imageUrl: '', note: '', done: false, platforms: ['Facebook'] },
+  { id: 'p-2', month: 12, year: 2026, topic: 'Desk setup', pillar: 'Pillar II', format: 'Carousel', goal: 'Engage', date: '2026-12-14', time: '18:00', status: 'Done', hook: '', caption: '', cta: '', hashtagGroup: 'Reach', hashtags: [], imageUrl: '', note: '', done: true, platforms: ['Instagram'] },
 ]
 const demoTxns: Txn[] = [
   { id: 't-1', date: '2026-01-05', amount: 15000, kind: 'IN', category: 'Sponsorship', sub: 'Brand A' },
@@ -777,7 +778,7 @@ const PAGES: [string, string, string][] = [
     <section class="gal-section">
       <h2>Controls (Vue)</h2>
       <div class="gal-grid">
-        <div class="gitem"><MonthToggle v-model="month" /><span class="gcap">MonthToggle</span></div>
+        <div class="gitem"><MonthToggle v-model="month" v-model:year="year" /><span class="gcap">MonthToggle</span></div>
         <div class="gitem"><HubTabs :tabs="hubTabs" v-model="hubTab" /><span class="gcap">HubTabs</span></div>
         <div class="gitem"><CarouselTabs :items="carouselItems" v-model="carousel" /><span class="gcap">CarouselTabs</span></div>
         <div class="gitem"><DatePickerPopup v-model="date" title="Select date" /><span class="gcap">DatePickerPopup</span></div>

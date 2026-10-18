@@ -1,51 +1,81 @@
-# Static host for the built SPA + same-origin proxy to the API container.
-# (Replaces ops/nginx/nginx.conf — the stack is Caddy-only now.)
-#
-# Known gap vs the old nginx host: stock Caddy has no per-IP rate limiting,
-# so the old `limit_req` tiers (5r/s auth, 30r/s api) are gone. If brute-force
-# protection is needed, add it in the Rust backend — per-account limits there
-# also stay correct behind the optional Caddy TLS front, where every request
-# used to arrive from a single IP and edge limits became global.
-:8080 {
-	encode gzip
+# ops/caddy/Caddyfile — Canonical Single-File Production Config (Master Engineering SOP §4.2)
+{$APP_DOMAIN:localhost} {
+    encode zstd gzip
 
-	# API proxy (same origin, so the browser never needs CORS).
-	# The Rust API sets its own security headers — none are added here,
-	# so they are not duplicated. No proxy read timeout: the API's own
-	# 30s middleware fires first, as it did behind nginx (35s).
-	handle /api/* {
-		request_body {
-			max_size 3MB
-		}
-		reverse_proxy api:8787
-	}
+    # 1. Hardened security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self';"
+        -Server
+    }
 
-	# Hashed Vite assets can be cached forever; missing files 404
-	# (no SPA fallback here — a missing hash is a real error).
-	handle /assets/* {
-		root * /srv
-		header Cache-Control "public, immutable"
-		header X-Content-Type-Options nosniff
-		header X-Frame-Options DENY
-		header Referrer-Policy no-referrer
-		header Permissions-Policy "camera=(), microphone=(), geolocation=()"
-		file_server
-	}
+    # 2. Agent / SSE Streaming endpoints (MUST precede general /api/* and disable buffering)
+    handle /api/agent/stream/* {
+        reverse_proxy {$API_UPSTREAM:api:8787} {
+            lb_policy round_robin
+            health_uri /healthz
+            health_interval 2s
+            health_timeout 1s
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            flush_interval -1
+        }
+    }
 
-	# Everything else is the SPA shell (hash routing: every path serves
-	# index.html). Never cached — it references the hashed bundles above.
-	# The CSP/no-cache policy applies to fallback routes too (stricter than
-	# the old nginx host, which sent them only for an exact /index.html hit;
-	# every fallback response IS index.html content, so it gets the same policy).
-	handle {
-		root * /srv
-		header Cache-Control "no-cache"
-		header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-		header X-Content-Type-Options nosniff
-		header X-Frame-Options DENY
-		header Referrer-Policy no-referrer
-		header Permissions-Policy "camera=(), microphone=(), geolocation=()"
-		try_files {path} /index.html
-		file_server
-	}
+    # 3. Standard API Reverse Proxy with Active Healthcheck for Zero-Downtime Scaling
+    handle /api/* {
+        reverse_proxy {$API_UPSTREAM:api:8787} {
+            lb_policy round_robin
+            health_uri /healthz
+            health_interval 2s
+            health_timeout 1s
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    handle /healthz {
+        reverse_proxy {$API_UPSTREAM:api:8787}
+    }
+
+    # 4. Cache rule: static assets (Vite hashed files) -> immutable, 1 year
+    @static {
+        path /assets/*
+    }
+    header @static {
+        Cache-Control "public, max-age=31536000, immutable"
+    }
+
+    # 5. Cache rule: entry HTML -> never cache
+    @html {
+        path /index.html /
+    }
+    header @html {
+        Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate"
+        Pragma "no-cache"
+        Expires "0"
+    }
+
+    # 6. SPA routing fallback
+    handle {
+        root * {$FRONTEND_ROOT:/srv/frontend}
+        try_files {path} /index.html
+        file_server
+    }
+
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 50mb
+            roll_keep 10
+        }
+        format json
+    }
 }

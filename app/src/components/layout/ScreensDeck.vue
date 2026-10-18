@@ -6,7 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { animate } from 'motion-v'
 import { screens } from '@/core/screens'
 import type { Screen } from '@/core/screens'
-import { deckFull } from '@/core/deck'
+import { deckFull, deckPeek } from '@/core/deck'
 import { currentRole } from '@/core/auth'
 import NotFoundPage from '@/pages/NotFoundPage.vue'
 
@@ -42,7 +42,9 @@ function pageProps(_s: Screen): Record<string, unknown> {
   return {}
 }
 const track = ref<HTMLElement | null>(null)
-const index = ref(0)
+// Start on the route's card (not card 0) so the first paint never flashes
+// the wrong hub before the mount scroll runs.
+const index = ref(notFound.value ? 0 : visibleIndexOf(route.path))
 const full = ref(false)
 
 // Publish the full-page state so pages can reflow (e.g. calendar 2 columns).
@@ -166,7 +168,7 @@ function slides(): HTMLElement[] {
   return track.value ? Array.from(track.value.querySelectorAll<HTMLElement>('.slide:not(.spacer)')) : []
 }
 
-// scroll-padding keeps a 1-column peek on the leading edge (12.5vw = 1/8 on desktop, 0 on phone)
+// scroll-padding keeps a 1-column peek on the leading edge (12.5vw on desktop, 10px on phone)
 function padOf(el: HTMLElement): number {
   return Number.parseFloat(window.getComputedStyle(el).scrollPaddingLeft) || 0
 }
@@ -244,13 +246,47 @@ function commit(): void {
   if (syncing || full.value) return
   const i = nearestIndex()
   index.value = i
+  // Glue the peek to the settled card so the hub label never flashes back
+  // to the pre-drag route while the router replace is in flight.
+  deckPeek.value = visible.value[i]?.to ?? null
   const s = visible.value[i]
   if (s && !s.match.some((m) => matches(m, route.path))) {
     router.replace({ path: s.to, query: route.query })
   }
 }
 
+// Live leader: index of the card covering more than 51% of the deck frame
+// right now (-1 when the drag sits between cards, keeping the previous
+// peek so the label never flickers at the midpoint).
+function leaderIndex(): number {
+  const el = track.value
+  if (!el || full.value || el.clientWidth === 0) return -1
+  const viewL = el.scrollLeft
+  const viewR = viewL + el.clientWidth
+  let best = -1
+  let bestCover = 0.51
+  slides().forEach((s, i) => {
+    if (s.offsetWidth === 0) return // collapsed slides (full-page mode) share an offsetLeft
+    const overlap = Math.min(s.offsetLeft + s.offsetWidth, viewR) - Math.max(s.offsetLeft, viewL)
+    const cover = overlap / el.clientWidth
+    if (cover > bestCover) {
+      bestCover = cover
+      best = i
+    }
+  })
+  return best
+}
+
 function onScroll(): void {
+  // Synchronous peek: the hub label follows the finger mid-drag, the moment
+  // the incoming card owns the frame — no waiting for release/settle.
+  if (!full.value) {
+    const leader = leaderIndex()
+    if (leader >= 0) {
+      const to = visible.value[leader]?.to ?? null
+      if (to !== deckPeek.value) deckPeek.value = to
+    }
+  }
   window.clearTimeout(settle)
   settle = window.setTimeout(commit, 150)
 }
@@ -258,6 +294,10 @@ function onScroll(): void {
 onMounted(() => {
   if (!notFound.value) {
     index.value = visibleIndexOf(route.path)
+    // Snap the track synchronously — before the first paint — so a deep
+    // route never flashes card 0 for a frame; the rAF pass re-asserts
+    // after fonts/layout settle.
+    scrollToIndex(index.value, false)
     requestAnimationFrame(() => scrollToIndex(index.value, false))
   }
   // Non-passive so onWheel may preventDefault horizontal gestures; the
@@ -302,6 +342,10 @@ watch(() => route.path, (p) => {
   const i = visibleIndexOf(p)
   if (i >= 0 && i !== index.value) {
     index.value = i
+    // External navigation (deep link, back/forward): drop any drag peek so
+    // the label reads the route; the scroll animation's own scroll events
+    // re-peek live if it travels across cards.
+    deckPeek.value = null
     scrollToIndex(i, routeApplied)
   }
   routeApplied = true

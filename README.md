@@ -2,12 +2,16 @@
 
 Content planner — Vue 3 frontend + Rust backend.
 
+<!-- portfolio -->
+<p align="center">
+  <img src="https://i.pinimg.com/1200x/5e/1c/4d/5e1c4d3cd83e7f0f439b41089c1cbe5c.jpg" />
+</p>
+
 | Part | Folder | What it is |
 |---|---|---|
 | dev | `app/` | Canonical frontend — Vue 3 + TanStack Query, client-ready design system (see `app/README.md`) |
-| dev | `server/` | Rust (Axum) REST backend (see `server/README.md`) |
-| desktop | `desktop/` | Tauri desktop shell (see `desktop/`) |
-| dev | `ops/` | Operations — `deploy/` (compose env, Caddy, systemd), `nginx/`, `scripts/` (dev, deploy, install, backup, restore, smoke), `docker-compose.yml` (see `ops/README.md`) |
+| dev | `server/` | Rust (Axum + SQLx) REST backend (see `server/README.md`) |
+| dev | `ops/` | Operations — `deploy/` (compose env, Caddy, systemd), `caddy/`, `scripts/` (dev, deploy, install, backup, restore, smoke), `docker-compose.yml` (see `ops/README.md`) |
 | data | `data/` | Runtime backend snapshot (`content-planner.json`, git-ignored — the live store, not source) |
 | backup | `backups/` | Timestamped snapshots (git-ignored, mode 600 — see `docs/DEPLOYMENT.md` § backups) |
 | other | `docs/` | Developer + operations docs, including `docs/DEPLOYMENT.md` |
@@ -112,3 +116,7 @@ cd app && echo 'VITE_API_URL=http://localhost:8787' > .env.local && bun run dev 
 Research heavies (`.pdf` / `.typ` / `.prompt.md`) are git-ignored build/sources —
 kept in your working copy, regenerated from the `.md` files (e.g.
 `typst compile --root . docs/07_Plan.typ docs/07_Plan.pdf`).
+
+## License
+
+Huuk is open-source software licensed under the **MIT License**. See [LICENSE](LICENSE) for the full text.

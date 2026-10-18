@@ -404,23 +404,24 @@ pub async fn callback(
                 ));
             }
             if accounts.len() == 1 {
-                let mut account = accounts.into_iter().next().unwrap();
-                if let Some(secs) = expires_in {
-                    account.expires_at = Some(expires_at_from(secs));
+                if let Some(mut account) = accounts.into_iter().next() {
+                    if let Some(secs) = expires_in {
+                        account.expires_at = Some(expires_at_from(secs));
+                    }
+                    apply_account(&mut store, &workspace_id, p, account);
+                    // The user token first (ads and other user-level calls), then
+                    // the Page token for Page content — fetched without the lock.
+                    store.set_platform_token(&workspace_id, p.id, &token);
+                    store.set_platform_token(&workspace_id, &format!("{}#user", p.id), &token);
+                    let page_id = store
+                        .workspace(&workspace_id)
+                        .and_then(|w| w.connections.iter().find(|c| c.id == p.id))
+                        .map(|c| c.external_id.clone())
+                        .unwrap_or_default();
+                    drop(store);
+                    store_page_token(&s, p, &workspace_id, &token, &page_id).await;
+                    refresh_after = Some(workspace_id.clone());
                 }
-                apply_account(&mut store, &workspace_id, p, account);
-                // The user token first (ads and other user-level calls), then
-                // the Page token for Page content — fetched without the lock.
-                store.set_platform_token(&workspace_id, p.id, &token);
-                store.set_platform_token(&workspace_id, &format!("{}#user", p.id), &token);
-                let page_id = store
-                    .workspace(&workspace_id)
-                    .and_then(|w| w.connections.iter().find(|c| c.id == p.id))
-                    .map(|c| c.external_id.clone())
-                    .unwrap_or_default();
-                drop(store);
-                store_page_token(&s, p, &workspace_id, &token, &page_id).await;
-                refresh_after = Some(workspace_id.clone());
             } else {
                 // Several connectable accounts: park the token server-side and
                 // let the user pick one in the app.
