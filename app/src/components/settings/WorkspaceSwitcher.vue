@@ -116,13 +116,21 @@ async function removeWs(): Promise<void> {
 </script>
 
 <template>
-  <section class="card">
-    <div class="ws-head">{{ t('ws.title') }}</div>
+  <section class="settings-section ws-section">
+    <div class="settings-section-head">
+      <div class="ws-head">{{ t('ws.title') }}</div>
+      <p class="settings-desc">Switch, rename, or create workspaces for your brand and client management.</p>
+    </div>
     <div class="ws-wrap">
       <button type="button" class="wire ws-trigger" :title="t('ws.switch')"
         aria-haspopup="menu" :aria-expanded="wsOpen" @click="toggleWsMenu">
-        {{ activeWsName }}
-        <span class="ws-caret" aria-hidden="true">▾</span>
+        <span class="flex items-center gap-2">
+          <span class="ws-name font-semibold">{{ activeWsName }}</span>
+        </span>
+        <span class="flex items-center gap-2 text-muted text-xs">
+          <span v-if="activeWs" class="chip py-0 px-2 m-0">{{ activeWs.connected }}/{{ activeWs.total }} connected</span>
+          <span class="ws-caret" aria-hidden="true">▾</span>
+        </span>
       </button>
       <div v-if="wsOpen" class="ws-menu" role="menu" :aria-label="t('ws.title')">
         <button v-for="w in workspaces ?? []" :key="w.id" type="button" class="ws-item" role="menuitem"

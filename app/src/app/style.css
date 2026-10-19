@@ -433,24 +433,266 @@ button.wire { font-family: inherit; cursor: pointer; }
 .avatar-menu .ws-trigger:hover { background: var(--wash); }
 .avatar-menu .ws-menu { position: static; box-shadow: none; border: 0; padding: 0; min-width: 0; }
 
-/* Settings workspace tab — the account sections moved out of the avatar
-   popup render here as full-width card sections (same hook classes). */
-.settings-stack { display: flex; flex-direction: column; gap: 20px; width: 100%; min-width: 0; }
-.settings-stack .pop-block { padding: 8px 10px 4px; }
-.settings-stack .pop-actions { display: flex; flex-direction: column; border-top: 1px solid var(--faint); margin-top: 8px; padding-top: 6px; }
-.settings-stack .menubtn {
-  text-align: left; font: inherit; font-size: 14px; padding: 8px 10px;
-  border: 0; border-radius: var(--radius-sm); background: none; color: inherit; cursor: pointer;
+/* =========================================================================
+   Settings Workspace Tab (Redesigned: Clean, Un-nested Modern Layout)
+   ========================================================================= */
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  min-width: 0;
+  text-align: left;
 }
-.settings-stack .menubtn:hover { background: var(--wash); }
-.settings-stack .ws-wrap { display: flex; flex-direction: column; width: 100%; }
-.settings-stack .ws-trigger {
-  width: 100%; justify-content: space-between;
-  font: inherit; font-size: 14px; padding: 8px 10px;
-  border: 0; border-radius: var(--radius-sm); background: none; color: inherit; cursor: pointer;
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--faint);
 }
-.settings-stack .ws-trigger:hover { background: var(--wash); }
-.settings-stack .ws-menu { position: static; box-shadow: none; border: 0; padding: 0; min-width: 0; }
+.settings-section:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.settings-section-head {
+  margin-bottom: 14px;
+}
+
+.settings-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+
+.settings-subtitle {
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.settings-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Grids */
+.settings-grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (max-width: 768px) {
+  .settings-grid3 { grid-template-columns: 1fr; }
+}
+
+.settings-grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+@media (max-width: 640px) {
+  .settings-grid2 { grid-template-columns: 1fr; }
+}
+
+.settings-field-group {
+  display: flex;
+  flex-direction: column;
+}
+.settings-field-group .lbl {
+  margin-top: 0;
+  margin-bottom: 6px;
+}
+
+.settings-toggle-row {
+  margin-top: 12px;
+}
+.settings-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.settings-checkbox-label:hover {
+  color: var(--ink);
+}
+
+/* Option lists grid */
+.settings-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.settings-option-card {
+  border: 1px solid var(--faint);
+  border-radius: var(--radius);
+  background: var(--wash);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.settings-option-title {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.settings-option-chips {
+  min-height: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Lists (Users, Accounts) */
+.settings-list-container {
+  border: 1px solid var(--faint);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.settings-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--faint);
+  transition: background 0.15s;
+}
+.settings-list-row:last-of-type {
+  border-bottom: 0;
+}
+.settings-list-row:hover {
+  background: var(--wash);
+}
+.settings-user-info, .settings-account-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.settings-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.settings-item-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+.settings-role-badge {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.settings-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--wash);
+  border-top: 1px solid var(--faint);
+  flex-wrap: wrap;
+}
+
+.settings-subblock {
+  border: 1px solid var(--faint);
+  border-radius: var(--radius);
+  padding: 18px;
+  background: var(--surface);
+}
+
+.settings-temp-box {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--wash);
+  border: 1px solid var(--faint);
+}
+.settings-temp-code {
+  display: block;
+  margin: 6px 0;
+  font-family: monospace;
+  font-size: 13.5px;
+  word-break: break-all;
+  color: var(--ink);
+}
+
+/* Workspace switcher section */
+.ws-section .ws-wrap {
+  position: relative;
+  width: 100%;
+}
+.ws-section .ws-trigger {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid var(--faint);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ws-section .ws-trigger:hover {
+  background: var(--wash);
+  border-color: var(--line);
+}
+.ws-section .ws-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--faint);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+}
+
+/* Account Profile & Actions */
+.settings-profile-card {
+  border: 1px solid var(--faint);
+  border-radius: var(--radius);
+  padding: 18px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.settings-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--faint);
+}
+.btn-danger {
+  color: var(--danger, #ef4444);
+  border-color: var(--danger, #ef4444);
+}
+.btn-danger:hover {
+  background: var(--danger-wash, rgba(239, 68, 68, 0.1));
+}
 
 /* guide overlay — not a deck card */
 .guide-overlay {

@@ -312,147 +312,204 @@ const setupError = computed(() => {
 <template>
   <p v-if="authRequired && !canSetup" class="muted" style="margin-top: 0;">{{ t('setup.readOnlyHint') }}</p>
   <div v-if="isPending" class="muted">{{ t('common.loading') }}</div>
-  <div v-else-if="setup">
-    <div class="grid2">
-      <div class="panel">
-        <label class="lbl" for="setup-year" style="margin-top: 0;">{{ t('setup.year') }}</label>
-        <input id="setup-year" class="field" type="number" v-model.number="yearDraft" :disabled="!canSetup || saveSetup.isPending.value"
-          min="1970" max="9999" :title="canSetup ? '' : t('auth.noPerm')" @change="saveYear" />
+  <div v-else-if="setup" class="settings-body-flow">
+    <!-- General Workspace Settings -->
+    <section class="settings-section">
+      <div class="settings-section-head">
+        <h2 class="settings-title">{{ t('setup.workspace') }} Details</h2>
+        <p class="settings-desc">Core planning year and workspace display configuration.</p>
       </div>
-      <div class="panel">
-        <label class="lbl" for="setup-owner" style="margin-top: 0;">{{ t('setup.owner') }}</label>
-        <input id="setup-owner" class="field" v-model="ownerDraft" :disabled="!canSetup || saveSetup.isPending.value"
-          :title="canSetup ? '' : t('auth.noPerm')" @change="saveOwner" />
-      </div>
-      <div class="panel">
-        <label class="lbl" for="setup-workspace" style="margin-top: 0;">{{ t('setup.workspace') }}</label>
-        <input id="setup-workspace" class="field" v-model="workspaceDraft" :disabled="!canSetup || saveSetup.isPending.value"
-          maxlength="80" :title="canSetup ? '' : t('auth.noPerm')" @change="saveWorkspace" />
-      </div>
-    </div>
-    <h2 style="line-height: 1.6;">{{ t('setup.optionLists') }}</h2>
-    <div class="grid2">
-      <div v-for="l in LISTS" :key="l.key" class="panel">
-        <strong>{{ t(l.labelKey) }}</strong>
-        <div class="mt"><Chip v-for="(v, i) in (setup[l.key] as string[])" :key="`${v}-${i}`" :label="v" /></div>
-        <div class="row mt">
-          <input class="field" style="flex: 1;" v-model="draft[l.key]" :placeholder="`new ${t(l.labelKey).toLowerCase()}`"
-            :aria-label="`New ${t(l.labelKey)}`" :disabled="!canSetup" :title="canSetup ? '' : t('auth.noPerm')"
-            @keyup.enter="add(l.key)" />
-          <button class="btn" :disabled="!canSetup || addOption.isPending.value || !(draft[l.key] ?? '').trim()"
-            :title="canSetup ? '' : t('auth.noPerm')" @click="add(l.key)">{{ t('common.add') }}</button>
+      <div class="settings-grid3">
+        <div class="settings-field-group">
+          <label class="lbl" for="setup-year">{{ t('setup.year') }}</label>
+          <input id="setup-year" class="field" type="number" v-model.number="yearDraft" :disabled="!canSetup || saveSetup.isPending.value"
+            min="1970" max="9999" :title="canSetup ? '' : t('auth.noPerm')" @change="saveYear" />
+        </div>
+        <div class="settings-field-group">
+          <label class="lbl" for="setup-owner">{{ t('setup.owner') }}</label>
+          <input id="setup-owner" class="field" v-model="ownerDraft" :disabled="!canSetup || saveSetup.isPending.value"
+            :title="canSetup ? '' : t('auth.noPerm')" @change="saveOwner" />
+        </div>
+        <div class="settings-field-group">
+          <label class="lbl" for="setup-workspace">{{ t('setup.workspace') }}</label>
+          <input id="setup-workspace" class="field" v-model="workspaceDraft" :disabled="!canSetup || saveSetup.isPending.value"
+            maxlength="80" :title="canSetup ? '' : t('auth.noPerm')" @change="saveWorkspace" />
         </div>
       </div>
-    </div>
-    <h2 style="line-height: 1.6;">{{ t('setup.options') }}</h2>
-    <label class="muted"><input type="checkbox" v-model="colorsDraft" :disabled="!canSetup || saveSetup.isPending.value"
-      :title="canSetup ? '' : t('auth.noPerm')" @change="saveColors" /> {{ t('setup.showEditableColors') }}</label>
-    <h2 style="line-height: 1.6;">{{ t('setup.users') }}</h2>
-    <div class="panel">
-      <div v-for="u in setup.users" :key="u.name" class="row" style="justify-content: space-between;">
-        <span>{{ u.name }} <span class="muted">· {{ u.role }}</span></span>
-        <button class="btn" :disabled="setup.users.length <= 1 || !canManage || removeUser.isPending.value"
-          :title="canManage ? 'Remove user' : t('auth.noPerm')" :aria-label="`Remove user ${u.name}`"
-          @click="confirmRemove(`user:${u.name}`, () => removeUsr(u.name))">{{ confirmId === `user:${u.name}` ? 'Confirm?' : '×' }}</button>
+      <div class="settings-toggle-row">
+        <label class="settings-checkbox-label">
+          <input type="checkbox" v-model="colorsDraft" :disabled="!canSetup || saveSetup.isPending.value"
+            :title="canSetup ? '' : t('auth.noPerm')" @change="saveColors" />
+          <span>{{ t('setup.showEditableColors') }}</span>
+        </label>
       </div>
-      <div class="row mt">
-        <input class="field" style="flex: 1;" v-model="newName" placeholder="new user" aria-label="New user name"
-          :disabled="!canManage" :title="canManage ? '' : t('auth.noPerm')" @keyup.enter="addUsr" />
-        <select class="field" v-model="newRole" aria-label="New user role" :disabled="!canManage"
-          :title="canManage ? '' : t('auth.noPerm')">
-          <option v-for="r in setup.roles" :key="r.name" :value="r.name">{{ r.name }}</option>
-        </select>
-        <button class="btn" :disabled="!canManage || addUser.isPending.value || !newName.trim()"
-          :title="canManage ? '' : t('auth.noPerm')" @click="addUsr">{{ t('common.add') }}</button>
+    </section>
+
+    <!-- Option Lists (Single Source of Truth) -->
+    <section class="settings-section">
+      <div class="settings-section-head">
+        <h2 class="settings-title">{{ t('setup.optionLists') }}</h2>
+        <p class="settings-desc">Predefined taxonomy and categories used across planners and campaigns.</p>
       </div>
-      <p v-if="addUser.error.value || removeUser.error.value" class="autherr" role="alert">
-        {{ (addUser.error.value ?? removeUser.error.value)?.message }}
-      </p>
-    </div>
-    <template v-if="canManage">
-      <h2 style="line-height: 1.6;">{{ t('setup.accounts') }}</h2>
-      <div class="panel">
-        <p class="muted" style="margin: 0 0 8px;">{{ t('setup.accountsHint') }}</p>
-        <div v-for="a in accountsQ.data.value ?? []" :key="a.email" class="row" style="justify-content: space-between;">
-          <span>{{ a.name }} · {{ a.email }} · {{ a.sessions }} {{ t('setup.sessions') }}</span>
-          <button class="btn" :disabled="!canManage || a.name === currentUser?.name || removeAccount.isPending.value"
-            :title="a.name === currentUser?.name ? 'You cannot delete your own account' : t('setup.removeAccount')"
-            :aria-label="`Remove account ${a.email}`" @click="confirmRemove(`account:${a.email}`, () => removeAcc(a))">{{ confirmId === `account:${a.email}` ? 'Confirm?' : '×' }}</button>
-        </div>
-        <p v-if="accountsQ.error.value || removeAccount.error.value" class="autherr" role="alert">
-          {{ (accountsQ.error.value ?? removeAccount.error.value)?.message }}
-        </p>
-      </div>
-      <h3>{{ t('setup.createAccount') }}</h3>
-      <div class="panel">
-        <p class="muted" style="margin: 0 0 8px;">{{ t('setup.createAccountHint') }}</p>
-        <div class="grid2">
-          <div>
-            <label class="lbl" for="acc-name" style="margin-top: 0;">{{ t('setup.accountName') }}</label>
-            <input id="acc-name" class="field" v-model="accName" />
+      <div class="settings-options-grid">
+        <div v-for="l in LISTS" :key="l.key" class="settings-option-card">
+          <div class="settings-option-title">{{ t(l.labelKey) }}</div>
+          <div class="settings-option-chips">
+            <Chip v-for="(v, i) in (setup[l.key] as string[])" :key="`${v}-${i}`" :label="v" />
           </div>
-          <div>
-            <label class="lbl" for="acc-email" style="margin-top: 0;">{{ t('setup.accountEmail') }}</label>
-            <input id="acc-email" class="field" type="email" v-model="accEmail" autocomplete="off" />
-          </div>
-          <div>
-            <label class="lbl" for="acc-role">{{ t('setup.accountRole') }}</label>
-            <select id="acc-role" class="field" v-model="accRole">
-              <option v-for="r in setup.roles" :key="r.name" :value="r.name">{{ r.name }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="lbl" for="acc-pass">{{ t('setup.accountPassword') }}</label>
-            <input id="acc-pass" class="field" type="text" v-model="accPassword" autocomplete="new-password"
-              :placeholder="t('setup.accountPasswordHint')" />
+          <div class="row mt-auto pt-2">
+            <input class="field" style="flex: 1;" v-model="draft[l.key]" :placeholder="`new ${t(l.labelKey).toLowerCase()}`"
+              :aria-label="`New ${t(l.labelKey)}`" :disabled="!canSetup" :title="canSetup ? '' : t('auth.noPerm')"
+              @keyup.enter="add(l.key)" />
+            <button class="btn" :disabled="!canSetup || addOption.isPending.value || !(draft[l.key] ?? '').trim()"
+              :title="canSetup ? '' : t('auth.noPerm')" @click="add(l.key)">{{ t('common.add') }}</button>
           </div>
         </div>
-        <div class="row mt">
-          <button class="btn btn-primary" :disabled="createAccount.isPending.value" @click="addAccount">
-            {{ t('setup.createAccountBtn') }}
+      </div>
+    </section>
+
+    <!-- Users Directory -->
+    <section class="settings-section">
+      <div class="settings-section-head">
+        <h2 class="settings-title">{{ t('setup.users') }}</h2>
+        <p class="settings-desc">Workspace member roles and permissions hierarchy.</p>
+      </div>
+      <div class="settings-list-container">
+        <div v-for="u in setup.users" :key="u.name" class="settings-list-row">
+          <div class="settings-user-info">
+            <span class="settings-item-name">{{ u.name }}</span>
+            <span class="settings-role-badge">· {{ u.role }}</span>
+          </div>
+          <button class="btn" :disabled="setup.users.length <= 1 || !canManage || removeUser.isPending.value"
+            :title="canManage ? 'Remove user' : t('auth.noPerm')" :aria-label="`Remove user ${u.name}`"
+            @click="confirmRemove(`user:${u.name}`, () => removeUsr(u.name))">
+            {{ confirmId === `user:${u.name}` ? 'Confirm?' : '×' }}
           </button>
         </div>
-        <p v-if="accError" class="autherr" role="alert">{{ accError }}</p>
-        <div v-if="tempPassword" role="status" class="card" style="margin-top: 8px; background: var(--wash);">
-          <strong>{{ t('setup.tempPassword') }}</strong>
-          <code style="display: block; margin: 6px 0; overflow-wrap: anywhere;">{{ tempPassword }}</code>
-          <button class="btn" @click="copyTempPassword">{{ copiedTemp ? t('studio.copied') : t('setup.copyPassword') }}</button>
+        <div class="settings-add-row">
+          <input class="field" style="flex: 1;" v-model="newName" placeholder="new user" aria-label="New user name"
+            :disabled="!canManage" :title="canManage ? '' : t('auth.noPerm')" @keyup.enter="addUsr" />
+          <select class="field w-auto" v-model="newRole" aria-label="New user role" :disabled="!canManage"
+            :title="canManage ? '' : t('auth.noPerm')">
+            <option v-for="r in setup.roles" :key="r.name" :value="r.name">{{ r.name }}</option>
+          </select>
+          <button class="btn btn-primary" :disabled="!canManage || addUser.isPending.value || !newName.trim()"
+            :title="canManage ? '' : t('auth.noPerm')" @click="addUsr">{{ t('common.add') }}</button>
         </div>
+        <p v-if="addUser.error.value || removeUser.error.value" class="autherr" role="alert" style="margin: 8px 14px;">
+          {{ (addUser.error.value ?? removeUser.error.value)?.message }}
+        </p>
       </div>
+    </section>
+
+    <!-- Client Sign-In Accounts -->
+    <template v-if="canManage">
+      <section class="settings-section">
+        <div class="settings-section-head">
+          <h2 class="settings-title">{{ t('setup.accounts') }}</h2>
+          <p class="settings-desc">{{ t('setup.accountsHint') }}</p>
+        </div>
+        <div class="settings-list-container">
+          <div v-for="a in accountsQ.data.value ?? []" :key="a.email" class="settings-list-row">
+            <div class="settings-account-info">
+              <span class="settings-item-name">{{ a.name }}</span>
+              <span class="settings-item-sub">· {{ a.email }}</span>
+              <span class="chip">· {{ a.sessions }} {{ t('setup.sessions') }}</span>
+            </div>
+            <button class="btn" :disabled="!canManage || a.name === currentUser?.name || removeAccount.isPending.value"
+              :title="a.name === currentUser?.name ? 'You cannot delete your own account' : t('setup.removeAccount')"
+              :aria-label="`Remove account ${a.email}`" @click="confirmRemove(`account:${a.email}`, () => removeAcc(a))">
+              {{ confirmId === `account:${a.email}` ? 'Confirm?' : '×' }}
+            </button>
+          </div>
+          <p v-if="accountsQ.error.value || removeAccount.error.value" class="autherr" role="alert" style="margin: 8px 14px;">
+            {{ (accountsQ.error.value ?? removeAccount.error.value)?.message }}
+          </p>
+        </div>
+
+        <div class="settings-subblock mt-5">
+          <h3 class="settings-subtitle">{{ t('setup.createAccount') }}</h3>
+          <p class="settings-desc">{{ t('setup.createAccountHint') }}</p>
+          <div class="settings-grid2">
+            <div>
+              <label class="lbl" for="acc-name">{{ t('setup.accountName') }}</label>
+              <input id="acc-name" class="field" v-model="accName" />
+            </div>
+            <div>
+              <label class="lbl" for="acc-email">{{ t('setup.accountEmail') }}</label>
+              <input id="acc-email" class="field" type="email" v-model="accEmail" autocomplete="off" />
+            </div>
+            <div>
+              <label class="lbl" for="acc-role">{{ t('setup.accountRole') }}</label>
+              <select id="acc-role" class="field" v-model="accRole">
+                <option v-for="r in setup.roles" :key="r.name" :value="r.name">{{ r.name }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl" for="acc-pass">{{ t('setup.accountPassword') }}</label>
+              <input id="acc-pass" class="field" type="text" v-model="accPassword" autocomplete="new-password"
+                :placeholder="t('setup.accountPasswordHint')" />
+            </div>
+          </div>
+          <div class="row mt-3.5">
+            <button class="btn btn-primary" :disabled="createAccount.isPending.value" @click="addAccount">
+              {{ t('setup.createAccountBtn') }}
+            </button>
+          </div>
+          <p v-if="accError" class="autherr" role="alert" style="margin-top: 8px;">{{ accError }}</p>
+          <div v-if="tempPassword" role="status" class="settings-temp-box">
+            <strong>{{ t('setup.tempPassword') }}</strong>
+            <code class="settings-temp-code">{{ tempPassword }}</code>
+            <button class="btn" @click="copyTempPassword">{{ copiedTemp ? t('studio.copied') : t('setup.copyPassword') }}</button>
+          </div>
+        </div>
+      </section>
     </template>
-    <h2 style="line-height: 1.6;">{{ t('auth.perms') }}</h2>
-    <div class="panel">
-      <label class="muted">
-        <input type="checkbox" v-model="authDraft" :disabled="!canManage || saveSetup.isPending.value"
-          :title="canManage ? '' : t('auth.noPerm')" @change="saveAuthRequired" />
-        {{ t('auth.require') }}
-      </label>
-      <h3>{{ t('auth.roles') }}</h3>
-      <TableFrame>
-        <thead>
-          <tr>
-            <th scope="col">{{ t('auth.perms') }}</th>
-            <th scope="col" v-for="r in roleDraft" :key="r.name">
-              {{ r.name }}
-              <button class="btn" style="margin-left: 6px;"
-                :disabled="!canManage || roleDraft.length <= 1 || roleInUse(r.name) || removeRole.isPending.value"
-                :title="canManage ? (roleInUse(r.name) ? 'Role is in use' : '') : t('auth.noPerm')"
-                :aria-label="`Remove role ${r.name}`" @click="confirmRemove(`role:${r.name}`, () => removeRl(r.name))">{{ confirmId === `role:${r.name}` ? 'Confirm?' : '×' }}</button>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="perm in PERMISSIONS" :key="perm" style="cursor: default;">
-            <td class="muted">{{ perm }}</td>
-            <td v-for="(r, i) in roleDraft" :key="r.name">
-              <input type="checkbox" :checked="r.permissions.includes(perm)" :disabled="!canManage"
-                :aria-label="`${r.name}: ${perm}`" :title="canManage ? '' : t('auth.noPerm')"
-                @change="togglePerm(i, perm, ($event.target as HTMLInputElement).checked)" />
-            </td>
-          </tr>
-        </tbody>
-      </TableFrame>
-      <div class="row mt">
+
+    <!-- Permissions Matrix -->
+    <section class="settings-section">
+      <div class="settings-section-head">
+        <h2 class="settings-title">{{ t('auth.perms') }}</h2>
+        <p class="settings-desc">Fine-grained access rights per role across features.</p>
+      </div>
+      <div class="settings-toggle-row mb-3.5">
+        <label class="settings-checkbox-label">
+          <input type="checkbox" v-model="authDraft" :disabled="!canManage || saveSetup.isPending.value"
+            :title="canManage ? '' : t('auth.noPerm')" @change="saveAuthRequired" />
+          <span>{{ t('auth.require') }}</span>
+        </label>
+      </div>
+      <div class="settings-perms-wrap">
+        <TableFrame>
+          <thead>
+            <tr>
+              <th scope="col">{{ t('auth.perms') }}</th>
+              <th scope="col" v-for="r in roleDraft" :key="r.name">
+                <div class="flex items-center justify-between gap-1">
+                  <span>{{ r.name }}</span>
+                  <button class="btn" style="margin-left: 6px; padding: 2px 6px; font-size: 12px;"
+                    :disabled="!canManage || roleDraft.length <= 1 || roleInUse(r.name) || removeRole.isPending.value"
+                    :title="canManage ? (roleInUse(r.name) ? 'Role is in use' : '') : t('auth.noPerm')"
+                    :aria-label="`Remove role ${r.name}`" @click="confirmRemove(`role:${r.name}`, () => removeRl(r.name))">
+                    {{ confirmId === `role:${r.name}` ? 'Confirm?' : '×' }}
+                  </button>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="perm in PERMISSIONS" :key="perm" style="cursor: default;">
+              <td class="muted">{{ perm }}</td>
+              <td v-for="(r, i) in roleDraft" :key="r.name">
+                <input type="checkbox" :checked="r.permissions.includes(perm)" :disabled="!canManage"
+                  :aria-label="`${r.name}: ${perm}`" :title="canManage ? '' : t('auth.noPerm')"
+                  @change="togglePerm(i, perm, ($event.target as HTMLInputElement).checked)" />
+              </td>
+            </tr>
+          </tbody>
+        </TableFrame>
+      </div>
+      <div class="row mt-3.5">
         <input class="field" style="flex: 1;" v-model="newRoleName" placeholder="new role" aria-label="New role name"
           :disabled="!canManage" :title="canManage ? '' : t('auth.noPerm')" @keyup.enter="addRl" />
         <button class="btn" :disabled="!canManage || addRole.isPending.value || !newRoleName.trim()"
@@ -460,7 +517,7 @@ const setupError = computed(() => {
         <button class="btn btn-primary" :disabled="!canSetup || saveSetup.isPending.value"
           :title="canSetup ? '' : t('auth.noPerm')" @click="saveRoles">{{ t('auth.savePerms') }}</button>
       </div>
-      <p v-if="setupError" class="autherr" role="alert">{{ setupError }}</p>
-    </div>
+      <p v-if="setupError" class="autherr" role="alert" style="margin-top: 8px;">{{ setupError }}</p>
+    </section>
   </div>
 </template>

@@ -21,13 +21,19 @@ async function doLogoutAll(): Promise<void> {
 </script>
 
 <template>
-  <section class="card">
-    <div class="pop-block"><ProfilePanel /></div>
-    <div v-if="currentUser" class="pop-actions">
-      <button class="menubtn" @click="changeOpen = true">{{ t('auth.change') }}</button>
-      <button class="menubtn" @click="guideOpen = true">{{ t('nav.guide') }}</button>
-      <button class="menubtn" @click="doLogoutAll">{{ t('auth.logoutAll') }}</button>
-      <button class="menubtn" @click="doLogout">{{ t('auth.logout') }}</button>
+  <section class="settings-section settings-profile-section">
+    <div class="settings-section-head">
+      <h2 class="settings-title">My Profile & Account</h2>
+      <p class="settings-desc">Manage your display name, active sign-in sessions, and account actions.</p>
+    </div>
+    <div class="settings-profile-card">
+      <div class="pop-block"><ProfilePanel /></div>
+      <div v-if="currentUser" class="settings-actions-bar pop-actions">
+        <button class="btn menubtn" @click="changeOpen = true">{{ t('auth.change') }}</button>
+        <button class="btn menubtn" @click="guideOpen = true">{{ t('nav.guide') }}</button>
+        <button class="btn menubtn" @click="doLogoutAll">{{ t('auth.logoutAll') }}</button>
+        <button class="btn btn-danger menubtn" @click="doLogout">{{ t('auth.logout') }}</button>
+      </div>
     </div>
   </section>
   <ChangePasswordModal :open="changeOpen" @close="changeOpen = false" />

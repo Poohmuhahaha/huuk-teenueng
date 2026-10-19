@@ -25,15 +25,15 @@ function save(): void {
 </script>
 
 <template>
-  <div>
+  <div class="settings-profile-panel">
     <label class="lbl" for="profile-name" style="margin-top: 0;">{{ t('profile.title') }}</label>
     <template v-if="isLoggedIn">
-      <input id="profile-name" class="field" v-model="name" maxlength="80" autocomplete="nickname" @keyup.enter="save" />
-      <div class="row mt">
+      <div class="row items-center gap-2 mt-1">
+        <input id="profile-name" class="field" style="max-width: 360px;" v-model="name" maxlength="80" autocomplete="nickname" @keyup.enter="save" />
         <button class="btn btn-primary" :disabled="!changed || !name.trim() || updateProfile.isPending.value" @click="save">
           {{ t('profile.save') }}
         </button>
-        <span v-if="updateProfile.isSuccess.value" role="status" class="muted">{{ t('profile.saved') }}</span>
+        <span v-if="updateProfile.isSuccess.value" role="status" class="text-xs text-muted font-medium">{{ t('profile.saved') }}</span>
       </div>
       <p v-if="updateProfile.error.value" class="autherr" role="alert" style="margin: 6px 0 0;">
         {{ updateProfile.error.value?.message }}
