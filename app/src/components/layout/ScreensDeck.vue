@@ -180,7 +180,7 @@ function nearestIndex(): number {
   let best = index.value
   let bestDist = Number.POSITIVE_INFINITY
   slides().forEach((s, i) => {
-    if (s.offsetWidth === 0) return // collapsed slides (full-page mode) share an offsetLeft
+    if (s.offsetWidth === 0) return // collapsed slides share an offsetLeft
     // Mirror scrollToIndex's clamp: the first card snaps at 0, so without the
     // max() it could never be nearest and a drag there snapped back.
     const d = Math.abs(Math.max(0, s.offsetLeft - pad) - el.scrollLeft)
@@ -232,9 +232,10 @@ function scrollToIndex(i: number, smooth = true): void {
   beginSync(Math.round(Math.min(900, Math.max(300, 250 + distance * 0.35))))
 }
 
-function goTo(i: number): void {
+async function goTo(i: number): Promise<void> {
   const clamped = Math.min(visible.value.length - 1, Math.max(0, i))
   index.value = clamped
+  await nextTick()
   scrollToIndex(clamped)
   const s = visible.value[clamped]
   if (s && !s.match.some((m) => matches(m, route.path))) {
@@ -338,7 +339,7 @@ onBeforeUnmount(() => {
 // forward). The first one after boot must snap, so a deep link does not play
 // a slide show; later ones animate.
 let routeApplied = false
-watch(() => route.path, (p) => {
+watch(() => route.path, async (p) => {
   const i = visibleIndexOf(p)
   if (i >= 0 && i !== index.value) {
     index.value = i
@@ -346,6 +347,7 @@ watch(() => route.path, (p) => {
     // the label reads the route; the scroll animation's own scroll events
     // re-peek live if it travels across cards.
     deckPeek.value = null
+    await nextTick()
     scrollToIndex(i, routeApplied)
   }
   routeApplied = true
@@ -356,21 +358,10 @@ function isEditable(el: HTMLElement): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
 }
 
-// Expand the card under the button — works from peeking cards too: the card
-// is brought into the main slot (and the route follows) before going full.
-function onExpand(i: number): void {
-  if (full.value && i === index.value) {
-    void setFull(false)
-    return
+function onSlideClick(i: number): void {
+  if (i !== index.value && !full.value) {
+    goTo(i)
   }
-  if (i !== index.value) {
-    index.value = i
-    const s = visible.value[i]
-    if (s && !s.match.some((m) => matches(m, route.path))) {
-      router.replace({ path: s.to, query: route.query })
-    }
-  }
-  void setFull(true, i)
 }
 
 // Touchpad two-finger swipe (deltaX) and shift+wheel flip one card per
@@ -405,30 +396,17 @@ function onKey(e: KeyboardEvent): void {
 
 <template>
   <NotFoundPage v-if="notFound" />
-  <div v-else>
+  <div v-else class="deck-container">
     <div ref="track" class="deck" :class="{ full }" role="region" aria-roledescription="carousel" aria-label="Screens" tabindex="0"
       @scroll.passive="onScroll" @keydown="onKey">
       <div class="slide spacer" aria-hidden="true" />
         <section v-for="(s, i) in visible" :key="s.path" class="slide"
-        :class="{ active: i === index }" :aria-label="`${i + 1} of ${visible.length}`">
+        :class="{ active: i === index }" :aria-label="`${i + 1} of ${visible.length}`"
+        @click="onSlideClick(i)">
         <div class="slide-card">
-          <button
-            class="expand-btn"
-            :title="full && i === index ? 'Exit full page' : 'Go full page'"
-            :aria-label="full && i === index ? 'Exit full page' : 'Go full page'"
-            @click.stop="onExpand(i)"
-          >
-            <svg v-if="full && i === index" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"
-              fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 2h4v4M14 2h-4v4M2 14h4v-4M14 14h-4v-4" />
-            </svg>
-            <svg v-else viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"
-              fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" />
-            </svg>
-          </button>
-          <div class="card-scroll"><component :is="s.component" v-bind="pageProps(s)" /></div>
+          <div class="card-scroll" :class="{ 'card-scroll-brand': s.path === '/branding' }"><component :is="s.component" v-bind="pageProps(s)" /></div>
         </div>
+        <div class="slide-dock" />
       </section>
       <div class="slide spacer" aria-hidden="true" />
     </div>

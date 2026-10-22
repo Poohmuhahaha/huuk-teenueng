@@ -10,8 +10,15 @@ import { t } from '@/core/i18n'
 import { PLATFORM_META } from '@/core/platforms'
 import type { PlatformId } from '@/core/platforms'
 import LoginModal from '@/components/overlays/LoginModal.vue'
+import Drawer from '@/components/overlays/Drawer.vue'
+import WorkspaceSwitcher from '@/components/settings/WorkspaceSwitcher.vue'
+import SettingsPanel from '@/components/overlays/SettingsPanel.vue'
+import AccountPanel from '@/components/settings/AccountPanel.vue'
 import MainNavPicker from './MainNavPicker.vue'
 import Subnavbar from './Subnavbar.vue'
+import MonthToggle from '@/components/ui/MonthToggle.vue'
+import { activeMonth, activeYear } from '@/core/navdate'
+import { deckPeek } from '@/core/deck'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,8 +26,8 @@ const router = useRouter()
 // settings tabs live in the shared below-bar like every other hub.
 // Missing/invalid ?tab= falls back to 'brand', mirroring useHubTab.
 const onBrand = computed(
-  () => (route.path === '/settings' || route.path.startsWith('/settings/'))
-    && !['workspace', 'members', 'connections'].includes(route.query.tab as string),
+  () => (route.path === '/branding' || route.path.startsWith('/branding/') || route.path === '/settings' || route.path.startsWith('/settings/'))
+    && !['members', 'connections'].includes(route.query.tab as string),
 )
 const qc = useQueryClient()
 
@@ -110,15 +117,34 @@ function openLogin(mode: 'login' | 'register'): void {
   authOpen.value = true
 }
 
-// The avatar is a shortcut to the account sections on the Settings
-// workspace tab — never a popup.
-function goAccount(): void {
+const workspaceOpen = ref(false)
+
+function toggleWorkspace(): void {
   navOpen.value = false
   if (!currentUser.value) {
     openLogin('login')
     return
   }
-  void router.push({ path: '/settings', query: { tab: 'workspace' } })
+  workspaceOpen.value = !workspaceOpen.value
+}
+
+// Watch for ?workspace=1 or legacy ?tab=workspace to pop open the modal
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (tab === 'workspace') {
+      workspaceOpen.value = true
+      const { tab: _t, ...rest } = route.query
+      void router.replace({ query: rest })
+    }
+  },
+  { immediate: true },
+)
+
+function onKeydown(e: KeyboardEvent): void {
+  if (e.key === 'Escape' && workspaceOpen.value) {
+    workspaceOpen.value = false
+  }
 }
 
 function onAuthSuccess(mode: 'login' | 'register'): void {
@@ -130,7 +156,7 @@ function onAuthSuccess(mode: 'login' | 'register'): void {
   }
   if (mode !== 'register') return
   showNotice(t('profile.welcome'))
-  void router.push({ path: '/settings', query: { tab: 'workspace' } })
+  workspaceOpen.value = true
 }
 
 // Client accounts belong in the studio: steer them away from planner pages.
@@ -142,6 +168,11 @@ watch(currentRole, (role) => {
 
 onMounted(() => {
   document.documentElement.lang = 'en'
+  window.addEventListener('keydown', onKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown)
 })
 
 interface NavLink {
@@ -157,7 +188,7 @@ const navLinks = computed<NavLink[]>(() =>
   isClient.value
     ? [{ to: '/content', label: t('nav.content') }]
     : [
-        { to: '/settings', label: t('nav.branding') },
+        { to: '/branding', label: t('nav.branding') },
         { to: '/dashboard', label: t('nav.home') },
         { to: '/plan', label: t('nav.plan') },
         { to: '/content', label: t('nav.content') },
@@ -168,8 +199,9 @@ const navLinks = computed<NavLink[]>(() =>
 
 function isActive(l: NavLink): boolean {
   // Segment match: '/plan' must not match '/plans'. '/' matches only itself.
-  if (l.to === '/') return route.path === '/'
-  return route.path === l.to || route.path.startsWith(l.to + '/')
+  const path = deckPeek.value ?? route.path
+  if (l.to === '/') return path === '/'
+  return path === l.to || path.startsWith(l.to + '/')
 }
 
 // Liquid-glass navbar: phone sizes collapse the links behind a hamburger
@@ -207,13 +239,17 @@ watch(
         <span aria-hidden="true" />
       </button>
       <div class="side">
+        <div class="topbar-month">
+          <MonthToggle v-model="activeMonth" v-model:year="activeYear" />
+        </div>
         <template v-if="!currentUser">
           <button class="btn btn-primary" @click="openLogin('register')">{{ t('auth.signup') }}</button>
           <button class="btn" @click="openLogin('login')">{{ t('auth.login') }}</button>
         </template>
         <div class="avatar-wrap">
           <button class="avatar" :title="t('profile.settings')" :aria-label="t('profile.settings')"
-            @click="goAccount">
+            :aria-expanded="workspaceOpen ? 'true' : 'false'"
+            @click="toggleWorkspace">
             {{ avatarLetter }}
           </button>
         </div>
@@ -224,30 +260,43 @@ watch(
       <span>{{ notice }}</span>
       <button class="btn" @click="notice = ''">{{ t('common.close') }}</button>
     </div>
-    <div v-if="pickReq" class="guide-overlay" @click.self="closePick">
-      <div class="guide-panel" role="dialog" aria-modal="true" :aria-label="t('slogin.pickTitle')">
-        <div class="guide-head">
-          <strong style="font-size: 20px;">{{ t('slogin.pickTitle') }}</strong>
-          <button class="btn" @click="closePick">{{ t('common.close') }}</button>
-        </div>
-        <p class="muted">{{ t('slogin.pickHint') }}</p>
-        <div v-if="pickQ.isPending.value" class="muted">{{ t('common.loading') }}</div>
-        <div v-else-if="pickQ.isError.value" class="autherr" role="alert">{{ t('slogin.pickFailed') }}</div>
-        <div v-else class="pick-list">
-          <button
-            v-for="a in pickQ.data.value?.accounts ?? []"
-            :key="a.external_id"
-            class="btn pick-row"
-            :disabled="!!choosingId"
-            @click="chooseCandidate(a.external_id)"
-          >
-            <span>{{ a.handle }}</span>
-            <span class="muted">{{ choosingId === a.external_id ? t('slogin.connecting') : t('slogin.pickChoose') }}</span>
-          </button>
-        </div>
-        <p v-if="pickError" class="autherr" role="alert">{{ pickError }}</p>
+    <!-- OAuth Account Pick Sheet -->
+    <Drawer
+      :model-value="!!pickReq"
+      :title="t('slogin.pickTitle')"
+      side="bottom"
+      @update:model-value="(val) => !val && closePick()"
+    >
+      <p class="muted" style="margin-top: 0;">{{ t('slogin.pickHint') }}</p>
+      <div v-if="pickQ.isPending.value" class="muted">{{ t('common.loading') }}</div>
+      <div v-else-if="pickQ.isError.value" class="autherr" role="alert">{{ t('slogin.pickFailed') }}</div>
+      <div v-else class="pick-list">
+        <button
+          v-for="a in pickQ.data.value?.accounts ?? []"
+          :key="a.external_id"
+          class="btn pick-row"
+          :disabled="!!choosingId"
+          @click="chooseCandidate(a.external_id)"
+        >
+          <span>{{ a.handle }}</span>
+          <span class="muted">{{ choosingId === a.external_id ? t('slogin.connecting') : t('slogin.pickChoose') }}</span>
+        </button>
       </div>
-    </div>
+      <p v-if="pickError" class="autherr" role="alert">{{ pickError }}</p>
+    </Drawer>
+
+    <!-- Workspace Settings Sheet (Profile Toggle) -->
+    <Drawer
+      v-model="workspaceOpen"
+      title="Workspace"
+      side="bottom"
+    >
+      <div class="workspace-panel settings-stack">
+        <WorkspaceSwitcher />
+        <SettingsPanel />
+        <AccountPanel />
+      </div>
+    </Drawer>
     <main class="main">
       <div class="shellgrid"><slot /></div>
     </main>

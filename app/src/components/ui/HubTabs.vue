@@ -48,7 +48,7 @@ function onKey(e: KeyboardEvent, index: number): void {
         :id="`${idPrefix}-${t.id}`"
         type="button"
         role="tab"
-        class="w-auto flex-none text-sm font-medium tracking-[0.01em] px-4 py-2 rounded-full border border-transparent cursor-pointer transition-all select-none whitespace-nowrap"
+        class="w-auto flex-none min-h-11 inline-flex items-center justify-center text-sm font-medium tracking-[0.01em] px-4 py-2 rounded-full border border-transparent cursor-pointer transition-all select-none whitespace-nowrap"
         :class="modelValue === t.id
           ? 'active bg-ink text-surface font-semibold shadow-xs border-ink'
           : 'text-muted hover:text-ink hover:bg-surface/50'"

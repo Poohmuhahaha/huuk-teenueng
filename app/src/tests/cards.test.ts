@@ -25,7 +25,7 @@ describe('hub registry', () => {
     expect(byTo.get('/content')?.component).toBe(ContentPage)
     expect(byTo.get('/promote')?.component).toBe(PromotePage)
     expect(byTo.get('/analyze')?.component).toBe(AnalyzePage)
-    expect(byTo.get('/settings')?.component).toBe(SettingsPage)
+    expect(byTo.get('/branding')?.component).toBe(SettingsPage)
     expect(screens).toHaveLength(6)
   })
 
@@ -35,17 +35,18 @@ describe('hub registry', () => {
     expect(screenIndexOf('/content')).toBe(screens.findIndex((s) => s.to === '/content'))
     expect(screenIndexOf('/promote')).toBe(screens.findIndex((s) => s.to === '/promote'))
     expect(screenIndexOf('/analyze')).toBe(screens.findIndex((s) => s.to === '/analyze'))
-    expect(screenIndexOf('/settings')).toBe(screens.findIndex((s) => s.to === '/settings'))
+    expect(screenIndexOf('/branding')).toBe(screens.findIndex((s) => s.to === '/branding'))
   })
 
   it('lands / on the front-most card — Brand Identity', () => {
-    expect(screens[0].to).toBe('/settings')
+    expect(screens[0].to).toBe('/branding')
   })
 
   it('redirects legacy deep links into the owning hub + tab', async () => {
     for (const [path, target, tab] of [
-      ['/brand', '/settings', 'brand'],
-      ['/members', '/settings', 'members'],
+      ['/settings', '/branding', undefined],
+      ['/brand', '/branding', 'brand'],
+      ['/members', '/branding', 'members'],
       ['/calendar', '/plan', 'calendar'],
       ['/hashtags', '/plan', 'hashtags'],
       ['/feed', '/content', 'feed'],
@@ -119,16 +120,15 @@ describe('avatar shortcut', () => {
     return { w, router }
   }
 
-  it('navigates to the Settings workspace tab instead of opening a popup', async () => {
+  it('toggles the Workspace overlay when clicking the avatar', async () => {
     await login('owner@studio.local', 'demo1234')
-    const { w, router } = mountShell()
+    const { w } = mountShell()
     try {
+      expect(w.find('.workspace-panel').exists()).toBe(false)
       await w.find('.avatar').trigger('click')
       await flushPromises()
-      expect(router.currentRoute.value.path).toBe('/settings')
-      expect(router.currentRoute.value.query.tab).toBe('workspace')
-      // No popup anymore.
-      expect(w.find('.avatar-menu').exists()).toBe(false)
+      expect(w.find('.workspace-panel').exists()).toBe(true)
+      expect(w.find('.workspace-panel .ws-trigger').exists()).toBe(true)
     } finally {
       w.unmount()
       await logout().catch(() => undefined)

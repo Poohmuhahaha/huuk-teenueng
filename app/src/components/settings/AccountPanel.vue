@@ -7,6 +7,7 @@ import { t } from '@/core/i18n'
 import ProfilePanel from '@/components/overlays/ProfilePanel.vue'
 import ChangePasswordModal from '@/components/overlays/ChangePasswordModal.vue'
 import GuideHero from '@/components/ui/GuideHero.vue'
+import InfoTip from '@/components/ui/InfoTip.vue'
 
 const changeOpen = ref(false)
 const guideOpen = ref(false)
@@ -23,8 +24,10 @@ async function doLogoutAll(): Promise<void> {
 <template>
   <section class="settings-section settings-profile-section">
     <div class="settings-section-head">
-      <h2 class="settings-title">My Profile & Account</h2>
-      <p class="settings-desc">Manage your display name, active sign-in sessions, and account actions.</p>
+      <h2 class="settings-title flex items-center">
+        <span>My Profile &amp; Account</span>
+        <InfoTip text="Manage your display name, active sign-in sessions, and account actions." />
+      </h2>
     </div>
     <div class="settings-profile-card">
       <div class="pop-block"><ProfilePanel /></div>

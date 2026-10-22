@@ -21,7 +21,7 @@ function mountLanding() {
       { path: '/content', component: { template: '<div />' } },
       { path: '/promote', component: { template: '<div />' } },
       { path: '/analyze', component: { template: '<div />' } },
-      { path: '/settings', component: { template: '<div />' } },
+      { path: '/branding', component: { template: '<div />' } },
     ],
   })
   return mount(LandingPage, { global: { plugins: [router] } })

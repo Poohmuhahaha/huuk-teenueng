@@ -12,6 +12,7 @@ import { beginOAuth } from '@/core/oauth'
 import type { OauthMode } from '@/api/contract'
 import { t } from '@/core/i18n'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
+import Drawer from '@/components/overlays/Drawer.vue'
 
 const props = defineProps<{ platform: PlatformId | null }>()
 const emit = defineEmits<{ close: [] }>()
@@ -152,15 +153,37 @@ async function onSync(): Promise<void> {
 </script>
 
 <template>
-  <div v-if="platform && meta" class="plogin" role="dialog" aria-modal="true"
-    :aria-label="`${meta.name} — ${t('social.manage')}`" aria-labelledby="plogin-title" @click.self="busy ? null : emit('close')">
-    <div class="plogin-body">
-      <div class="plogin-card">
-        <button class="plogin-close" style="width: auto; min-width: 32px;" :aria-label="t('common.close')" :title="t('common.close')"
-          :disabled="busy" @click="emit('close')">×</button>
-        <h2 id="plogin-title" class="plogin-brand flex items-center justify-center gap-2"><PlatformLogo :id="platform ?? ''" :size="20" />{{ meta.name }}</h2>
+  <Drawer
+    :model-value="Boolean(platform && meta)"
+    :title="meta ? meta.name : ''"
+    side="bottom"
+    @update:model-value="(val) => !val && (busy ? null : emit('close'))"
+  >
+    <div
+      v-if="platform && meta"
+      class="plogin"
+      style="position: static; inset: auto; background: none; backdrop-filter: none; padding: 0; display: block;"
+      role="region"
+      :aria-label="`${meta.name} — ${t('social.manage')}`"
+      aria-labelledby="plogin-title"
+      @click.self="busy ? null : emit('close')"
+    >
+      <div class="plogin-body" style="width: 100%; max-width: none;">
+        <div class="plogin-card" style="border: 0; padding: 0; box-shadow: none; background: transparent; max-height: none;">
+          <button
+            class="plogin-close"
+            style="display: none;"
+            :aria-label="t('common.close')"
+            :title="t('common.close')"
+            :disabled="busy"
+            @click="emit('close')"
+          >×</button>
+          <div class="flex items-center gap-2 mb-4">
+            <PlatformLogo :id="platform ?? ''" :size="24" />
+            <h2 id="plogin-title" class="m-0 text-xl font-bold font-display text-ink">{{ meta.name }}</h2>
+          </div>
 
-        <p v-if="!mayManage" class="plogin-note">{{ t('auth.noPerm') }}</p>
+          <p v-if="!mayManage" class="plogin-note">{{ t('auth.noPerm') }}</p>
 
         <!-- connected: account state + maintenance -->
         <template v-if="connected">
@@ -240,4 +263,5 @@ async function onSync(): Promise<void> {
       </div>
     </div>
   </div>
+  </Drawer>
 </template>

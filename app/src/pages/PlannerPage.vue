@@ -292,9 +292,7 @@ watch(
 
 <template>
   <div class="planner-page" ref="root">
-  <h1>{{ t('planner.heading') }}</h1>
-
-  <div class="planner-grid">
+    <div class="planner-grid">
     <DockBar label="Planner controls">
       <MonthToggle :model-value="m" :year="year" @update:model-value="goMonth" @update:year="setYear" />
       <span class="dock-sep" aria-hidden="true" />

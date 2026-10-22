@@ -20,6 +20,6 @@ useDismiss(root, close)
   <span ref="root" class="inline-flex align-middle ml-2 relative">
     <button type="button" class="infotip w-[18px] h-[18px] flex-none p-0 rounded-full border border-line bg-surface text-muted text-xs italic font-bold leading-none cursor-pointer hover:border-accent hover:text-accent" :aria-expanded="open" :aria-label="t('common.moreInfo')"
       @click="open = !open">i</button>
-    <span v-if="open" class="infotip-bubble z-[200] bg-surface border border-faint rounded-none w-max max-w-[min(280px,72vw)] shadow-none text-ink whitespace-normal text-left px-3 py-2.5 text-sm font-normal absolute top-[calc(100%+8px)] right-0" role="tooltip">{{ text }}</span>
+    <span v-if="open" class="infotip-bubble z-[200] bg-surface border border-faint rounded-xl w-max max-w-[min(280px,72vw)] shadow-lg text-ink whitespace-normal text-left px-3.5 py-2.5 text-xs leading-relaxed font-normal absolute top-[calc(100%+8px)] left-0" role="tooltip">{{ text }}</span>
   </span>
 </template>

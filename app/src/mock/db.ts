@@ -391,7 +391,7 @@ export interface MockWorkspace {
 export const workspaces: MockWorkspace[] = [
   {
     id: 'ws-default', name: 'workspace', created: '2026-01-01T00:00:00Z', connected: 1, total: 3,
-    owner: 'thontrapoowadol@example.com',
+    owner: 'owner@studio.local',
     members: ['editor@studio.local', 'client@studio.local'],
   },
 ]

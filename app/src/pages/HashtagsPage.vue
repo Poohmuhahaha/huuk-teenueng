@@ -16,7 +16,6 @@ async function onAdd(groupId: string, tag: string): Promise<void> {
 </script>
 
 <template>
-  <h1>Hashtag Library</h1>
   <div v-if="isPending" class="muted">Loading groups…</div>
   <div v-else-if="isError" class="card">
     <p class="muted">Could not load hashtag groups: {{ loadError?.message }}</p>

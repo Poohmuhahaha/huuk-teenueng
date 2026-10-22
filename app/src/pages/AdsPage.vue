@@ -243,7 +243,7 @@ const audit = computed(() => view.value?.audit ?? [])
 
 <template>
   <div class="mt-2">
-    <h1>{{ t('ads.title') }}<InfoTip :text="t('ads.subtitle')" /></h1>
+    <h1 class="sr-only">{{ t('ads.title') }}</h1>
     <div class="tbl-tools">
       <span v-if="view?.fetchedAt" class="muted">{{ t('ads.synced') }} {{ new Date(view.fetchedAt * 1000).toLocaleString() }}</span>
       <button class="btn btn-primary ml-0" :disabled="!mayManage || sync.isPending.value"

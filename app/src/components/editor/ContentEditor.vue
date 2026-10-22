@@ -10,6 +10,7 @@ import {
 } from '@/core/queries'
 import { renderMarkdown } from '@/core/markdown'
 import { t } from '@/core/i18n'
+import Drawer from '@/components/overlays/Drawer.vue'
 import type { Content, ContentKind, ContentRevision, ContentStatus } from '@/mock/db'
 
 const props = defineProps<{ id: string }>()
@@ -403,10 +404,18 @@ function formatStamp(stamp: string): string {
     <button class="btn w-auto" @click="() => itemQ.refetch()">{{ t('common.tryAgain') }}</button>
   </div>
   <div v-else-if="content && draft" class="grid gap-3 in-[.deck.full]:gap-4">
-    <header class="flex gap-2.5 items-center in-[.deck.full]:flex-wrap">
-      <input v-model="draft.title" class="field text-lg font-bold flex-1" :disabled="!canEdit"
-        :aria-label="t('studio.field.title')" :placeholder="t('studio.untitled')" />
-      <div class="flex gap-2 items-center whitespace-nowrap">
+    <!-- Header: Title + Status + Saved indicator -->
+    <header class="flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex-1 min-w-[240px]">
+        <input
+          v-model="draft.title"
+          class="field text-xl md:text-2xl font-bold w-full bg-transparent border-0 border-b border-line/60 rounded-none px-1 py-1.5 focus:border-accent focus:ring-0 placeholder:text-muted/60"
+          :disabled="!canEdit"
+          :aria-label="t('studio.field.title')"
+          :placeholder="t('studio.untitled')"
+        />
+      </div>
+      <div class="flex items-center gap-2 whitespace-nowrap">
         <span class="statuschip" :class="`st-${status}`">{{ statusLabel(status) }}</span>
         <span class="muted text-xs">
           <template v-if="saving">{{ t('studio.saving') }}</template>
@@ -417,195 +426,389 @@ function formatStamp(stamp: string): string {
       </div>
     </header>
 
-    <div class="sticky top-[-16px] z-10 -mx-4 px-4 py-2 bg-surface border-b border-line grid gap-2">
-      <div class="flex flex-wrap gap-2 items-center">
-        <button class="btn btn-primary w-auto" :disabled="!canEdit || saving || !dirty || conflict" @click="save()">
+    <!-- Streamlined Sticky Action Bar -->
+    <div class="sticky top-[-16px] z-10 -mx-4 px-4 py-2 bg-surface/95 backdrop-blur-sm border-b border-line flex flex-wrap items-center justify-between gap-2">
+      <!-- Left: Primary Publish & Save -->
+      <div class="flex items-center gap-2">
+        <button
+          class="btn btn-primary w-auto text-xs py-1.5 px-3 font-semibold"
+          :disabled="!canEdit || saving || !dirty || conflict"
+          @click="save()"
+        >
           {{ t('studio.saveDraft') }}
         </button>
+
         <template v-if="canPublish">
           <div class="relative publish-wrap">
-            <button class="btn w-auto" :disabled="!canEdit" :aria-expanded="publishOpen" @click="publishOpen = !publishOpen">
+            <button
+              class="btn w-auto text-xs py-1.5 px-3"
+              :disabled="!canEdit"
+              :aria-expanded="publishOpen"
+              @click="publishOpen = !publishOpen"
+            >
               {{ status === 'published' ? '✓ ' : '' }}{{ t('studio.publish') }} ▾
             </button>
-            <div v-if="publishOpen" class="absolute z-30 top-[calc(100%+6px)] left-0 bg-surface border border-faint rounded-none p-2 min-w-[240px] grid gap-1 shadow-none [&_.menubtn]:text-left" role="dialog" :aria-label="t('studio.publish')">
-              <button class="menubtn" :disabled="status === 'published'" @click="publishNow">{{ t('studio.publishNow') }}</button>
-              <label class="lbl" for="studio-schedule" style="margin: 6px 0 0;">{{ t('studio.scheduleFor') }}</label>
-              <input id="studio-schedule" class="field" type="datetime-local" v-model="scheduleLocal" />
-              <button class="menubtn" :disabled="!scheduleLocal" @click="schedulePublish">{{ t('studio.schedule') }}</button>
-              <button v-if="status === 'published' || status === 'scheduled'" class="menubtn" @click="unpublishNow">
+            <div
+              v-if="publishOpen"
+              class="absolute z-30 top-[calc(100%+6px)] left-0 bg-surface border border-faint rounded-xl p-3 min-w-[260px] grid gap-2 shadow-xl [&_.menubtn]:text-left"
+              role="dialog"
+              :aria-label="t('studio.publish')"
+            >
+              <button class="menubtn" :disabled="status === 'published'" @click="publishNow">
+                {{ t('studio.publishNow') }}
+              </button>
+              <div class="border-t border-faint pt-2 grid gap-1">
+                <label class="lbl text-2xs" for="studio-schedule">{{ t('studio.scheduleFor') }}</label>
+                <input id="studio-schedule" class="field text-xs" type="datetime-local" v-model="scheduleLocal" />
+                <button class="menubtn mt-1" :disabled="!scheduleLocal" @click="schedulePublish">
+                  {{ t('studio.schedule') }}
+                </button>
+              </div>
+              <button
+                v-if="status === 'published' || status === 'scheduled'"
+                class="menubtn text-danger border-t border-faint pt-2"
+                @click="unpublishNow"
+              >
                 {{ t('studio.unpublish') }}
               </button>
             </div>
           </div>
         </template>
         <template v-else-if="canWrite">
-          <button v-if="status === 'draft'" class="btn w-auto" :disabled="!canEdit" @click="setStatus('review')">
+          <button v-if="status === 'draft'" class="btn w-auto text-xs py-1.5 px-3" :disabled="!canEdit" @click="setStatus('review')">
             {{ t('studio.submitReview') }}
           </button>
-          <button v-else-if="status === 'review'" class="btn w-auto" :disabled="!canEdit" @click="setStatus('draft')">
+          <button v-else-if="status === 'review'" class="btn w-auto text-xs py-1.5 px-3" :disabled="!canEdit" @click="setStatus('draft')">
             {{ t('studio.backToDraft') }}
           </button>
         </template>
-        <span class="flex-1" />
-        <div class="flex gap-1" role="tablist" :aria-label="t('studio.view')">
-          <button class="tab" :class="{ active: mode === 'edit' }" role="tab" :aria-selected="mode === 'edit'"
-            @click="mode = 'edit'">{{ t('studio.view.edit') }}</button>
-          <button class="tab" :class="{ active: mode === 'split' }" role="tab" :aria-selected="mode === 'split'"
-            @click="mode = 'split'">{{ t('studio.view.split') }}</button>
-          <button class="tab" :class="{ active: mode === 'preview' }" role="tab" :aria-selected="mode === 'preview'"
-            @click="mode = 'preview'">{{ t('studio.view.preview') }}</button>
-        </div>
       </div>
-      <div class="flex flex-wrap gap-2 items-center">
-        <button class="btn w-auto" :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')" @click="duplicateContent">
+
+      <!-- Center: View Mode Segmented Control -->
+      <div class="inline-flex items-center gap-0.5 bg-wash p-1 rounded-lg border border-line" role="tablist" :aria-label="t('studio.view')">
+        <button
+          class="tab py-1 px-3 rounded-md text-xs font-medium cursor-pointer transition-colors"
+          :class="{ active: mode === 'edit', 'bg-surface shadow-xs font-semibold text-ink': mode === 'edit', 'text-muted hover:text-ink': mode !== 'edit' }"
+          role="tab"
+          :aria-selected="mode === 'edit'"
+          @click="mode = 'edit'"
+        >
+          {{ t('studio.view.edit') }}
+        </button>
+        <button
+          class="tab py-1 px-3 rounded-md text-xs font-medium cursor-pointer transition-colors"
+          :class="{ active: mode === 'split', 'bg-surface shadow-xs font-semibold text-ink': mode === 'split', 'text-muted hover:text-ink': mode !== 'split' }"
+          role="tab"
+          :aria-selected="mode === 'split'"
+          @click="mode = 'split'"
+        >
+          {{ t('studio.view.split') }}
+        </button>
+        <button
+          class="tab py-1 px-3 rounded-md text-xs font-medium cursor-pointer transition-colors"
+          :class="{ active: mode === 'preview', 'bg-surface shadow-xs font-semibold text-ink': mode === 'preview', 'text-muted hover:text-ink': mode !== 'preview' }"
+          role="tab"
+          :aria-selected="mode === 'preview'"
+          @click="mode = 'preview'"
+        >
+          {{ t('studio.view.preview') }}
+        </button>
+      </div>
+
+      <!-- Right: Revisions & Post Actions -->
+      <div class="flex items-center gap-1.5">
+        <button
+          class="btn w-auto text-xs py-1.5 px-2.5 inline-flex items-center gap-1.5"
+          :title="t('studio.revisions')"
+          @click="revisionsOpen = !revisionsOpen"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>{{ t('studio.revisions') }}</span>
+          <span class="inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-2xs bg-wash font-bold">{{ content.revisions.length }}</span>
+        </button>
+
+        <button
+          class="btn w-auto text-xs py-1.5 px-2.5"
+          :disabled="!canWrite"
+          :title="canWrite ? '' : t('auth.noPerm')"
+          @click="duplicateContent"
+        >
           {{ t('studio.duplicate') }}
         </button>
-        <button class="btn w-auto" @click="revisionsOpen = !revisionsOpen">
-          {{ t('studio.revisions') }} ({{ content.revisions.length }})
-        </button>
-        <button v-if="status === 'archived' && canWrite" class="btn w-auto" @click="setStatus('draft')">
+
+        <button
+          v-if="status === 'archived' && canWrite"
+          class="btn w-auto text-xs py-1.5 px-2.5"
+          @click="setStatus('draft')"
+        >
           {{ t('studio.restoreDraft') }}
         </button>
-        <button v-else-if="canWrite" class="btn w-auto" @click="setStatus('archived')">{{ t('studio.archive') }}</button>
-        <span class="flex-1" />
-        <button v-if="canDelete" class="btn w-auto" @click="removeContent">{{ t('studio.delete') }}</button>
+        <button
+          v-else-if="canWrite"
+          class="btn w-auto text-xs py-1.5 px-2.5"
+          @click="setStatus('archived')"
+        >
+          {{ t('studio.archive') }}
+        </button>
+
+        <button
+          v-if="canDelete"
+          class="btn w-auto text-xs py-1.5 px-2.5 text-danger hover:bg-danger-wash hover:border-danger/30"
+          @click="removeContent"
+        >
+          {{ t('studio.delete') }}
+        </button>
       </div>
     </div>
 
-    <div v-if="conflict" class="flex flex-wrap gap-2 items-center border border-warning bg-warning-wash rounded-none py-2 px-2.5" role="alert">
+    <!-- Alert / Notice Banners -->
+    <div v-if="conflict" class="flex flex-wrap gap-2 items-center border border-warning bg-warning-wash rounded-lg py-2 px-3 text-xs" role="alert">
       <strong>{{ t('studio.conflict') }}</strong>
-      <span class="muted">{{ t('studio.conflictHint') }}</span>
-      <button class="btn w-auto" @click="reloadLatest">{{ t('studio.reloadLatest') }}</button>
-      <button class="btn btn-primary w-auto" @click="keepMine">{{ t('studio.keepMine') }}</button>
+      <span class="muted flex-1">{{ t('studio.conflictHint') }}</span>
+      <button class="btn w-auto text-xs" @click="reloadLatest">{{ t('studio.reloadLatest') }}</button>
+      <button class="btn btn-primary w-auto text-xs" @click="keepMine">{{ t('studio.keepMine') }}</button>
     </div>
-    <p v-if="saveError" class="autherr" role="alert">{{ saveError }}</p>
-    <p v-if="notice" class="muted" role="status">{{ notice }}</p>
+    <p v-if="saveError" class="autherr text-xs" role="alert">{{ saveError }}</p>
+    <p v-if="notice" class="muted text-xs" role="status">{{ notice }}</p>
 
-    <div v-if="status === 'published' && publishedUrl" class="flex gap-2 items-center flex-wrap bg-wash py-2.5 px-3 rounded-none">
-      <strong>{{ t('studio.live') }}</strong>
-      <code class="text-xs [overflow-wrap:anywhere]">{{ publishedUrl }}</code>
-      <button class="btn w-auto" @click="copyLink">{{ copied ? t('studio.copied') : t('studio.copyLink') }}</button>
-      <RouterLink class="btn w-auto" :to="`/read/${content.slug}`" target="_blank">{{ t('studio.openLive') }}</RouterLink>
+    <div v-if="status === 'published' && publishedUrl" class="flex gap-2 items-center flex-wrap bg-wash/60 border border-faint py-2 px-3 rounded-lg text-xs">
+      <strong class="text-ink">{{ t('studio.live') }}</strong>
+      <code class="text-2xs px-2 py-0.5 rounded bg-surface border border-line [overflow-wrap:anywhere] flex-1">{{ publishedUrl }}</code>
+      <button class="btn w-auto text-xs py-1 px-2" @click="copyLink">{{ copied ? t('studio.copied') : t('studio.copyLink') }}</button>
+      <RouterLink class="btn w-auto text-xs py-1 px-2" :to="`/read/${content.slug}`" target="_blank">{{ t('studio.openLive') }}</RouterLink>
     </div>
 
-    <div class="grid gap-2 items-start in-[.deck.full]:gap-4" :class="mode === 'split' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'">
-      <section v-show="mode !== 'preview'" class="min-w-0">
-        <div class="grid2">
-          <div>
-            <label class="lbl" for="studio-slug">{{ t('studio.field.slug') }}</label>
-            <input id="studio-slug" v-model="draft.slug" class="field" :disabled="!canEdit" />
+    <!-- Writing Workspace: Split / Edit / Preview -->
+    <div
+      class="grid gap-4 items-start"
+      :class="mode === 'split' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'"
+    >
+      <!-- Left / Editor Column -->
+      <section v-show="mode !== 'preview'" class="min-w-0 flex flex-col gap-2">
+        <!-- Formatting Toolbar -->
+        <div
+          class="flex flex-wrap gap-1 items-center justify-between p-1.5 bg-wash/50 border border-faint rounded-lg"
+          role="toolbar"
+          :aria-label="t('studio.field.body')"
+        >
+          <div class="flex flex-wrap gap-1 items-center">
+            <button
+              type="button"
+              class="toolbtn inline-flex items-center justify-center min-w-[30px] h-[30px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition text-xs font-bold"
+              :disabled="!canEdit"
+              :title="t('studio.tool.bold')"
+              @click="wrapSelection('**', '**', t('studio.tool.text'))"
+            >
+              <strong>B</strong>
+            </button>
+            <button
+              type="button"
+              class="toolbtn inline-flex items-center justify-center min-w-[30px] h-[30px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition text-xs italic font-serif"
+              :disabled="!canEdit"
+              :title="t('studio.tool.italic')"
+              @click="wrapSelection('*', '*', t('studio.tool.text'))"
+            >
+              <em>I</em>
+            </button>
+            <button
+              type="button"
+              class="toolbtn inline-flex items-center justify-center min-w-[30px] h-[30px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition text-xs font-semibold"
+              :disabled="!canEdit"
+              :title="t('studio.tool.h2')"
+              @click="prefixLines('## ')"
+            >
+              H2
+            </button>
+            <button
+              type="button"
+              class="toolbtn inline-flex items-center justify-center min-w-[30px] h-[30px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition text-xs"
+              :disabled="!canEdit"
+              :title="t('studio.tool.list')"
+              @click="prefixLines('- ')"
+            >
+              •
+            </button>
+            <button
+              type="button"
+              class="toolbtn inline-flex items-center justify-center min-w-[30px] h-[30px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition text-xs"
+              :disabled="!canEdit"
+              :title="t('studio.tool.ordered')"
+              @click="prefixLines('1. ')"
+            >
+              1.
+            </button>
+            <button
+              type="button"
+              class="toolbtn inline-flex items-center justify-center min-w-[30px] h-[30px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition text-xs"
+              :disabled="!canEdit"
+              :title="t('studio.tool.quote')"
+              @click="prefixLines('> ')"
+            >
+              ”
+            </button>
+            <button
+              type="button"
+              class="toolbtn inline-flex items-center justify-center min-w-[30px] h-[30px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition text-xs font-mono"
+              :disabled="!canEdit"
+              :title="t('studio.tool.code')"
+              @click="wrapSelection('`', '`', 'code')"
+            >
+              &lt;/&gt;
+            </button>
+            <button
+              type="button"
+              class="toolbtn inline-flex items-center justify-center min-w-[30px] h-[30px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition text-xs"
+              :disabled="!canEdit"
+              :title="t('studio.tool.link')"
+              @click="openLink"
+            >
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6.5 9.5a3 3 0 0 0 4.2 0l2-2a3 3 0 0 0-4.2-4.2l-1 1" /><path d="M9.5 6.5a3 3 0 0 0-4.2 0l-2 2a3 3 0 0 0 4.2 4.2l1-1" /></svg>
+            </button>
           </div>
-          <div>
-            <label class="lbl" for="studio-kind">{{ t('studio.field.kind') }}</label>
-            <select id="studio-kind" v-model="draft.kind" class="field" :disabled="!canEdit">
-              <option value="article">{{ t('studio.kind.article') }}</option>
-              <option value="page">{{ t('studio.kind.page') }}</option>
-              <option value="note">{{ t('studio.kind.note') }}</option>
-            </select>
-          </div>
-        </div>
-
-        <label class="lbl" for="studio-excerpt">{{ t('studio.field.excerpt') }}</label>
-        <input id="studio-excerpt" v-model="draft.excerpt" class="field" :disabled="!canEdit" maxlength="500" />
-
-        <div class="flex flex-wrap gap-1 items-center justify-center in-[.deck.full]:justify-start my-2 mb-1.5" role="toolbar" :aria-label="t('studio.field.body')">
-          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.bold')"
-            @click="wrapSelection('**', '**', t('studio.tool.text'))"><strong>B</strong></button>
-          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.italic')"
-            @click="wrapSelection('*', '*', t('studio.tool.text'))"><em>I</em></button>
-          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.h2')"
-            @click="prefixLines('## ')">H2</button>
-          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.list')"
-            @click="prefixLines('- ')">•</button>
-          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.ordered')"
-            @click="prefixLines('1. ')">1.</button>
-          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.quote')"
-            @click="prefixLines('> ')">”</button>
-          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.code')"
-            @click="wrapSelection('`', '`', 'code')">&lt;/&gt;</button>
-          <button type="button" class="toolbtn inline-flex items-center justify-center min-w-[32px] py-[3px] px-[7px] border border-faint rounded-md bg-surface text-ink cursor-pointer hover:bg-wash hover:border-line disabled:opacity-50 disabled:cursor-not-allowed transition" :disabled="!canEdit" :title="t('studio.tool.link')"
-            @click="openLink"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6.5 9.5a3 3 0 0 0 4.2 0l2-2a3 3 0 0 0-4.2-4.2l-1 1" /><path d="M9.5 6.5a3 3 0 0 0-4.2 0l-2 2a3 3 0 0 0 4.2 4.2l1-1" /></svg></button>
-          <span class="muted text-xs">
+          <span class="muted text-xs pr-1">
             {{ wordCount }} {{ t('studio.words') }} · {{ readingMinutes }} {{ t('studio.minRead') }}
           </span>
         </div>
-        <div v-if="linkOpen" class="flex gap-1.5 items-center my-0 mb-1.5 [&_.field]:flex-1 [&_.field]:min-w-0">
-          <input v-model="linkDraft" class="field" :aria-label="t('studio.linkPrompt')" placeholder="https://" @keydown.enter.prevent="confirmLink" @keydown.esc.prevent="cancelLink" />
-          <button type="button" class="btn w-auto" :disabled="!linkDraft.trim()" @click="confirmLink">{{ t('common.add') }}</button>
-          <button type="button" class="btn w-auto" @click="cancelLink">{{ t('common.cancel') }}</button>
-        </div>
-        <textarea id="studio-body" ref="bodyEl" v-model="draft.body" class="field font-mono text-sm leading-relaxed"
-          :disabled="!canEdit" rows="7" :aria-label="t('studio.field.body')" />
 
-        <div class="grid2">
-          <div>
-            <label class="lbl" for="studio-tags">{{ t('studio.field.tags') }}</label>
-            <input id="studio-tags" v-model="draft.tagsText" class="field" :disabled="!canEdit"
-              :placeholder="t('studio.field.tagsHint')" />
-          </div>
-          <div>
-            <label class="lbl" for="studio-hero">{{ t('studio.field.hero') }}</label>
-            <input id="studio-hero" v-model="draft.heroImageUrl" class="field" :disabled="!canEdit" placeholder="https://" />
-          </div>
+        <!-- Link input popover bar -->
+        <div v-if="linkOpen" class="flex gap-1.5 items-center my-0 mb-1.5 [&_.field]:flex-1 [&_.field]:min-w-0 bg-wash/60 p-2 rounded-lg border border-line">
+          <input v-model="linkDraft" class="field text-xs" :aria-label="t('studio.linkPrompt')" placeholder="https://" @keydown.enter.prevent="confirmLink" @keydown.esc.prevent="cancelLink" />
+          <button type="button" class="btn w-auto text-xs py-1 px-3" :disabled="!linkDraft.trim()" @click="confirmLink">{{ t('common.add') }}</button>
+          <button type="button" class="btn w-auto text-xs py-1 px-3" @click="cancelLink">{{ t('common.cancel') }}</button>
         </div>
 
-        <details class="mt-2.5">
-          <summary>{{ t('studio.seo') }}</summary>
-          <div class="grid2 mt">
-            <div>
-              <label class="lbl" for="studio-seo-title">{{ t('studio.field.seoTitle') }}</label>
-              <input id="studio-seo-title" v-model="draft.seoTitle" class="field" :disabled="!canEdit" maxlength="200" />
-              <span class="muted text-[11px]">{{ draft.seoTitle.length }}/200 (≤ 60)</span>
-            </div>
-            <div>
-              <label class="lbl" for="studio-seo-desc">{{ t('studio.field.seoDescription') }}</label>
-              <input id="studio-seo-desc" v-model="draft.seoDescription" class="field" :disabled="!canEdit" maxlength="500" />
-              <span class="muted text-[11px]">{{ draft.seoDescription.length }}/500 (≤ 160)</span>
-            </div>
-          </div>
-        </details>
+        <!-- Body Textarea -->
+        <textarea
+          id="studio-body"
+          ref="bodyEl"
+          v-model="draft.body"
+          class="field font-mono text-sm leading-relaxed min-h-[300px] md:min-h-[380px] p-3.5 resize-y"
+          :disabled="!canEdit"
+          rows="14"
+          :aria-label="t('studio.field.body')"
+          placeholder="Write in Markdown here..."
+        />
       </section>
 
-      <section v-show="mode !== 'edit'" class="min-w-0">
-        <div class="flex justify-between gap-2 items-baseline mb-2">
-          <strong>{{ t('studio.preview') }}</strong>
-          <span class="muted">{{ t('studio.previewHint') }}</span>
+      <!-- Right / Preview Column -->
+      <section v-show="mode !== 'edit'" class="min-w-0 flex flex-col gap-2">
+        <div class="flex justify-between gap-2 items-baseline p-1.5 bg-wash/50 border border-faint rounded-lg">
+          <strong class="text-xs text-ink px-1">{{ t('studio.preview') }}</strong>
+          <span class="muted text-xs pr-1">{{ t('studio.previewHint') }}</span>
         </div>
-        <article class="border border-faint rounded-[var(--radius,10px)] py-2.5 px-3 bg-surface min-h-[140px]">
+        <article class="border border-faint rounded-xl p-4 bg-surface min-h-[300px] md:min-h-[380px] overflow-y-auto">
           <h1 v-if="draft.title" class="text-2xl font-bold my-2">{{ draft.title }}</h1>
           <p v-if="draft.excerpt" class="muted text-[15px] my-2">{{ draft.excerpt }}</p>
-          <img v-if="draft.heroImageUrl" :src="draft.heroImageUrl" :alt="draft.title" class="max-w-full rounded-none my-3" @error="(e) => ((e.target as HTMLImageElement).style.display = 'none')" />
+          <img v-if="draft.heroImageUrl" :src="draft.heroImageUrl" :alt="draft.title" class="max-w-full rounded-lg my-3 border border-line" @error="(e) => ((e.target as HTMLImageElement).style.display = 'none')" />
           <!-- renderMarkdown escapes all text before inserting its own tags -->
           <div class="markdown" v-html="previewHtml" />
         </article>
       </section>
     </div>
 
-    <!-- revisions drawer -->
-    <aside v-if="revisionsOpen" class="fixed top-0 right-0 bottom-0 w-[min(420px,92vw)] z-60 bg-surface border-l border-faint p-3.5 overflow-y-auto shadow-lg" role="dialog" :aria-label="t('studio.revisions')" @keydown.esc="revisionsOpen = false; revisionPreview = null">
-      <div class="flex justify-between items-center mb-2">
-        <strong>{{ t('studio.revisions') }}</strong>
-        <button ref="revisionsCloseBtn" class="btn w-auto" @click="revisionsOpen = false; revisionPreview = null">{{ t('common.close') }}</button>
+    <!-- Structured Post Details & Metadata Card -->
+    <section class="border border-line rounded-xl bg-surface p-4 grid gap-4 mt-2">
+      <div class="flex items-center justify-between border-b border-faint pb-3">
+        <div class="flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <h3 class="text-sm font-semibold text-ink m-0">Post Details & Settings</h3>
+        </div>
+        <span class="text-2xs text-muted">Slug · Category · Summary · Media · SEO</span>
       </div>
-      <div v-if="revisionsQ.isPending.value" class="muted">{{ t('common.loading') }}</div>
-      <p v-else-if="!revisions.length" class="muted">{{ t('studio.noRevisions') }}</p>
-      <ul v-else class="list-none m-0 p-0 grid gap-1.5">
-        <li v-for="revision in revisions" :key="revision.revision">
-          <button class="studio-item" :class="{ on: revisionPreview?.revision === revision.revision }"
-            @click="revisionPreview = revision">
-            <strong>#{{ revision.revision }} · {{ revision.note || t('studio.edit') }}</strong>
-            <span class="muted">{{ revision.author }} · {{ formatStamp(revision.savedAt) }}</span>
+
+      <!-- Group 1: Slug, Type, Summary -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="lbl text-xs font-medium" for="studio-slug">{{ t('studio.field.slug') }}</label>
+          <input id="studio-slug" v-model="draft.slug" class="field text-sm" :disabled="!canEdit" />
+        </div>
+        <div>
+          <label class="lbl text-xs font-medium" for="studio-kind">{{ t('studio.field.kind') }}</label>
+          <select id="studio-kind" v-model="draft.kind" class="field text-sm" :disabled="!canEdit">
+            <option value="article">{{ t('studio.kind.article') }}</option>
+            <option value="page">{{ t('studio.kind.page') }}</option>
+            <option value="note">{{ t('studio.kind.note') }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl text-xs font-medium" for="studio-excerpt">{{ t('studio.field.excerpt') }}</label>
+          <input id="studio-excerpt" v-model="draft.excerpt" class="field text-sm" :disabled="!canEdit" maxlength="500" />
+        </div>
+      </div>
+
+      <!-- Group 2: Tags & Hero Image -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="lbl text-xs font-medium" for="studio-tags">{{ t('studio.field.tags') }}</label>
+          <input
+            id="studio-tags"
+            v-model="draft.tagsText"
+            class="field text-sm"
+            :disabled="!canEdit"
+            :placeholder="t('studio.field.tagsHint')"
+          />
+        </div>
+        <div>
+          <label class="lbl text-xs font-medium" for="studio-hero">{{ t('studio.field.hero') }}</label>
+          <div class="flex gap-2 items-center">
+            <input id="studio-hero" v-model="draft.heroImageUrl" class="field text-sm flex-1" :disabled="!canEdit" placeholder="https://" />
+            <div v-if="draft.heroImageUrl" class="w-9 h-9 rounded-lg border border-line overflow-hidden flex-none bg-wash flex items-center justify-center">
+              <img :src="draft.heroImageUrl" alt="" class="w-full h-full object-cover" @error="(e) => ((e.target as HTMLImageElement).style.display = 'none')" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 3: SEO Listing -->
+      <details class="border border-line rounded-lg p-3 bg-wash/30">
+        <summary class="font-medium text-xs text-ink cursor-pointer select-none">{{ t('studio.seo') }}</summary>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+          <div>
+            <label class="lbl text-xs" for="studio-seo-title">{{ t('studio.field.seoTitle') }}</label>
+            <input id="studio-seo-title" v-model="draft.seoTitle" class="field text-sm" :disabled="!canEdit" maxlength="200" />
+            <span class="muted text-[11px]">{{ draft.seoTitle.length }}/200 (≤ 60)</span>
+          </div>
+          <div>
+            <label class="lbl text-xs" for="studio-seo-desc">{{ t('studio.field.seoDescription') }}</label>
+            <input id="studio-seo-desc" v-model="draft.seoDescription" class="field text-sm" :disabled="!canEdit" maxlength="500" />
+            <span class="muted text-[11px]">{{ draft.seoDescription.length }}/500 (≤ 160)</span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- Revisions Bottom Sheet Drawer -->
+    <Drawer v-model="revisionsOpen" :title="t('studio.revisions')" side="bottom">
+      <div class="grid gap-3 max-w-2xl mx-auto">
+        <div v-if="revisionsQ.isPending.value" class="muted">{{ t('common.loading') }}</div>
+        <p v-else-if="!revisions.length" class="muted">{{ t('studio.noRevisions') }}</p>
+        <ul v-else class="list-none m-0 p-0 grid gap-2">
+          <li v-for="revision in revisions" :key="revision.revision">
+            <button
+              class="w-full text-left p-3 rounded-xl border border-line bg-surface hover:bg-wash transition flex flex-col gap-1 cursor-pointer"
+              :class="{ 'border-accent bg-wash': revisionPreview?.revision === revision.revision }"
+              @click="revisionPreview = revision"
+            >
+              <div class="flex items-center justify-between">
+                <strong class="text-sm text-ink">#{{ revision.revision }} · {{ revision.note || t('studio.edit') }}</strong>
+                <span class="text-xs text-muted">{{ formatStamp(revision.savedAt) }}</span>
+              </div>
+              <span class="text-2xs text-muted">{{ revision.author }}</span>
+            </button>
+          </li>
+        </ul>
+        <div v-if="revisionPreview" class="border-t border-dashed border-line mt-2 pt-3">
+          <h4 class="m-0 mb-2 font-bold">{{ revisionPreview.title }}</h4>
+          <div class="markdown p-3 rounded-lg border border-line bg-wash/30 text-sm max-h-[300px] overflow-y-auto" v-html="renderMarkdown(revisionPreview.body)" />
+          <button class="btn btn-primary mt-3 w-auto" :disabled="!canWrite" @click="restoreRevision(revisionPreview)">
+            {{ t('studio.restoreThis') }}
           </button>
-        </li>
-      </ul>
-      <div v-if="revisionPreview" class="border-t border-dashed border-line mt-2.5 pt-2">
-        <h4 style="margin: 8px 0 4px;">{{ revisionPreview.title }}</h4>
-        <div class="markdown" v-html="renderMarkdown(revisionPreview.body)" />
-        <button class="btn btn-primary mt" :disabled="!canWrite" @click="restoreRevision(revisionPreview)">
-          {{ t('studio.restoreThis') }}
-        </button>
+        </div>
       </div>
-    </aside>
+    </Drawer>
   </div>
   <div v-else class="py-2 grid gap-2 justify-items-center in-[.deck.full]:justify-items-start">
     <p class="muted">Content not found</p>

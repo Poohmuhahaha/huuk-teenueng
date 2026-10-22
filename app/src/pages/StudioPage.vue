@@ -6,7 +6,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useContentList, useCreateContent, usePermission } from '@/core/queries'
 import { t } from '@/core/i18n'
-import InfoTip from '@/components/ui/InfoTip.vue'
 import DockBar from '@/components/ui/DockBar.vue'
 import DropdownMenu from '@/components/ui/DropdownMenu.vue'
 import type { ContentStatus, ContentSummary } from '@/mock/db'
@@ -102,13 +101,10 @@ function updatedLabel(row: ContentSummary): string {
 
 <template>
   <div v-if="!isLoggedIn" class="card mt" style="max-width: 560px; margin: 40px auto;">
-    <h1>{{ t('studio.title') }}</h1>
     <p class="muted">{{ t('studio.signInHint') }}</p>
   </div>
 
   <div v-else ref="root" class="studio-page">
-    <h1>{{ t('studio.title') }}<InfoTip :text="t('studio.subtitle')" /></h1>
-
     <div class="grid grid-single gap-4 items-start">
     <DockBar label="Studio controls">
       <div class="flex-1 min-w-0 m-0 [&>div]:w-full [&>div>button]:w-full">

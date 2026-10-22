@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, useId } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
 import { t } from '@/core/i18n'
 
 const open = defineModel<boolean>({ default: false })
@@ -22,10 +22,79 @@ const uid = useId()
 const titleId = `${uid}-title`
 
 function onKey(e: KeyboardEvent): void {
-  if (e.key === 'Escape' && open.value) open.value = false
+  if (e.key === 'Escape' && open.value && props.dismissable) open.value = false
 }
 onMounted(() => window.addEventListener('keydown', onKey))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+
+// Drag-to-dismiss for bottom sheets
+const dragY = ref(0)
+const isDragging = ref(false)
+
+let startClientY = 0
+let lastClientY = 0
+let lastTimestamp = 0
+let velocityY = 0
+
+function startDrag(e: PointerEvent): void {
+  if (e.button !== 0 || props.side !== 'bottom' || !props.dismissable) return
+  const target = e.target as HTMLElement | null
+  if (target?.closest('.p-drawer-x') || target?.tagName === 'BUTTON' || target?.tagName === 'A' || target?.tagName === 'INPUT' || target?.tagName === 'SELECT') return
+
+  isDragging.value = true
+  startClientY = e.clientY
+  lastClientY = e.clientY
+  lastTimestamp = performance.now()
+  dragY.value = 0
+  velocityY = 0
+
+  const onPointerMove = (ev: PointerEvent): void => {
+    if (!isDragging.value) return
+    const now = performance.now()
+    const dt = now - lastTimestamp
+    const dy = ev.clientY - lastClientY
+    if (dt > 0) velocityY = (dy / dt) * 1000
+    lastClientY = ev.clientY
+    lastTimestamp = now
+
+    const delta = ev.clientY - startClientY
+    if (delta > 0) {
+      dragY.value = delta
+    } else {
+      dragY.value = delta * 0.15
+    }
+  }
+
+  const onPointerUp = (): void => {
+    if (!isDragging.value) return
+    isDragging.value = false
+    window.removeEventListener('pointermove', onPointerMove)
+    window.removeEventListener('pointerup', onPointerUp)
+    window.removeEventListener('pointercancel', onPointerUp)
+
+    if (dragY.value > 90 || velocityY > 400) {
+      open.value = false
+    }
+    dragY.value = 0
+  }
+
+  window.addEventListener('pointermove', onPointerMove)
+  window.addEventListener('pointerup', onPointerUp)
+  window.addEventListener('pointercancel', onPointerUp)
+}
+
+const drawerStyle = computed(() => {
+  const styles: Record<string, string> = {}
+  if (props.side !== 'bottom') {
+    styles.width = props.width
+  } else if (isDragging.value || dragY.value !== 0) {
+    styles.transform = `translate3d(0, ${Math.max(0, dragY.value)}px, 0)`
+    if (isDragging.value) {
+      styles.transition = 'none'
+    }
+  }
+  return styles
+})
 </script>
 
 <template>
@@ -63,26 +132,44 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
           side === 'bottom'
             ? 'w-full max-w-none rounded-t-[20px] h-[calc(100%-12px)] max-h-[calc(100%-12px)] border-b-0'
             : '',
+          isDragging ? 'is-dragging' : '',
         ]"
-        :style="side === 'bottom' ? undefined : { width }"
+        :style="drawerStyle"
         role="dialog"
         aria-modal="true"
         :aria-labelledby="title ? titleId : undefined"
       >
         <!-- Pull / drag handle indicator at top of bottom sheet -->
-        <div v-if="side === 'bottom'" class="w-10 h-1 bg-muted/40 rounded-full mx-auto mt-2.5 mb-1 flex-none" />
-        <header class="flex items-center justify-between gap-3 p-3.5 px-4 border-b border-line">
-          <h3 v-if="title" :id="titleId" class="m-0 text-lg font-display text-ink truncate">{{ title }}</h3>
+        <div
+          v-if="side === 'bottom'"
+          class="p-drawer-handle-zone w-full py-2.5 cursor-grab active:cursor-grabbing flex justify-center items-center flex-none select-none touch-none"
+          @pointerdown="startDrag"
+        >
+          <div class="w-10 h-1 bg-muted/40 rounded-full flex-none pointer-events-none" />
+        </div>
+        <header
+          class="flex items-center justify-between gap-3 p-3.5 px-4 border-b border-line select-none flex-none"
+          :class="{ 'cursor-grab active:cursor-grabbing': side === 'bottom' }"
+          @pointerdown="startDrag"
+        >
+          <h3 v-if="title" :id="titleId" class="m-0 text-lg font-display text-ink truncate pointer-events-none">{{ title }}</h3>
           <button type="button" class="p-drawer-x w-auto bg-transparent border-0 text-[22px] leading-none text-muted cursor-pointer p-0 hover:text-ink" :aria-label="t('common.close')" @click="open = false">×</button>
         </header>
         <div class="flex-1 overflow-y-auto p-4"><slot /></div>
-        <footer v-if="$slots.footer" class="flex justify-end gap-2.5 p-3 px-4 border-t border-line"><slot name="footer" /></footer>
+        <footer v-if="$slots.footer" class="flex justify-end gap-2.5 p-3 px-4 border-t border-line flex-none"><slot name="footer" /></footer>
       </aside>
     </div>
   </Transition>
 </template>
 
 <style scoped>
+.p-drawer.is-dragging {
+  transition: none !important;
+}
+.p-drawer-handle-zone {
+  touch-action: none;
+}
+
 /* Backdrop fade */
 .p-drawer-anim-enter-active,
 .p-drawer-anim-leave-active {

@@ -2,6 +2,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { login, register } from '@/core/auth'
 import { t } from '@/core/i18n'
+import Drawer from '@/components/overlays/Drawer.vue'
 
 const props = defineProps<{ open: boolean; initialMode?: 'login' | 'register' }>()
 const emit = defineEmits<{ close: []; success: [mode: 'login' | 'register'] }>()
@@ -60,32 +61,39 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <div v-if="open" class="backdrop" @click.self="!busy && emit('close')">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-      <h3 id="auth-title">{{ mode === 'login' ? t('auth.login') : t('auth.registerTitle') }}</h3>
-      <form @submit.prevent="submit">
-        <template v-if="mode === 'register'">
-          <label class="lbl" for="auth-name">{{ t('auth.name') }}</label>
-          <input id="auth-name" ref="firstField" v-model="name" class="field" type="text" autocomplete="name" required />
-        </template>
-        <label class="lbl" for="auth-email">{{ t('auth.email') }}</label>
-        <input v-if="mode === 'login'" id="auth-email" ref="firstField" v-model="email" class="field" type="email"
-          autocomplete="email" required />
-        <input v-else id="auth-email" v-model="email" class="field" type="email" autocomplete="email" required />
-        <label class="lbl" for="auth-password">{{ t('auth.password') }}</label>
-        <input id="auth-password" v-model="password" class="field" type="password" required minlength="8"
-          :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" />
-        <p v-if="error" class="mt-2.5 text-sm font-bold text-danger" role="alert">{{ error }}</p>
-        <button type="button" class="inline-block mt-2.5 p-0 border-0 bg-transparent text-sm underline cursor-pointer text-ink hover:text-muted" @click="toggleMode">
-          {{ mode === 'login' ? t('auth.noAccount') : t('auth.haveAccount') }}
-        </button>
-        <div class="actions">
-          <button type="button" class="btn" :disabled="busy" @click="emit('close')">{{ t('common.cancel') }}</button>
-          <button type="submit" class="btn btn-primary" :disabled="busy">
-            {{ mode === 'login' ? t('auth.login') : t('auth.register') }}
+  <Drawer
+    :model-value="open"
+    :title="mode === 'login' ? t('auth.login') : t('auth.registerTitle')"
+    side="bottom"
+    @update:model-value="(val) => !val && (!busy && emit('close'))"
+  >
+    <div class="backdrop" style="position: static; inset: auto; background: none; backdrop-filter: none; padding: 0; display: block;" @click.self="!busy && emit('close')">
+      <div class="modal" style="position: static; border: 0; padding: 0; box-shadow: none; background: transparent; max-width: none;" role="region" aria-labelledby="auth-title">
+        <h3 id="auth-title" style="display: none;">{{ mode === 'login' ? t('auth.login') : t('auth.registerTitle') }}</h3>
+        <form @submit.prevent="submit" class="flex flex-col gap-3">
+          <template v-if="mode === 'register'">
+            <label class="lbl" for="auth-name">{{ t('auth.name') }}</label>
+            <input id="auth-name" ref="firstField" v-model="name" class="field" type="text" autocomplete="name" required />
+          </template>
+          <label class="lbl" for="auth-email">{{ t('auth.email') }}</label>
+          <input v-if="mode === 'login'" id="auth-email" ref="firstField" v-model="email" class="field" type="email"
+            autocomplete="email" required />
+          <input v-else id="auth-email" v-model="email" class="field" type="email" autocomplete="email" required />
+          <label class="lbl" for="auth-password">{{ t('auth.password') }}</label>
+          <input id="auth-password" v-model="password" class="field" type="password" required minlength="8"
+            :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" />
+          <p v-if="error" class="mt-2 text-sm font-bold text-danger" role="alert">{{ error }}</p>
+          <button type="button" class="inline-block mt-2 p-0 border-0 bg-transparent text-sm underline cursor-pointer text-ink hover:text-muted text-left" @click="toggleMode">
+            {{ mode === 'login' ? t('auth.noAccount') : t('auth.haveAccount') }}
           </button>
-        </div>
-      </form>
+          <div class="actions flex justify-end gap-2 mt-4 pt-4 border-t border-line">
+            <button type="button" class="btn" :disabled="busy" @click="emit('close')">{{ t('common.cancel') }}</button>
+            <button type="submit" class="btn btn-primary" :disabled="busy">
+              {{ mode === 'login' ? t('auth.login') : t('auth.register') }}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
+  </Drawer>
 </template>

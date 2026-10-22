@@ -68,7 +68,6 @@ async function onPromote(it: Idea): Promise<void> {
 </script>
 
 <template>
-  <h1>Idea Bank</h1>
   <p v-if="notice" class="muted" role="status">{{ notice }}</p>
   <p v-if="actionError" class="autherr" role="alert">{{ actionError }}</p>
   <div v-if="isPending" class="muted">Loading ideas…</div>

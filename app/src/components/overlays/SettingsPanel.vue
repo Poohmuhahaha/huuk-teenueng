@@ -12,6 +12,7 @@ import { PERMISSIONS } from '@/mock/db'
 import type { Permission, Role } from '@/mock/db'
 import Chip from '@/components/ui/Chip.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
+import InfoTip from '@/components/ui/InfoTip.vue'
 
 const { data: setup, isPending } = useSetup()
 const saveSetup = useSaveSetup()
@@ -316,8 +317,10 @@ const setupError = computed(() => {
     <!-- General Workspace Settings -->
     <section class="settings-section">
       <div class="settings-section-head">
-        <h2 class="settings-title">{{ t('setup.workspace') }} Details</h2>
-        <p class="settings-desc">Core planning year and workspace display configuration.</p>
+        <h2 class="settings-title flex items-center">
+          <span>{{ t('setup.workspace') }} Details</span>
+          <InfoTip text="Core planning year and workspace display configuration." />
+        </h2>
       </div>
       <div class="settings-grid3">
         <div class="settings-field-group">
@@ -348,8 +351,10 @@ const setupError = computed(() => {
     <!-- Option Lists (Single Source of Truth) -->
     <section class="settings-section">
       <div class="settings-section-head">
-        <h2 class="settings-title">{{ t('setup.optionLists') }}</h2>
-        <p class="settings-desc">Predefined taxonomy and categories used across planners and campaigns.</p>
+        <h2 class="settings-title flex items-center">
+          <span>{{ t('setup.optionLists') }}</span>
+          <InfoTip text="Predefined taxonomy and categories used across planners and campaigns." />
+        </h2>
       </div>
       <div class="settings-options-grid">
         <div v-for="l in LISTS" :key="l.key" class="settings-option-card">
@@ -361,7 +366,7 @@ const setupError = computed(() => {
             <input class="field" style="flex: 1;" v-model="draft[l.key]" :placeholder="`new ${t(l.labelKey).toLowerCase()}`"
               :aria-label="`New ${t(l.labelKey)}`" :disabled="!canSetup" :title="canSetup ? '' : t('auth.noPerm')"
               @keyup.enter="add(l.key)" />
-            <button class="btn" :disabled="!canSetup || addOption.isPending.value || !(draft[l.key] ?? '').trim()"
+            <button class="btn w-auto" :disabled="!canSetup || addOption.isPending.value || !(draft[l.key] ?? '').trim()"
               :title="canSetup ? '' : t('auth.noPerm')" @click="add(l.key)">{{ t('common.add') }}</button>
           </div>
         </div>
@@ -371,8 +376,10 @@ const setupError = computed(() => {
     <!-- Users Directory -->
     <section class="settings-section">
       <div class="settings-section-head">
-        <h2 class="settings-title">{{ t('setup.users') }}</h2>
-        <p class="settings-desc">Workspace member roles and permissions hierarchy.</p>
+        <h2 class="settings-title flex items-center">
+          <span>{{ t('setup.users') }}</span>
+          <InfoTip text="Workspace member roles and permissions hierarchy." />
+        </h2>
       </div>
       <div class="settings-list-container">
         <div v-for="u in setup.users" :key="u.name" class="settings-list-row">
@@ -380,7 +387,8 @@ const setupError = computed(() => {
             <span class="settings-item-name">{{ u.name }}</span>
             <span class="settings-role-badge">· {{ u.role }}</span>
           </div>
-          <button class="btn" :disabled="setup.users.length <= 1 || !canManage || removeUser.isPending.value"
+          <button class="settings-del-btn" :class="{ confirming: confirmId === `user:${u.name}` }"
+            :disabled="setup.users.length <= 1 || !canManage || removeUser.isPending.value"
             :title="canManage ? 'Remove user' : t('auth.noPerm')" :aria-label="`Remove user ${u.name}`"
             @click="confirmRemove(`user:${u.name}`, () => removeUsr(u.name))">
             {{ confirmId === `user:${u.name}` ? 'Confirm?' : '×' }}
@@ -393,7 +401,7 @@ const setupError = computed(() => {
             :title="canManage ? '' : t('auth.noPerm')">
             <option v-for="r in setup.roles" :key="r.name" :value="r.name">{{ r.name }}</option>
           </select>
-          <button class="btn btn-primary" :disabled="!canManage || addUser.isPending.value || !newName.trim()"
+          <button class="btn btn-primary w-auto" :disabled="!canManage || addUser.isPending.value || !newName.trim()"
             :title="canManage ? '' : t('auth.noPerm')" @click="addUsr">{{ t('common.add') }}</button>
         </div>
         <p v-if="addUser.error.value || removeUser.error.value" class="autherr" role="alert" style="margin: 8px 14px;">
@@ -406,17 +414,20 @@ const setupError = computed(() => {
     <template v-if="canManage">
       <section class="settings-section">
         <div class="settings-section-head">
-          <h2 class="settings-title">{{ t('setup.accounts') }}</h2>
-          <p class="settings-desc">{{ t('setup.accountsHint') }}</p>
+          <h2 class="settings-title flex items-center">
+            <span>{{ t('setup.accounts') }}</span>
+            <InfoTip :text="t('setup.accountsHint')" />
+          </h2>
         </div>
         <div class="settings-list-container">
           <div v-for="a in accountsQ.data.value ?? []" :key="a.email" class="settings-list-row">
             <div class="settings-account-info">
               <span class="settings-item-name">{{ a.name }}</span>
               <span class="settings-item-sub">· {{ a.email }}</span>
-              <span class="chip">· {{ a.sessions }} {{ t('setup.sessions') }}</span>
+              <span class="settings-session-chip">{{ a.sessions }} {{ t('setup.sessions') }}</span>
             </div>
-            <button class="btn" :disabled="!canManage || a.name === currentUser?.name || removeAccount.isPending.value"
+            <button class="settings-del-btn" :class="{ confirming: confirmId === `account:${a.email}` }"
+              :disabled="!canManage || a.name === currentUser?.name || removeAccount.isPending.value"
               :title="a.name === currentUser?.name ? 'You cannot delete your own account' : t('setup.removeAccount')"
               :aria-label="`Remove account ${a.email}`" @click="confirmRemove(`account:${a.email}`, () => removeAcc(a))">
               {{ confirmId === `account:${a.email}` ? 'Confirm?' : '×' }}
@@ -428,8 +439,10 @@ const setupError = computed(() => {
         </div>
 
         <div class="settings-subblock mt-5">
-          <h3 class="settings-subtitle">{{ t('setup.createAccount') }}</h3>
-          <p class="settings-desc">{{ t('setup.createAccountHint') }}</p>
+          <h3 class="settings-subtitle flex items-center">
+            <span>{{ t('setup.createAccount') }}</span>
+            <InfoTip :text="t('setup.createAccountHint')" />
+          </h3>
           <div class="settings-grid2">
             <div>
               <label class="lbl" for="acc-name">{{ t('setup.accountName') }}</label>
@@ -452,7 +465,7 @@ const setupError = computed(() => {
             </div>
           </div>
           <div class="row mt-3.5">
-            <button class="btn btn-primary" :disabled="createAccount.isPending.value" @click="addAccount">
+            <button class="btn btn-primary w-auto" :disabled="createAccount.isPending.value" @click="addAccount">
               {{ t('setup.createAccountBtn') }}
             </button>
           </div>
@@ -460,7 +473,7 @@ const setupError = computed(() => {
           <div v-if="tempPassword" role="status" class="settings-temp-box">
             <strong>{{ t('setup.tempPassword') }}</strong>
             <code class="settings-temp-code">{{ tempPassword }}</code>
-            <button class="btn" @click="copyTempPassword">{{ copiedTemp ? t('studio.copied') : t('setup.copyPassword') }}</button>
+            <button class="btn w-auto" @click="copyTempPassword">{{ copiedTemp ? t('studio.copied') : t('setup.copyPassword') }}</button>
           </div>
         </div>
       </section>
@@ -469,8 +482,10 @@ const setupError = computed(() => {
     <!-- Permissions Matrix -->
     <section class="settings-section">
       <div class="settings-section-head">
-        <h2 class="settings-title">{{ t('auth.perms') }}</h2>
-        <p class="settings-desc">Fine-grained access rights per role across features.</p>
+        <h2 class="settings-title flex items-center">
+          <span>{{ t('auth.perms') }}</span>
+          <InfoTip text="Fine-grained access rights per role across features." />
+        </h2>
       </div>
       <div class="settings-toggle-row mb-3.5">
         <label class="settings-checkbox-label">
@@ -487,7 +502,8 @@ const setupError = computed(() => {
               <th scope="col" v-for="r in roleDraft" :key="r.name">
                 <div class="flex items-center justify-between gap-1">
                   <span>{{ r.name }}</span>
-                  <button class="btn" style="margin-left: 6px; padding: 2px 6px; font-size: 12px;"
+                  <button class="settings-del-btn" style="width: 22px !important; height: 22px !important; min-width: 22px !important; font-size: 13px !important; margin-left: 6px;"
+                    :class="{ confirming: confirmId === `role:${r.name}` }"
                     :disabled="!canManage || roleDraft.length <= 1 || roleInUse(r.name) || removeRole.isPending.value"
                     :title="canManage ? (roleInUse(r.name) ? 'Role is in use' : '') : t('auth.noPerm')"
                     :aria-label="`Remove role ${r.name}`" @click="confirmRemove(`role:${r.name}`, () => removeRl(r.name))">
@@ -512,9 +528,9 @@ const setupError = computed(() => {
       <div class="row mt-3.5">
         <input class="field" style="flex: 1;" v-model="newRoleName" placeholder="new role" aria-label="New role name"
           :disabled="!canManage" :title="canManage ? '' : t('auth.noPerm')" @keyup.enter="addRl" />
-        <button class="btn" :disabled="!canManage || addRole.isPending.value || !newRoleName.trim()"
+        <button class="btn w-auto" :disabled="!canManage || addRole.isPending.value || !newRoleName.trim()"
           :title="canManage ? '' : t('auth.noPerm')" @click="addRl">{{ t('auth.addRole') }}</button>
-        <button class="btn btn-primary" :disabled="!canSetup || saveSetup.isPending.value"
+        <button class="btn btn-primary w-auto" :disabled="!canSetup || saveSetup.isPending.value"
           :title="canSetup ? '' : t('auth.noPerm')" @click="saveRoles">{{ t('auth.savePerms') }}</button>
       </div>
       <p v-if="setupError" class="autherr" role="alert" style="margin-top: 8px;">{{ setupError }}</p>

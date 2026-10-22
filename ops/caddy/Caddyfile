@@ -1,5 +1,5 @@
 # ops/caddy/Caddyfile — Canonical Single-File Production Config (Master Engineering SOP §4.2)
-{$APP_DOMAIN:localhost} {
+{$APP_DOMAIN::80, :8080} {
     encode zstd gzip
 
     # 1. Hardened security headers

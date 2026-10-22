@@ -25,7 +25,7 @@ const hubs: Hub[] = [
   { to: '/content', name: 'landing.hubContent', tagline: 'landing.hubContentTag', tabs: 'Studio · Feed preview · Hashtags', access: 'WRITE master' },
   { to: '/promote', name: 'landing.hubPromote', tagline: 'landing.hubPromoteTag', tabs: 'Campaigns · Meta Ads', access: 'WRITE master' },
   { to: '/analyze', name: 'landing.hubAnalyze', tagline: 'landing.hubAnalyzeTag', tabs: 'Performance · Finance', access: 'semi-computed' },
-  { to: '/settings', name: 'landing.hubSettings', tagline: 'landing.hubSettingsTag', tabs: 'Brand · Workspace · Members', access: 'owner' },
+  { to: '/branding', name: 'landing.hubSettings', tagline: 'landing.hubSettingsTag', tabs: 'Brand · Members · Connections', access: 'owner' },
 ]
 
 interface Tier {

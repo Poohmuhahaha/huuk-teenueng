@@ -13,7 +13,6 @@ export interface HubTab {
 export const HUB_TABS: Record<string, HubTab[]> = {
   '/dashboard': [
     { id: 'overview', label: 'Overview' },
-    { id: 'live', label: 'Live' },
     { id: 'ads', label: 'Ads' },
     { id: 'top', label: 'Top posts' },
   ],
@@ -35,9 +34,13 @@ export const HUB_TABS: Record<string, HubTab[]> = {
     { id: 'performance', label: 'Performance' },
     { id: 'finance', label: 'Finance' },
   ],
+  '/branding': [
+    { id: 'brand', label: 'Brand' },
+    { id: 'members', label: 'Members' },
+    { id: 'connections', label: 'Connections' },
+  ],
   '/settings': [
     { id: 'brand', label: 'Brand' },
-    { id: 'workspace', label: 'Workspace' },
     { id: 'members', label: 'Members' },
     { id: 'connections', label: 'Connections' },
   ],

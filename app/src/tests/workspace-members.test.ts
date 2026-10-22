@@ -107,12 +107,11 @@ describe('workspace members page', () => {
     expect(w.find('.member-row').exists()).toBe(false)
     w.unmount()
 
-    const { w: shell, router: shellRouter } = mountShell()
+    const { w: shell } = mountShell()
     await shell.find('.avatar').trigger('click')
     await vi.waitFor(() => {
-      expect(shellRouter.currentRoute.value.path).toBe('/settings')
+      expect(shell.find('.workspace-panel').exists()).toBe(true)
     }, { timeout: 8000 })
-    expect(shellRouter.currentRoute.value.query.tab).toBe('workspace')
     expect(navLabels(shell)).not.toContain('Members')
     shell.unmount()
   })
@@ -141,9 +140,9 @@ describe('workspace members page', () => {
 })
 
 describe('members route registration', () => {
-  it('redirects /members into the Settings hub (members tab)', async () => {
+  it('redirects /members into the Branding hub (members tab)', async () => {
     await appRouter.push('/members')
-    expect(appRouter.currentRoute.value.path).toBe('/settings')
+    expect(appRouter.currentRoute.value.path).toBe('/branding')
     expect(appRouter.currentRoute.value.query.tab).toBe('members')
   })
 })

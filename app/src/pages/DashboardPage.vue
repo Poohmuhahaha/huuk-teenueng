@@ -13,7 +13,6 @@ import DockBar from '@/components/ui/DockBar.vue'
 import KpiCard from '@/components/ui/KpiCard.vue'
 import BarChart from '@/components/ui/BarChart.vue'
 import LineChart from '@/components/ui/LineChart.vue'
-import LiveSection from '@/components/live/LiveSection.vue'
 import ProtectedModal from '@/components/overlays/ProtectedModal.vue'
 
 const router = useRouter()
@@ -78,6 +77,14 @@ const pillarBars = computed(() => {
   })
 })
 
+const PLATFORM_BRAND: Record<string, string> = {
+  facebook: '#1877F2',
+  meta: '#1877F2',
+  instagram: '#E4405F',
+  youtube: '#FF0000',
+  tiktok: '#0F0F0F',
+}
+
 const platformBars = computed(() => {
   if (!stats.value) return []
   const rows = postsQ.data.value ?? []
@@ -86,6 +93,7 @@ const platformBars = computed(() => {
     const plRows = rows.filter((r) => r.platforms.includes(label))
     const posted = plRows.filter((r) => r.status === 'Done').length
     const remaining = plRows.length - posted
+    const brand = label ? PLATFORM_BRAND[label.toLowerCase()] : undefined
     return {
       label: label || 'Direct',
       value,
@@ -93,6 +101,8 @@ const platformBars = computed(() => {
       posted,
       pending: remaining,
       sublabel: `${posted} posted · ${remaining} in progress`,
+      platform: brand ? label : undefined,
+      color: brand,
     }
   })
 })
@@ -192,8 +202,6 @@ function goMaster(): void {
 
 <template>
   <div class="dash-page" ref="root">
-    <h1>Dashboard</h1>
-
     <div class="dash-grid">
       <DockBar label="Dashboard controls">
         <MonthToggle v-model="month" v-model:year="year" />
@@ -226,30 +234,26 @@ function goMaster(): void {
             <!-- Views & Engagement Line Chart -->
             <div class="mt-6">
               <div class="flex items-center justify-between mb-2">
-                <h2 class="m-0 text-md font-bold tracking-tight">Views & Engagement Growth</h2>
+                <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Views & Engagement Growth</h2>
               </div>
               <LineChart :labels="trendData.labels" :series="trendData.series" :height="160" />
             </div>
 
             <div class="mt-6">
-              <h2 class="mb-2 text-md font-bold tracking-tight">Planned vs posted · by pillar</h2>
-              <BarChart :items="pillarBars" unit="topics" />
+              <h2 class="mb-2 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Planned vs posted · by pillar</h2>
+              <BarChart :items="pillarBars" />
             </div>
 
             <div class="grid2 mt-5">
               <div>
-                <h2 class="mb-2 text-md font-bold tracking-tight" style="margin-top: 0;">By platform</h2>
-                <BarChart :items="platformBars" unit="posts" />
+                <h2 class="mb-2 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By platform</h2>
+                <BarChart :items="platformBars" />
               </div>
               <div>
-                <h2 class="mb-2 text-md font-bold tracking-tight" style="margin-top: 0;">By status</h2>
-                <BarChart :items="statusBars" unit="topics" />
+                <h2 class="mb-2 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By status</h2>
+                <BarChart :items="statusBars" />
               </div>
             </div>
-          </template>
-
-          <template v-else-if="section === 'live'">
-            <LiveSection :limit="3" />
           </template>
 
           <template v-else-if="section === 'ads'">
@@ -262,16 +266,19 @@ function goMaster(): void {
                 <ul v-if="adsAlerts.length" class="mt-2.5 pl-4.5 text-warning text-sm-minus">
                   <li v-for="(a, i) in adsAlerts" :key="i">{{ a }}</li>
                 </ul>
-                <TableFrame>
-                  <thead><tr><th>{{ t('ads.campaign') }}</th><th>{{ t('ads.status') }}</th><th class="num">{{ t('ads.spend') }}</th></tr></thead>
-                  <tbody>
-                    <tr v-for="c in activeCampaigns" :key="c.id" style="cursor: default;">
-                      <td>{{ c.name }}</td>
-                      <td><span class="badge badge-success">{{ c.status }}</span></td>
-                      <td class="num">{{ adsMoney(adSpend(c.id) * 100) }}</td>
-                      </tr>
-                    </tbody>
-                </TableFrame>
+                <div v-if="activeCampaigns.length" class="grid gap-3 mt-3 sm:grid-cols-2">
+                  <div v-for="c in activeCampaigns" :key="c.id"
+                    class="border border-line rounded-xl bg-surface p-3.5 shadow-xs flex flex-col gap-2">
+                    <div class="flex items-start justify-between gap-2">
+                      <strong class="text-[13px] font-bold text-ink truncate">{{ c.name }}</strong>
+                      <span class="badge badge-success flex-none">{{ c.status }}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-muted">
+                      <span>{{ t('ads.spend') }}</span>
+                      <span class="text-sm font-bold text-ink font-mono">{{ adsMoney(adSpend(c.id) * 100) }}</span>
+                    </div>
+                  </div>
+                </div>
               </template>
               <p v-else class="muted">No active campaigns.</p>
             </section>
@@ -285,7 +292,7 @@ function goMaster(): void {
                 <tr v-for="t in stats.top5" :key="t.post.id" style="cursor: default;">
                   <td>{{ t.post.topic }}</td>
                   <td>{{ t.post.status }}</td>
-                  <td class="num">{{ t.views.toLocaleString('en-US') }}</td>
+                  <td>{{ t.views.toLocaleString('en-US') }}</td>
                   <td><button class="btn" @click="askEdit">Edit</button></td>
                 </tr>
               </tbody>

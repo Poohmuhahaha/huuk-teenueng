@@ -27,7 +27,7 @@ export interface Screen {
 export const screens: Screen[] = [
   // Brand Identity leads the deck: it is the workspace's foundation, so it is
   // the front-most card (and the landing screen at "/").
-  { path: '/settings', to: '/settings', label: 'Settings', match: ['/settings'], component: SettingsPage, sheet: 'Settings', access: 'owner', tabs: HUB_TABS['/settings'] },
+  { path: '/branding', to: '/branding', label: 'Branding', match: ['/branding', '/settings', '/brand'], component: SettingsPage, sheet: 'Branding', access: 'owner', tabs: HUB_TABS['/branding'] },
   { path: '/dashboard', to: '/dashboard', label: 'Home', match: ['/dashboard', '/home'], component: DashboardPage, sheet: 'Home', access: 'computed', tabs: HUB_TABS['/dashboard'] },
   { path: '/plan', to: '/plan', label: 'Plan', match: ['/plan'], component: PlanPage, sheet: 'Plan', access: 'WRITE master', tabs: HUB_TABS['/plan'] },
   { path: '/content', to: '/content', label: 'Content', match: ['/content'], component: ContentPage, sheet: 'Content', access: 'WRITE master', tabs: HUB_TABS['/content'] },

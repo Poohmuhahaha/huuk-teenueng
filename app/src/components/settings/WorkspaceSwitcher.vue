@@ -11,6 +11,7 @@ import {
 } from '@/core/queries'
 import { activeWorkspaceId, setActiveWorkspace } from '@/core/workspace'
 import { t } from '@/core/i18n'
+import InfoTip from '@/components/ui/InfoTip.vue'
 
 const qc = useQueryClient()
 const { data: setup } = useSetup()
@@ -118,8 +119,10 @@ async function removeWs(): Promise<void> {
 <template>
   <section class="settings-section ws-section">
     <div class="settings-section-head">
-      <div class="ws-head">{{ t('ws.title') }}</div>
-      <p class="settings-desc">Switch, rename, or create workspaces for your brand and client management.</p>
+      <div class="ws-head flex items-center">
+        <span>{{ t('ws.title') }}</span>
+        <InfoTip text="Switch, rename, or create workspaces for your brand and client management." />
+      </div>
     </div>
     <div class="ws-wrap">
       <button type="button" class="wire ws-trigger" :title="t('ws.switch')"

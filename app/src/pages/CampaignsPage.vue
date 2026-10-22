@@ -231,8 +231,6 @@ async function destroy(): Promise<void> {
 
 <template>
   <div class="camp-page" ref="root">
-    <h1>{{ t('campaign.title') }}<InfoTip :text="t('campaign.hint')" /></h1>
-
     <div class="camp-grid">
       <DockBar label="Campaign controls">
         <MonthToggle :model-value="month" :year="year" @update:model-value="setMonth" @update:year="setYear" />

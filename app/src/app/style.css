@@ -241,7 +241,10 @@ input[type="color"] { width: auto; }
    back/forward gesture — only the deck's own handler reacts to horizontal
    scroll gestures, everywhere else nothing should happen. */
 html,
-body { overscroll-behavior-x: none; }
+body {
+  height: 100%;
+  overscroll-behavior-x: none;
+}
 
 body {
   margin: 0;
@@ -260,7 +263,16 @@ a { color: inherit; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* ---- app frame ---- */
-.app { min-height: 100vh; display: flex; flex-direction: column; }
+.app {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 .topbar {
   display: flex; align-items: center; gap: 20px;
   padding: 14px 28px;
@@ -709,7 +721,7 @@ button.wire { font-family: inherit; cursor: pointer; }
 .guide-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 /* settings popup — reuses the guide overlay shell */
 .settings-body { max-height: 68vh; overflow-y: auto; padding-right: 4px; }
-.main { flex: 1; width: 100%; max-width: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
+.main { flex: 1 1 0%; width: 100%; max-width: none; margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; }
 
 /* ---- primitives ---- */
 h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 6px; }
@@ -966,13 +978,25 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 
 /* screen deck — fixed 402px cards, one-step snap
    desktop: cards march left to right with the previous one peeking · phone: [card][peek] */
+.deck-container {
+  flex: 1 1 0%;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .deck {
   position: relative; display: flex; gap: 20px;
   overflow-x: auto; overflow-y: hidden;
-  margin: 20px 0 0;
+  margin: 0;
   scroll-snap-type: x mandatory; scroll-behavior: smooth;
   scroll-padding-inline: 12.5vw;
-  padding: 0; height: 100%; min-height: 0; min-width: 0;
+  padding: 16px 0 20px;
+  flex: 1 1 0%;
+  height: 100%; min-height: 0; min-width: 0;
+  box-sizing: border-box;
   scrollbar-width: none;
   /* Native horizontal panning (touchpad swipe / touch) with momentum + snap;
      `pan-y` keeps vertical page/card scroll working. */
@@ -983,18 +1007,107 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 .deck:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .slide {
   flex: 0 0 402px; scroll-snap-align: start; scroll-snap-stop: always;
-  min-width: 0; padding: 0; display: flex;
+  min-width: 0; padding: 0; display: flex; flex-direction: column;
+  height: 100%; min-height: 0; gap: 10px;
   transition: opacity 0.3s ease;
 }
 .slide-card {
-  flex: 1; position: relative;
+  flex: 1 1 0%; position: relative;
   border: 1px solid var(--faint); border-radius: 24px;
   background: var(--surface); overflow: hidden;
   box-shadow: var(--shadow-md);
-  /* Topbar + social bar + footer are chrome; the card fills the rest.
-     Trimmed 50px so every card sits shorter than the viewport. */
-  height: calc(100vh - var(--shell-bars) - 50px);
-  min-height: 420px;
+  height: auto;
+  min-height: 0;
+}
+.slide-dock {
+  flex: none;
+  width: 100%;
+}
+.slide-dock:empty {
+  display: none;
+}
+
+/* Desktop: cards are full-size from the start (consistent full width across all slides) */
+@media (min-width: 641px) {
+  .deck {
+    scroll-padding-inline: calc((100vw - min(1368px, calc(100vw - 100px))) / 2);
+    scroll-snap-type: x mandatory;
+  }
+  .slide.spacer {
+    flex: 0 0 calc((100vw - min(1368px, calc(100vw - 100px))) / 2 - 20px) !important;
+  }
+  .slide {
+    flex: 0 0 min(1368px, calc(100vw - 100px));
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    transition: opacity 0.3s ease;
+  }
+  .slide.active {
+    flex: 0 0 min(1368px, calc(100vw - 100px));
+  }
+  .slide .slide-card {
+    transition: opacity 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .slide:not(.active) .slide-card {
+    border-color: var(--line);
+    opacity: 0.55;
+    cursor: pointer;
+  }
+  .slide:not(.active):hover .slide-card {
+    opacity: 0.85;
+  }
+  .slide.active .slide-card {
+    border-color: var(--line);
+    box-shadow: var(--shadow-md);
+    opacity: 1;
+  }
+  .brandpage .slide-card,
+  .brandpage .slide.active .slide-card,
+  .brandpage .slide:not(.active) .slide-card {
+    border: none !important;
+    outline: none !important;
+  }
+  .slide:not(.active) .slide-dock {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+  }
+  .slide.active .slide-dock {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+  }
+  .slide-dock .dock-bar .month-toggle,
+  .slide-dock .dock-bar .month-toggle + .dock-sep,
+  .slide-dock .dock-bar .dock-sep:has(+ .month-toggle) {
+    display: none !important;
+  }
+}
+
+.topbar-month {
+  display: flex;
+  align-items: center;
+}
+.topbar-month .month-toggle {
+  width: auto;
+  height: 38px;
+  border-radius: 9999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 0 4px;
+  box-shadow: none;
+}
+.topbar-month .month-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 0 8px;
+}
+@media (max-width: 640px) {
+  .topbar-month {
+    display: none !important;
+  }
 }
 .card-scroll {
   height: 100%; overflow-y: auto; overscroll-behavior: contain;
@@ -1021,49 +1134,22 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
   scroll-snap-align: none; scroll-snap-stop: normal;
 }
 
-/* full-page mode — active card only, centred with a gutter (never edge to
-   edge). Height never changes, and the reveal is a horizontal clip animation
-   (no scaling up/down). The JS transition targets the same rect. */
-.deck.full { scroll-padding-inline: 0; gap: 0; padding: 0 24px; }
-.deck.full .slide {
-  flex-basis: 0; opacity: 0; padding: 0; overflow: hidden;
-  pointer-events: none;
-}
-.deck.full .slide.active {
-  flex-basis: 100%; opacity: 1; padding: 0; overflow: visible;
-  pointer-events: auto;
-}
+/* full-page deck mode: cards keep full width naturally */
+.deck.full { scroll-padding-inline: 0; gap: 20px; }
 .deck.full .slide.active .slide-card {
   max-width: none;
   margin: 0;
 }
 @media (max-width: 640px) {
-  .deck { scroll-padding-inline: 10px; gap: 20px; height: 100%; margin-top: 0; }
+  .deck { scroll-padding-inline: 10px; gap: 20px; height: 100%; margin-top: 0; padding: 0 0 calc(22px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+  .slide { flex-basis: min(402px, calc(100vw - 20px)); height: 100%; gap: 10px; }
+  .slide-card { height: auto; }
   /* Phones: 10px under the topbar, then the card sits flush under the pills
-     (no margin). 10 + 61 + 61 + 0 + 10 chrome = 142;
-     no tab row: 10 + 61 + 0 + 10 = 81.
-     Card content starts 10px under the card edge (was 40px). */
+     (no margin). Card content starts 10px under the card edge. */
   .app header.topbar { margin-top: 10px; top: 10px; }
   .card-scroll { padding: 10px 18px 18px; }
-  .slide-card { height: calc(100vh - 142px); }
-  .app:not(:has(> nav.subnavbar)) .slide-card { height: calc(100vh - 81px); }
-  /* Phones: every dockbar lives below its card, outside it — the card
-     shrinks by that 72px zone (10 gap + ~52 buttons + 10 pad) so the total
-     display height stays the same. Cards without a dock keep full height. */
-  .slide:has(.dock) .slide-card { height: calc(100vh - 214px); }
-  .app:not(:has(> nav.subnavbar)) .slide:has(.dock) .slide-card { height: calc(100vh - 153px); }
-  .slide:has(.dock) .dock {
-    position: fixed; bottom: 10px; left: 0; right: 0; z-index: 30;
-    margin: 0; background: transparent; border: 0;
-  }
-  .slide:not(.active):has(.dock) .dock { display: none; }
-  /* Uniform dock height so the card→buttons gap is 10px on every page. */
-  .slide:has(.dock) .dock-bar { min-height: 62px; }
   /* No full-page expand on phones — the card already fills the viewport. */
   .expand-btn { display: none; }
-  /* Snap pins every card's left edge at 10px, so full-bleed-minus-margins
-     width gives symmetric 10/10 breathing (optically centered). */
-  .slide { flex-basis: min(402px, calc(100vw - 20px)); }
   .slide.spacer { flex-basis: 10px; }
   /* Phone finger-swipe between cards: let horizontal pans chain out of the
      card to the deck (the swipe dies under `contain`). Vertical stays
@@ -1078,7 +1164,7 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 }
 
 /* native shell grid — 1 : 3 : 3 : 1, full screen (04 §1) */
-.shellgrid { width: 100%; max-width: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
+.shellgrid { flex: 1 1 0%; width: 100%; max-width: none; margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; }
 
 @media (max-width: 860px) {
   .grid2, .grid3, .grid4, .grid6, .steps { grid-template-columns: 1fr 1fr; }
@@ -1990,7 +2076,7 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 /* Content column — no effect on narrow deck cards, keeps wide (full-page)
    cards readable without snapping mid-animation. */
 .card-scroll > * {
-  max-width: 1100px;
+  max-width: 1368px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -2286,6 +2372,11 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   max-height: 100%;
   overscroll-behavior: contain;
 }
+/* Planner: only the table inside the card — TableFrame's rounded box read as
+   a second card nested in the slide card. Rows keep their hairlines. */
+.card-scroll.planner-scroll .planner-main .tblwrap {
+  border: 0; border-radius: 0; background: transparent;
+}
 .card-scroll.planner-scroll .planner-detail,
 .card-scroll.camp-scroll .camp-detail,
 .card-scroll.planner-scroll .planner-grid > .p-drawer,
@@ -2335,6 +2426,8 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   max-height: 100%;
   overscroll-behavior: contain;
 }
+
+
 
 /* Dashboard KPI grid — the global single-column hub rule stacks every grid;
    a data summary reads better compact, so the KPI row keeps its columns at
@@ -2391,7 +2484,7 @@ header.topbar .nav-toggle-group {
 header.topbar .navlink {
   font-size: 14px; font-weight: 500; letter-spacing: 0.01em;
   color: rgba(20, 20, 25, 0.55);
-  padding: 10px 15px; border: 0; border-radius: 999px;
+  padding: 10px 15px; border: 0 !important; border-radius: 999px;
   transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
 }
 header.topbar .navlink:hover,
@@ -2444,30 +2537,77 @@ header.topbar .nav-burger span:first-child { top: 15px; }
 header.topbar .nav-burger span:last-child { top: 23px; }
 header.topbar .nav-burger.open span:first-child { top: 19px; transform: rotate(45deg); }
 header.topbar .nav-burger.open span:last-child { top: 19px; transform: rotate(-45deg); }
-/* Main-nav picker: on phones the ≡ burger is replaced by one long
-   tabselect-style button (current hub + caret) opening the hub menu.
-   Desktop always keeps the logo + links row, so the picker hides there. */
+/* Main-nav: desktop displays navigation buttons; mobile uses picker in .in-topbar */
+header.topbar .links { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+header.topbar .brand { flex: 1 0 0%; display: flex; align-items: center; min-width: 100px; }
+header.topbar .side { flex: 1 0 0%; display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 100px; }
 header.topbar .in-topbar { display: none; }
-header.topbar .in-topbar .tabselect-btn { width: 100%; display: flex; justify-content: center; align-items: center; padding: 8px 4px; }
+header.topbar .in-topbar .tabselect-btn {
+  width: auto;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+header.topbar .in-topbar .tabselect-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+header.topbar .in-topbar .tabselect-btn:active {
+  transform: scale(0.98);
+}
 /* Picker label reads as the page h1: serif display, uppercase. All-caps sits
    optically high in its line box, so nudge it down (transform: no layout). */
 header.topbar .in-topbar .tabselect-label {
   font-family: var(--font-display);
   text-transform: uppercase;
   font-weight: 700;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1.05;
   letter-spacing: -0.01em;
-  transform: translateY(0.08em);
+  transform: translateY(0.06em);
 }
-header.topbar .in-topbar .tabselect-menu { left: 50%; transform: translateX(-50%); }
-/* Main menu reads bigger: roomier rows for the hub list. */
-header.topbar .in-topbar .tabselect-menu { min-width: 240px; padding: 10px; }
-header.topbar .in-topbar .tabselect-item { font-size: 16px; padding: 12px 14px; border-radius: 14px; }
-header.topbar .in-topbar .tabselect-check { font-size: 14px; }
+header.topbar .in-topbar .tabselect-caret {
+  font-size: 13px;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+header.topbar .in-topbar .tabselect-btn.expanded .tabselect-caret {
+  transform: rotate(180deg);
+}
+header.topbar .in-topbar .tabselect-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 240px;
+  padding: 8px;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
+}
+header.topbar .in-topbar .tabselect-item {
+  font-size: 15px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+header.topbar .in-topbar .tabselect-item.active {
+  background: rgba(0, 0, 0, 0.05);
+  font-weight: 700;
+}
 .app.on-brand header.topbar .nav-burger { display: none; }
-.app.on-brand .brandpage .brand-head { display: none; }
-/* Single-button tab picker (select mode): ghost button + dropdown menu. */
+.brand-head { display: none !important; }
+.slide-card h1, .card-scroll h1 { display: none !important; }
 .tabselect { position: relative; min-width: 0; }
 .tabselect-btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -2567,9 +2707,9 @@ header.topbar .in-topbar .tabselect-check { font-size: 14px; }
   /* Phones: the topbar picker already names the hub — drop every in-card
      h1 so pages start at their content. */
   .app h1 { display: none; }
-  /* Mobile only: taller dashboard KPI cards so the half-empty gap above the
-     sparkline breathes and short decks fill the viewport. */
-  .dash-main .grid6 > * { min-height: 168px; }
+  /* Mobile only: keep dashboard KPI cards compact — a tall card left a dead
+     gap between the number and the sparkline. */
+  .dash-main .grid6 > * { min-height: 126px; }
 }
 /* Very small phones: shave the enlarged pills just enough that 4 tabs
    (Brand/Workspace/Members/Connections) fit a 390px viewport. */
@@ -2618,21 +2758,47 @@ header.topbar .in-topbar .tabselect-check { font-size: 14px; }
 .planner-grid > .dock,
 .camp-grid > .dock { grid-column: 1 / -1; }
 .dock {
-  order: 999; flex: none; margin-top: auto;
-  position: sticky; bottom: 0; z-index: 30;
-  display: flex; background: var(--surface); border-top: 1px solid var(--line);
+  width: 100%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
 }
 .dock-bar {
-  flex: 1 1 auto; max-width: none;
-  background: transparent; border: 0; border-radius: 0; box-shadow: none;
-  display: flex; align-items: center; gap: 4px;
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  min-height: 48px;
+}
+.brandpage .dock-bar,
+.slide-dock .dock-bar {
+  width: 100%;
+}
+.brandpage .dock-bar .btn,
+.brandpage .dock .btn {
+  height: 48px;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+.deck.full .dock-bar {
+  max-width: 440px;
+  margin: 0 auto;
 }
 /* Dock toggle keeps its pill (border + surface + curve) instead of bare
    segments, so the month control reads as one control in the dock. */
 .dock .month-toggle {
   background: var(--surface); border: 1px solid var(--line); border-radius: 9999px; box-shadow: none;
-  padding: 2px; height: 44px; width: auto; flex: 1 1 auto; min-width: 0;
+  padding: 2px; height: 48px; width: auto; flex: 1 1 auto; min-width: 0;
 }
 /* Fixed label width (fits "September 2026" + padding + ▾) so the dock never resizes on month change. */
 .dock .month-toggle > span, .dock .month-toggle > button.month-label { flex: none; width: 156px; }
@@ -2641,9 +2807,2094 @@ header.topbar .in-topbar .tabselect-check { font-size: 14px; }
 .month-toggle .month-label { display: flex; align-items: center; justify-content: center; text-align: center; position: relative; width: 100%; }
 .month-toggle .month-label > span[aria-hidden="true"] { position: static; transform: none; margin-left: 4px; flex: none; }
 .dock-sep { width: 1px; align-self: stretch; margin: 6px 0; background: var(--faint); }
-.dock .btn-icon { width: 44px; height: 44px; flex: none; font-size: 22px; }
+.dock .btn-icon { width: 48px; height: 48px; flex: none; font-size: 24px; }
 /* Wizard footer: keep step buttons centred as a pair. */
 .brandpage .dock-bar { justify-content: center; }
 .card-scroll.dash-scroll .dash-grid { grid-template-columns: minmax(0, 1fr); }
 .card-scroll.planner-scroll .planner-grid,
 .card-scroll.camp-scroll .camp-grid { grid-template-columns: 340px minmax(0, 1fr); }
+
+/* ---- auth pages: mobile WHOOP style + desktop split ---- */
+.loginpage {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #060d17 url('/login-art.jpg') center top / cover no-repeat !important;
+}
+
+/* Mobile WHOOP overlay */
+.whoop-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 24px 24px calc(28px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(
+    180deg,
+    rgba(6, 13, 23, 0) 0%,
+    rgba(6, 13, 23, 0) 38%,
+    rgba(6, 13, 23, 0.55) 52%,
+    rgba(6, 13, 23, 0.88) 64%,
+    rgba(6, 13, 23, 0.98) 78%,
+    #060d17 100%
+  );
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.whoop-brand {
+  margin: 0 0 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.whoop-logo {
+  font-family: var(--font-display, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-size: clamp(42px, 10vw, 54px);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: #ffffff;
+  text-transform: uppercase;
+  margin: 0;
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+
+.whoop-reg {
+  font-size: 0.32em;
+  font-weight: 600;
+  margin-left: 3px;
+  opacity: 0.85;
+  line-height: 1;
+}
+
+.whoop-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.whoop-btn {
+  width: 100%;
+  height: 54px;
+  border-radius: 9999px;
+  font-size: 13.5px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, opacity 0.15s ease, background-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.whoop-btn:active {
+  transform: scale(0.985);
+}
+
+.whoop-btn-primary {
+  background: #ffffff;
+  color: #060d17;
+  border: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.whoop-btn-primary:hover {
+  background: #f4f4f5;
+}
+
+.whoop-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.whoop-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.whoop-tagline {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.whoop-tagline strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
+/* Mobile Bottom Sheet */
+.lp-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+
+.lp-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lp-card {
+  position: fixed;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  z-index: 100;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff !important;
+  border: 0 !important;
+  border-radius: 24px 24px 0 0 !important;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35) !important;
+  padding: 8px 24px calc(28px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  transform: translateY(105%);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lp-card.sheet-open {
+  transform: translateY(0);
+}
+
+.lp-card.is-dragging {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.lp-sheet-handle-bar {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0 16px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+}
+
+.lp-sheet-handle-bar:active {
+  cursor: grabbing;
+}
+
+.lp-sheet-handle {
+  width: 44px;
+  height: 5px;
+  border-radius: 9999px;
+  background: #d4d4d8;
+  pointer-events: none;
+}
+
+.lp-sheet-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 0;
+  background: #f4f4f5;
+  color: var(--ink);
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.lp-sheet-close:hover {
+  background: #e4e4e7;
+}
+
+.lp-form { width: 100%; max-width: 360px; }
+.lp-card h1 {
+  font-family: var(--font);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  text-align: center;
+  margin: 0;
+  color: var(--ink);
+}
+.lp-sub { margin: 6px 0 22px; font-size: 13.5px; color: var(--muted); text-align: center; }
+.loginpage .lbl { color: var(--ink); font-weight: 600; margin: 0 0 6px; }
+.loginpage .field,
+.loginpage input.field,
+.loginpage input:not([type="checkbox"]):not([type="radio"]) {
+  width: 100%;
+  height: 48px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  font-size: 14.5px;
+  background: #f4f4f5 !important;
+  border: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  border-radius: 10px !important;
+  color: var(--ink);
+  box-sizing: border-box;
+  transition: background 0.15s, border-color 0.15s;
+}
+.loginpage .field:focus,
+.loginpage input.field:focus,
+.loginpage input:not([type="checkbox"]):not([type="radio"]):focus {
+  background: #ffffff !important;
+  border-color: var(--ink) !important;
+  border-bottom-color: var(--ink) !important;
+  outline: none;
+}
+.lp-remember {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  margin-top: 2px;
+}
+.lp-remember input { width: 18px; height: 18px; margin: 0; accent-color: var(--ink); }
+.loginpage .lp-submit,
+.loginpage button.lp-submit {
+  width: 100%;
+  height: 48px;
+  margin-top: 22px;
+  border: 0;
+  border-radius: 10px;
+  background: #0a0a0a !important;
+  color: #ffffff !important;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.loginpage .lp-submit:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.loginpage .lp-submit:active:not(:disabled) {
+  transform: scale(0.99);
+}
+.lp-foot { margin: 22px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
+.lp-link {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.lp-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.lp-hero {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .loginpage {
+    position: static;
+    min-height: 100vh;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 16px;
+    padding: 16px;
+    max-width: none;
+    background: #ffffff !important;
+    overflow: visible;
+  }
+  .whoop-view,
+  .lp-backdrop,
+  .lp-sheet-handle-bar,
+  .lp-sheet-handle,
+  .lp-sheet-close {
+    display: none !important;
+  }
+  .lp-card {
+    position: static !important;
+    transform: none !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+    order: 1;
+    max-width: none;
+    min-height: calc(100vh - 32px);
+    padding: 48px;
+    background: #ffffff !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  .lp-card h1 {
+    font-size: 30px;
+  }
+  .lp-hero {
+    order: 2;
+    display: block !important;
+    width: 100% !important;
+    max-width: none;
+    height: auto;
+    min-height: calc(100vh - 32px);
+    border-radius: 22px;
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+    background: #0f172a url('/login-art.jpg') center / cover no-repeat;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    box-sizing: border-box;
+  }
+  .lp-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(10, 4, 24, 0.08) 25%, rgba(10, 4, 24, 0.72) 100%);
+    pointer-events: none;
+  }
+  .lp-mark {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25), 0 8px 24px rgba(0, 0, 0, 0.32);
+    z-index: 2;
+  }
+  .lp-tagline {
+    position: absolute;
+    left: 32px;
+    right: 32px;
+    bottom: 32px;
+    font-size: clamp(26px, 2.3vw, 36px);
+    line-height: 1.18;
+    color: #fff;
+    margin: 0;
+    z-index: 2;
+  }
+  .lp-tagline strong {
+    font-weight: 700;
+  }
+}
+
+/* ---- Brand Guideline Book & Card Enhancements ---- */
+/* Card scroll container hosting the Brand page: eliminate outer padding so the card fills edge-to-edge */
+.card-scroll.card-scroll-brand,
+.card-scroll:has(.brandpage),
+.slide-card:has(.brandpage) .card-scroll {
+  padding: 0 !important;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+.card-scroll.card-scroll-brand > .hubpage,
+.hubpage.hubpage-brand,
+.hubpage:has(.brandpage) {
+  padding: 0 !important;
+  margin: 0 !important;
+  height: 100%;
+  width: 100%;
+}
+
+.brandpage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  align-content: start;
+  gap: 0;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: inherit;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.brandpage.has-custom-bg {
+  position: relative;
+  background-image: var(--brand-bg-desktop);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: inherit;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+@media (max-width: 640px) {
+  .brandpage.has-custom-bg {
+    background-image: var(--brand-bg-mobile, var(--brand-bg-desktop));
+  }
+}
+
+/* Custom background: smooth bottom fade gradient (as requested by user) without any text-shadow */
+.brandpage.has-custom-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  display: block !important;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.05) 30%,
+    rgba(0, 0, 0, 0.45) 65%,
+    rgba(0, 0, 0, 0.88) 100%
+  ) !important;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.brandpage.has-custom-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Step 0 Hero: Justified to the bottom-left, no text-shadow, smooth bottom fade */
+.brandpage .brand-hero,
+.brandpage.has-custom-bg .brand-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  text-align: left;
+  min-height: 100%;
+  height: 100%;
+  padding: 48px 36px 40px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-sizing: border-box;
+}
+
+/* Ensure v-show="false" (inline display: none) is never overridden on any brand step */
+.brandpage .brand-body[style*="display: none"],
+.brandpage [style*="display: none"] {
+  display: none !important;
+}
+
+.brandpage .brand-hero .brand-prompt {
+  font-family: var(--font-display);
+  font-size: clamp(15px, 2.8vw, 18px);
+  line-height: 1.3;
+  text-align: left !important;
+  color: var(--muted);
+  margin: 0 0 10px 0 !important;
+  text-shadow: none !important;
+  letter-spacing: 0.01em;
+}
+
+.brandpage.has-custom-bg .brand-hero .brand-prompt {
+  color: rgba(255, 255, 255, 0.88) !important;
+  text-shadow: none !important;
+}
+
+.brandpage .brand-hero .field,
+.brandpage #brand-channel {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 2px solid var(--line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-align: left !important;
+  font-size: clamp(28px, 5vw, 44px) !important;
+  font-weight: 700 !important;
+  padding: 8px 0 !important;
+  max-width: 640px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  color: var(--ink) !important;
+  text-shadow: none !important;
+}
+
+.brandpage .brand-hero .field:focus,
+.brandpage #brand-channel:focus {
+  border-bottom-color: var(--ink) !important;
+  outline: none !important;
+}
+
+.brandpage.has-custom-bg .brand-hero .field,
+.brandpage.has-custom-bg #brand-channel {
+  color: #ffffff !important;
+  border-bottom-color: rgba(255, 255, 255, 0.6) !important;
+  text-shadow: none !important;
+}
+
+.brandpage.has-custom-bg .brand-hero .field:focus,
+.brandpage.has-custom-bg #brand-channel:focus {
+  border-bottom-color: #ffffff !important;
+}
+
+/* Other brand steps: balanced padding and layout inside the 16:9 card */
+.brandpage .brand-body:not(.brand-hero) {
+  padding: 24px 32px;
+  box-sizing: border-box;
+}
+
+.brandpage.has-custom-bg .brand-body:not(.brand-hero) {
+  background: rgba(10, 14, 22, 0.76);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-radius: inherit;
+  color: #f8fafc;
+  min-height: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Compact, sleek fields inside brand steps: override giant 26px margins */
+.brandpage .brand-body:not(.brand-hero) .field,
+.brandpage .brand-body:not(.brand-hero) input.field {
+  width: 100% !important;
+  padding: 9px 13px !important;
+  margin-bottom: 0 !important;
+  font-size: 13.5px !important;
+  line-height: 1.4 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: none !important;
+  outline: none !important;
+  border-radius: 8px !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  transition: background 0.15s ease;
+}
+
+.brandpage .brand-body:not(.brand-hero) .field:focus,
+.brandpage .brand-body:not(.brand-hero) input.field:focus {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.brandpage .brand-body:not(.brand-hero) .lbl {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  margin-bottom: 5px !important;
+}
+
+/* Step 1: Voice & Rules balanced 2-column layout */
+.brand-voice-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+  width: 100%;
+}
+
+.brand-voice-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.brand-field-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-voice-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.brand-voice-panels .panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 240px;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.brand-voice-panels .panel strong {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 6px;
+}
+
+.brand-voice-panels .panel ul {
+  flex: 1 1 auto;
+}
+
+.brand-voice-panels .panel .row {
+  margin-top: auto;
+  gap: 8px;
+}
+
+/* Step 2: Logos - compact 3-column slots */
+.brand-logos-step .logo-preview,
+.brandpage .logo-preview {
+  height: 130px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: none !important;
+  border-radius: 10px !important;
+}
+
+.brandpage .logo-slot {
+  gap: 6px !important;
+}
+
+.brandpage .logo-slot .row {
+  gap: 8px !important;
+  margin-top: 4px;
+}
+
+.brandpage .logo-slot .btn {
+  border: none !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+}
+
+/* Step 3: Palette - borderless sleek glass */
+.brandpage .palette-strip {
+  border: none !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  margin-bottom: 16px !important;
+}
+
+.brandpage .palette-card {
+  border: none !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.brandpage .palette-tile {
+  border: none !important;
+  border-radius: 8px !important;
+}
+
+/* Zero stroke on all panels */
+.brandpage.has-custom-bg .panel {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  border: none !important;
+  border-radius: 12px;
+  color: #ffffff;
+}
+
+/* Finished State: Elegant, centered, zero AI slop, zero emoji */
+.brandpage .brand-finished-hero {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  min-height: 100% !important;
+  height: 100% !important;
+  padding: 40px !important;
+  box-sizing: border-box !important;
+}
+
+.brand-finished-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 520px;
+  width: 100%;
+  background: rgba(10, 14, 22, 0.72);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  padding: 38px 46px;
+  border-radius: 20px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.38);
+  border: none !important;
+}
+
+.brand-finished-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 12px;
+}
+
+.brand-finished-name {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4.5vw, 40px);
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 10px 0;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.brand-finished-desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 26px 0;
+  line-height: 1.5;
+}
+
+.brand-finished-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-finished-export {
+  background: #ffffff !important;
+  color: #090d16 !important;
+  font-weight: 650 !important;
+  font-size: 13.5px !important;
+  padding: 10px 24px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-finished-export:hover {
+  background: rgba(255, 255, 255, 0.92) !important;
+  transform: translateY(-1px);
+}
+
+.btn-finished-review {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 13.5px !important;
+  padding: 10px 22px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-finished-review:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* ---- Brand Guideline Book Dock Row: Transparent background, no white BG ---- */
+.brand-dock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 9999px;
+  padding: 4px 0 !important;
+  box-shadow: none !important;
+  box-sizing: border-box;
+  min-height: 48px;
+}
+
+/* Stepper navigation on the left: Back, Chapter Nav Tabs, Next grouped together */
+.brand-dock-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.brand-dock-row .brand-book-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent !important;
+}
+
+/* Tools on the right: Background and Export PDF grouped together */
+.brand-dock-tools,
+.brand-dock-row .brand-book-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  margin-left: auto;
+}
+
+.brand-dock-row .btn-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px !important;
+  padding: 0 14px !important;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--surface) !important;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.brand-dock-row .btn-tool:hover,
+.brand-dock-row .btn-tool.active {
+  background: var(--wash) !important;
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* ---- Chapter Toggle Dropdown (Sleek Minimal Control requested by user) ---- */
+.brand-chapter-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.brand-chapter-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  height: 38px !important;
+  padding: 0 14px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  border: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+
+.brand-chapter-toggle:hover,
+.brand-chapter-toggle.active {
+  background: var(--wash) !important;
+  border-color: var(--ink) !important;
+}
+
+.brand-chapter-toggle .tab-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+}
+
+.brand-chapter-toggle .caret {
+  opacity: 0.7;
+}
+
+.brand-chapter-menu {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 0;
+  width: 250px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.18);
+  padding: 8px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chapter-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 8px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+
+.chapter-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.chapter-menu-item {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  width: 100% !important;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+
+.chapter-menu-item:hover {
+  background: var(--wash);
+}
+
+.chapter-menu-item.active {
+  background: var(--wash);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.chapter-menu-item .tab-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--wash);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chapter-menu-item.active .tab-num {
+  background: var(--ink);
+  color: #fff;
+}
+
+.chapter-menu-item .tab-check {
+  margin-left: auto;
+  stroke: var(--ink);
+}
+
+/* ---- Edit Image Modal / Popover (Desktop vs Mobile image support) ---- */
+.edit-image-modal {
+  width: 360px !important;
+  padding: 16px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-image-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.bg-device-toggle {
+  display: flex;
+  background: var(--wash);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 4px;
+}
+
+.bg-device-btn {
+  flex: 1 1 0%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bg-device-btn.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.device-dot {
+  color: #10b981;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.edit-image-preview-wrap {
+  width: 100%;
+  background: #6b7280;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 160px;
+  position: relative;
+}
+
+.edit-preview-desktop {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.edit-preview-mobile-outer {
+  width: 100%;
+  height: 100%;
+  background: #4b5563; /* grey letterbox mask matching uploaded image */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.edit-preview-mobile-inner {
+  width: 90px;
+  height: 140px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 14px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+}
+
+.preview-placeholder {
+  font-size: 11px;
+  color: #f3f4f6 !important;
+  text-align: center;
+  padding: 8px;
+}
+
+.brand-dock-arrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: none !important;
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  height: 38px !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+  border: 0 !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.brand-dock-arrow:hover:not(:disabled) {
+  background: var(--wash) !important;
+  color: var(--ink) !important;
+}
+
+.brand-dock-arrow:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.brand-dock-arrow:disabled {
+  opacity: 0.28 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+/* Mobile responsive layout */
+@media (max-width: 640px) {
+  .brand-dock-row {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    padding: 4px 0 !important;
+    min-height: auto !important;
+    justify-content: space-between !important;
+  }
+
+  .brand-dock-stepper {
+    gap: 4px !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .brand-chapter-toggle {
+    height: 36px !important;
+    padding: 0 8px !important;
+    font-size: 12px !important;
+    max-width: 130px !important;
+    min-width: 0 !important;
+    overflow: hidden;
+  }
+  .brand-chapter-toggle .tab-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .brand-chapter-menu {
+    position: fixed !important;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35) !important;
+    z-index: 1000 !important;
+  }
+
+  .brand-dock-arrow {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .brand-dock-tools,
+  .brand-dock-row .brand-book-tools {
+    gap: 4px !important;
+    flex: none !important;
+    margin-left: auto !important;
+  }
+
+  .brand-dock-tools .btn-tool,
+  .brand-dock-row .btn-tool {
+    height: 36px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    gap: 4px !important;
+  }
+  .brand-dock-tools .btn-tool .tool-label,
+  .brand-dock-row .btn-tool .tool-label,
+  .brand-dock-tools .btn-tool .caret,
+  .brand-dock-row .btn-tool .caret {
+    display: none !important; /* Compact icon button on mobile */
+  }
+
+  .brand-dock-row .btn-dock-next {
+    margin-left: auto !important;
+    height: 36px !important;
+    padding: 0 16px !important;
+    font-size: 12px !important;
+  }
+
+  /* Mobile floating popover for Edit image */
+  .brand-bg-popover {
+    position: fixed !important;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35) !important;
+    z-index: 1000 !important;
+  }
+}
+
+.brand-book-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 4px;
+  box-sizing: border-box;
+}
+
+.brand-book-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.brand-book-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.brand-book-tab {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  height: 38px !important;
+  padding: 0 14px !important;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: 0 !important;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: max-content !important;
+}
+
+.brand-book-tab:hover {
+  background: var(--wash);
+  color: var(--ink);
+}
+
+.brand-book-tab.active {
+  background: var(--ink);
+  color: #fff;
+  border: 0 !important;
+}
+
+.brand-book-tab .tab-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  background: var(--wash);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.brand-book-tab.active .tab-num {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.brand-book-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.brand-bg-tool {
+  position: relative;
+}
+
+.btn-tool {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: max-content !important;
+}
+
+.btn-tool:hover,
+.btn-tool.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-tool .caret {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.brand-bg-popover {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  right: 0;
+  width: 290px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.22);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bg-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.bg-popover-head .btn-close {
+  background: transparent;
+  border: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.bg-popover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-upload {
+  width: 100%;
+  justify-content: center;
+  cursor: pointer;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.bg-url-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.bg-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.bg-thumb {
+  width: 48px;
+  height: 32px;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--line);
+}
+
+.btn-remove-bg {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fef2f2;
+  font-size: 12px;
+  padding: 4px 10px;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* Printable 16:9 PDF Presentation Deck styles */
+#brand-guideline-pdf {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: 297mm 167.06mm; /* Exact 16:9 ratio (matching A4 width 297mm x 167.06mm) */
+    margin: 0;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Reset all ancestors so overflow:hidden never clips pagination */
+  #app,
+  .app,
+  .shellgrid,
+  .deck-container,
+  .deck,
+  .slide,
+  .slide-card,
+  .card-scroll,
+  .hubpage,
+  .brandpage {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    float: none !important;
+  }
+
+  /* Hide app navigation and interactive UI elements */
+  .app-header,
+  .topbar,
+  .subnavbar,
+  .expand-btn,
+  .nav-tabs,
+  .nav-toggle-group,
+  .deck-nav,
+  .slide-dock,
+  .dock,
+  .dock-bar,
+  .brand-book-nav,
+  .brand-note,
+  .brandpage > :not(#brand-guideline-pdf),
+  .slide:not(.active),
+  .autherr,
+  .oknote {
+    display: none !important;
+  }
+
+  #brand-guideline-pdf {
+    display: block !important;
+    position: static !important;
+    width: 297mm !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .pdf-slide {
+    width: 297mm !important;
+    height: 167.06mm !important;
+    min-height: 167.06mm !important;
+    max-height: 167.06mm !important;
+    box-sizing: border-box !important;
+    padding: 12mm 18mm !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    background-color: #080a0f !important;
+    color: #ffffff !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Noto Sans Thai", sans-serif !important;
+    overflow: hidden !important;
+    position: relative !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .pdf-slide:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Completely borderless / stroke-free presentation per user mandate */
+  #brand-guideline-pdf * {
+    border-color: transparent !important;
+    outline: none !important;
+  }
+
+  /* ---- SLIDE HEADER (Clean Minimalist Editorial - No Strokes) ---- */
+  .pdf-slide-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    border: none !important;
+    padding-bottom: 3mm !important;
+    margin-bottom: 5mm !important;
+  }
+
+  .pdf-slide-title {
+    font-size: 8.5pt !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-header-channel {
+    font-size: 7.5pt !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: #71717a !important;
+  }
+
+  /* ---- SLIDE FOOTER (No Strokes) ---- */
+  .pdf-slide-footer {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 7pt !important;
+    letter-spacing: 0.05em !important;
+    color: #71717a !important;
+    border: none !important;
+    padding-top: 3.5mm !important;
+  }
+
+  .pdf-slide-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    margin-bottom: 3mm !important;
+  }
+
+  /* =========================================================================
+     PAGE 1: 1. BRAND IDENTITY HERO (No Strokes, Bottom-Left Text, Smooth Fade)
+     ========================================================================= */
+  .pdf-slide.pdf-slide-hero {
+    position: relative !important;
+    background-color: #080a0f !important;
+    background-size: cover !important;
+    background-position: center !important;
+    color: #ffffff !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+  }
+
+  .pdf-cover-shade {
+    position: absolute !important;
+    inset: 0 !important;
+    background: linear-gradient(180deg, rgba(8, 10, 15, 0.25) 0%, rgba(8, 10, 15, 0.05) 30%, rgba(8, 10, 15, 0.75) 70%, rgba(8, 10, 15, 0.96) 100%) !important;
+    pointer-events: none !important;
+    z-index: 1 !important;
+  }
+
+  .pdf-cover-container {
+    position: relative !important;
+    z-index: 2 !important;
+    width: 100% !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+    padding: 12mm 16mm 10mm 16mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+
+  .pdf-hero-content {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    margin-top: auto !important;
+    margin-bottom: 4mm !important;
+    text-align: left !important;
+    border: none !important;
+  }
+
+  .pdf-hero-title {
+    display: block !important;
+    font-size: 52pt !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.03em !important;
+    color: #ffffff !important;
+    line-height: 1.05 !important;
+    margin: 0 0 6px 0 !important;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .pdf-hero-pos {
+    font-size: 13pt !important;
+    color: #cbd5e1 !important;
+    margin: 0 !important;
+    font-weight: 400 !important;
+    letter-spacing: -0.01em !important;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  /* =========================================================================
+     PAGE 2: 2. BRAND VOICE (No Strokes)
+     ========================================================================= */
+  .pdf-voice-meta {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8mm !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-radius: 8px !important;
+    padding: 14px 18px !important;
+    margin-bottom: 8mm !important;
+  }
+
+  .pdf-voice-field {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+
+  .pdf-field-lbl {
+    font-size: 7pt !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    color: #94a3b8 !important;
+  }
+
+  .pdf-field-val {
+    font-size: 10pt !important;
+    color: #ffffff !important;
+    margin: 0 !important;
+    line-height: 1.35 !important;
+  }
+
+  .pdf-voice-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8mm !important;
+  }
+
+  .pdf-voice-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 8px !important;
+    padding: 16px 20px !important;
+  }
+
+  .pdf-card-title {
+    font-size: 9.5pt !important;
+    font-weight: 700 !important;
+    margin-bottom: 8px !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-card-do .pdf-card-title {
+    color: #34d399 !important;
+  }
+
+  .pdf-card-dont .pdf-card-title {
+    color: #f87171 !important;
+  }
+
+  /* =========================================================================
+     PAGE 3: 3. LOGOS (No Strokes)
+     ========================================================================= */
+  .pdf-logos-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8mm !important;
+  }
+
+  .pdf-logo-card {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .pdf-logo-display {
+    height: 140px !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+
+  .pdf-logo-display.on-photo {
+    background-size: cover !important;
+    background-position: center !important;
+    position: relative !important;
+  }
+
+  .pdf-logo-img {
+    max-height: 85px !important;
+    max-width: 80% !important;
+    object-fit: contain !important;
+  }
+
+  .pdf-logo-placeholder {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .pdf-logo-fallback {
+    font-size: 26pt !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .pdf-logo-info {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .pdf-logo-info strong {
+    font-size: 9pt !important;
+    color: #ffffff !important;
+  }
+
+  /* =========================================================================
+     PAGE 4: 4. PALETTE (No Strokes)
+     ========================================================================= */
+  .pdf-palette-strip {
+    height: 32px !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    margin-bottom: 8mm !important;
+  }
+
+  .pdf-palette-strip-seg {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 7.5pt !important;
+    font-weight: 700 !important;
+  }
+
+  .pdf-palette-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6mm !important;
+  }
+
+  .pdf-palette-card {
+    display: flex !important;
+    flex-direction: column !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+  }
+
+  .pdf-palette-swatch {
+    height: 100px !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    padding: 8px !important;
+    box-sizing: border-box !important;
+    margin-bottom: 6px !important;
+  }
+
+  .pdf-palette-sample {
+    font-size: 14pt !important;
+    font-weight: 700 !important;
+  }
+
+  .pdf-palette-details {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    padding: 0 4px !important;
+  }
+
+  .pdf-palette-details strong {
+    font-size: 8.5pt !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-hex-code {
+    font-family: ui-monospace, monospace !important;
+    font-size: 8pt !important;
+    font-weight: 700 !important;
+    color: #e2e8f0 !important;
+  }
+
+  .pdf-rgb-code {
+    font-family: ui-monospace, monospace !important;
+    font-size: 7pt !important;
+    color: #94a3b8 !important;
+  }
+
+  /* =========================================================================
+     PAGE 5: 5. TYPOGRAPHY (No Strokes)
+     ========================================================================= */
+  .pdf-type-lead {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    margin-bottom: 6px !important;
+  }
+
+  .pdf-font-name {
+    font-size: 22pt !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-type-specimen-box {
+    display: flex !important;
+    gap: 8mm !important;
+    align-items: center !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 8px !important;
+    padding: 14px 20px !important;
+    margin-bottom: 8mm !important;
+  }
+
+  .pdf-type-big-aa {
+    font-size: 54pt !important;
+    font-weight: 300 !important;
+    color: #ffffff !important;
+    line-height: 1 !important;
+  }
+
+  .pdf-type-charset {
+    font-size: 8pt !important;
+    color: #cbd5e1 !important;
+    line-height: 1.6 !important;
+  }
+
+  .pdf-type-preview-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1.5fr !important;
+    gap: 8mm !important;
+  }
+
+  .pdf-type-scale-item {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+
+  .pdf-scale-label {
+    font-size: 7pt !important;
+    font-weight: 700 !important;
+    color: #94a3b8 !important;
+    text-transform: uppercase !important;
+  }
+
+  .pdf-scale-display {
+    font-size: 18pt !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-scale-body {
+    font-size: 9.5pt !important;
+    color: #cbd5e1 !important;
+    line-height: 1.5 !important;
+    margin: 0 !important;
+  }
+
+  /* =========================================================================
+     PAGE 6: 6. STYLE (No Strokes)
+     ========================================================================= */
+  .pdf-style-tokens-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8mm !important;
+  }
+
+  .pdf-style-token-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+  }
+
+  .pdf-token-text {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+
+  .pdf-token-lbl {
+    font-size: 7pt !important;
+    font-weight: 700 !important;
+    color: #94a3b8 !important;
+    text-transform: uppercase !important;
+  }
+
+  .pdf-token-text strong {
+    font-size: 14pt !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-token-preview {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 70px !important;
+    background: rgba(0, 0, 0, 0.25) !important;
+    border-radius: 6px !important;
+  }
+
+  .pdf-preview-box {
+    width: 48px !important;
+    height: 48px !important;
+    background: rgba(255, 255, 255, 0.25) !important;
+  }
+
+  .pdf-preview-shadow {
+    width: 48px !important;
+    height: 48px !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+  }
+
+  .pdf-preview-shadow.shadow-soft {
+    box-shadow: 0 6px 14px rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .pdf-preview-shadow.shadow-strong {
+    box-shadow: 0 10px 24px rgba(255, 255, 255, 0.35) !important;
+  }
+
+  .pdf-preview-fill {
+    width: 48px !important;
+    height: 48px !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+  }
+
+  /* =========================================================================
+     PAGE 7: 7. MOODBOARD (No Strokes)
+     ========================================================================= */
+  .pdf-mood-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6mm !important;
+    height: 100% !important;
+  }
+
+  .pdf-mood-item {
+    background-size: cover !important;
+    background-position: center !important;
+    border-radius: 8px !important;
+    min-height: 120px !important;
+  }
+
+  .pdf-mood-hero-single {
+    background-size: cover !important;
+    background-position: center !important;
+    border-radius: 10px !important;
+    height: 100% !important;
+    position: relative !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    padding: 24px !important;
+    box-sizing: border-box !important;
+  }
+
+  .pdf-mood-single-shade {
+    position: absolute !important;
+    inset: 0 !important;
+    background: linear-gradient(180deg, transparent 40%, rgba(8, 10, 15, 0.85) 100%) !important;
+  }
+
+  .pdf-mood-single-caption {
+    position: relative !important;
+    z-index: 2 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .pdf-mood-single-caption strong {
+    font-size: 16pt !important;
+    color: #ffffff !important;
+  }
+}

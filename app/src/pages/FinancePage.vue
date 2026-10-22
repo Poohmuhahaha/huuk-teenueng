@@ -75,7 +75,6 @@ async function add(): Promise<void> {
 </script>
 
 <template>
-  <h1>Finance</h1>
   <BudgetCards :income="income" :expense="expense" :balance="balance" :currency="CURRENCY" />
   <div class="grid2 mt">
     <div><h2>Income by month</h2><BarChart :items="monthlyIn" /></div>

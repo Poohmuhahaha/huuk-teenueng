@@ -47,9 +47,12 @@ function linkOf(id: PlatformId): string | null {
       <template v-if="linkOf(p.id)">
         <a class="socialname text-inherit cursor-pointer bg-transparent border-0 p-0 hover:underline w-auto" :href="linkOf(p.id) as string" target="_blank" rel="noopener noreferrer"
           :title="`${p.name} — ${t('social.openProfile')}`">{{ p.name }}</a>
-        <button class="tracking-[0.02em] cursor-pointer text-inherit opacity-70 bg-transparent border-0 pl-1.5 p-0 text-2xs font-bold hover:opacity-100 hover:underline w-auto flex-none" :aria-label="`${t('social.manage')} ${p.name}`"
+        <button class="cursor-pointer text-inherit opacity-70 hover:opacity-100 bg-transparent border-0 pl-1.5 p-0 text-2xs font-bold w-auto flex-none inline-flex items-center" :aria-label="`${t('social.manage')} ${p.name}`"
           :title="`${t('social.manage')} ${p.name}`" @click="loginFor = p.id">
-          {{ t('social.manageShort') }}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
         </button>
       </template>
       <button v-else class="text-inherit cursor-pointer bg-transparent border-0 p-0 hover:underline w-auto flex-none" :title="`${p.name} — ${t('social.connect')}`"
@@ -57,8 +60,14 @@ function linkOf(id: PlatformId): string | null {
         {{ p.name }}
       </button>
     </div>
-    <button v-if="activePlatforms.length" class="bg-surface border border-faint rounded-full cursor-pointer text-muted flex-none ml-auto px-[13px] py-[5px] text-sm font-semibold transition-colors hover:bg-accent hover:text-accent-ink hover:border-accent w-auto" :title="t('social.manageHint')"
-      @click="loginFor = activePlatforms[0] ?? null">{{ t('social.manage') }}…</button>
+    <button v-if="activePlatforms.length" class="bg-surface border border-faint rounded-full cursor-pointer text-muted flex-none ml-auto px-[13px] py-[5px] text-sm font-semibold transition-colors hover:bg-accent hover:text-accent-ink hover:border-accent w-auto inline-flex items-center gap-1.5" :title="t('social.manageHint')"
+      @click="loginFor = activePlatforms[0] ?? null">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+      <span>{{ t('social.manage') }}…</span>
+    </button>
     <PlatformLogin :platform="loginFor" @close="loginFor = null" />
   </div>
 </template>

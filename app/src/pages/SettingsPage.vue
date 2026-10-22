@@ -1,29 +1,17 @@
 <script setup lang="ts">
-// Settings hub — brand identity, workspace config + permissions, members and
-// platform connections behind one screen.
+// Branding hub — brand identity, members and platform connections behind one screen.
 import { useHubTab } from '@/core/subnav'
 import BrandPage from '@/pages/BrandPage.vue'
 import MembersPage from '@/pages/MembersPage.vue'
-import SettingsPanel from '@/components/overlays/SettingsPanel.vue'
-import AccountPanel from '@/components/settings/AccountPanel.vue'
-import WorkspaceSwitcher from '@/components/settings/WorkspaceSwitcher.vue'
-import SocialMediaBar from '@/components/ui/SocialMediaBar.vue'
+import ConnectionsPage from '@/pages/ConnectionsPage.vue'
 
-const { active: tab } = useHubTab('/settings')
+const { active: tab } = useHubTab('/branding')
 </script>
 
 <template>
-  <div class="hubpage">
+  <div class="hubpage" :class="{ 'hubpage-brand': tab === 'brand' }">
     <BrandPage v-if="tab === 'brand'" />
-    <div v-else-if="tab === 'workspace'" class="settings-stack">
-      <WorkspaceSwitcher />
-      <SettingsPanel />
-      <AccountPanel />
-    </div>
     <MembersPage v-else-if="tab === 'members'" />
-    <div v-else class="card">
-      <p class="muted" style="margin-top: 0;">Connect the social accounts this workspace publishes to.</p>
-      <SocialMediaBar />
-    </div>
+    <ConnectionsPage v-else />
   </div>
 </template>

@@ -78,7 +78,6 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
 
 <template>
   <div class="mt-2">
-    <h1 class="m-0 flex items-center gap-1.5 text-2xl font-bold">{{ t('members.title') }}<InfoTip :text="t('members.subtitle')" /></h1>
 
     <p v-if="isError" class="card text-muted">{{ loadError?.message }}</p>
     <p v-else-if="workspacesPending" class="text-muted">{{ t('common.loading') }}</p>

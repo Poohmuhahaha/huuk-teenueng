@@ -14,7 +14,8 @@ import ComponentsPage from '@/pages/ComponentsPage.vue'
 // Legacy deep links (the old per-feature paths) redirect into the owning hub
 // + tab, so bookmarks keep working.
 const legacy: RouteRecordRaw[] = [
-  { path: '/brand', redirect: (to) => ({ path: '/settings', query: { ...to.query, tab: 'brand' } }) },
+  { path: '/settings', redirect: (to) => ({ path: '/branding', query: to.query }) },
+  { path: '/brand', redirect: (to) => ({ path: '/branding', query: { ...to.query, tab: 'brand' } }) },
   { path: '/home', redirect: (to) => ({ path: '/dashboard', query: to.query }) },
   { path: '/planner', redirect: (to) => ({ path: '/plan', query: { ...to.query, tab: 'monthly' } }) },
   {
@@ -43,7 +44,7 @@ const legacy: RouteRecordRaw[] = [
   { path: '/ads', redirect: (to) => ({ path: '/promote', query: { ...to.query, tab: 'ads' } }) },
   { path: '/performance', redirect: (to) => ({ path: '/analyze', query: { ...to.query, tab: 'performance' } }) },
   { path: '/finance', redirect: (to) => ({ path: '/analyze', query: { ...to.query, tab: 'finance' } }) },
-  { path: '/members', redirect: (to) => ({ path: '/settings', query: { ...to.query, tab: 'members' } }) },
+  { path: '/members', redirect: (to) => ({ path: '/branding', query: { ...to.query, tab: 'members' } }) },
 ]
 
 const routes: RouteRecordRaw[] = [

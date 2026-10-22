@@ -72,8 +72,6 @@ const growth = computed(() => {
 
 <template>
   <div class="perf-page" ref="root">
-    <h1>Performance</h1>
-
     <div class="perf-grid">
       <DockBar label="Performance controls">
         <MonthToggle v-model="month" v-model:year="year" />

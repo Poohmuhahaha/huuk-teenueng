@@ -1,7 +1,9 @@
 # Master Engineering SOP §5.2 — Multi-Stage Rust Container Build (cargo-chef + musl + alpine + appuser)
-FROM lukemathwalker/cargo-chef:latest-rust-1.85-alpine AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-alpine AS chef
 WORKDIR /app
 RUN apk add --no-cache musl-dev
+ENV CARGO_NET_RETRY=10 \
+    CARGO_HTTP_MULTIPLEXING=false
 
 FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./

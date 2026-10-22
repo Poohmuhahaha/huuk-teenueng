@@ -1,12 +1,35 @@
 <script setup lang="ts">
-// Card footer shared by every hub card: the page drops its primary
-// controls in the slot and they close the card in normal flow (see the
-// footer mechanics in style.css) — never hovering over content.
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+
 defineProps<{ label: string }>()
+
+const dockEl = ref<HTMLElement | null>(null)
+const teleportTarget = ref<HTMLElement | null>(null)
+
+function resolveTarget(): void {
+  const slide = dockEl.value?.closest('.slide')
+  if (slide) {
+    const slot = slide.querySelector<HTMLElement>(':scope > .slide-dock')
+    if (slot) {
+      teleportTarget.value = slot
+    }
+  }
+}
+
+onMounted(async () => {
+  await nextTick()
+  resolveTarget()
+})
+
+onBeforeUnmount(() => {
+  teleportTarget.value = null
+})
 </script>
 
 <template>
-  <aside class="dock">
-    <div class="dock-bar" role="group" :aria-label="label"><slot /></div>
-  </aside>
+  <Teleport :to="teleportTarget" :disabled="!teleportTarget">
+    <aside ref="dockEl" class="dock">
+      <div class="dock-bar" role="group" :aria-label="label"><slot /></div>
+    </aside>
+  </Teleport>
 </template>

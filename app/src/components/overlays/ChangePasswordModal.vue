@@ -2,6 +2,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { changePassword } from '@/core/auth'
 import { t } from '@/core/i18n'
+import Drawer from '@/components/overlays/Drawer.vue'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
@@ -61,28 +62,35 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <div v-if="open" class="backdrop" @click.self="!busy && emit('close')">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cp-title">
-      <h3 id="cp-title">{{ t('auth.change') }}</h3>
-      <form @submit.prevent="submit">
-        <label class="lbl" for="cp-old">{{ t('auth.oldPassword') }}</label>
-        <input id="cp-old" ref="oldField" v-model="oldPassword" class="field" type="password" autocomplete="current-password" required minlength="8" />
-        <label class="lbl" for="cp-new">{{ t('auth.newPassword') }}</label>
-        <input id="cp-new" v-model="newPassword" class="field" type="password" autocomplete="new-password" required minlength="8" />
-        <label class="lbl" for="cp-confirm">{{ t('auth.confirmNew') }}</label>
-        <input id="cp-confirm" v-model="confirmPassword" class="field" type="password" autocomplete="new-password" required minlength="8" />
-        <p v-if="error" class="mt-2.5 text-sm font-bold text-danger" role="alert">{{ error }}</p>
-        <p v-if="done" class="mt-2.5 text-sm font-bold text-success" role="status">{{ t('auth.passwordChanged') }}</p>
-        <div class="actions">
-          <button type="button" class="btn" :disabled="busy" @click="emit('close')">{{ t('common.cancel') }}</button>
-          <button v-if="done" type="button" class="btn btn-primary" @click="emit('close')">
-            {{ t('common.close') }}
-          </button>
-          <button v-else type="submit" class="btn btn-primary" :disabled="busy">
-            {{ t('common.confirm') }}
-          </button>
-        </div>
-      </form>
+  <Drawer
+    :model-value="open"
+    :title="t('auth.change')"
+    side="bottom"
+    @update:model-value="(val) => !val && (!busy && emit('close'))"
+  >
+    <div class="backdrop" style="position: static; inset: auto; background: none; backdrop-filter: none; padding: 0; display: block;" @click.self="!busy && emit('close')">
+      <div class="modal" style="position: static; border: 0; padding: 0; box-shadow: none; background: transparent; max-width: none;" role="region" aria-labelledby="cp-title">
+        <h3 id="cp-title" style="display: none;">{{ t('auth.change') }}</h3>
+        <form @submit.prevent="submit" class="flex flex-col gap-3">
+          <label class="lbl" for="cp-old">{{ t('auth.oldPassword') }}</label>
+          <input id="cp-old" ref="oldField" v-model="oldPassword" class="field" type="password" autocomplete="current-password" required minlength="8" />
+          <label class="lbl" for="cp-new">{{ t('auth.newPassword') }}</label>
+          <input id="cp-new" v-model="newPassword" class="field" type="password" autocomplete="new-password" required minlength="8" />
+          <label class="lbl" for="cp-confirm">{{ t('auth.confirmNew') }}</label>
+          <input id="cp-confirm" v-model="confirmPassword" class="field" type="password" autocomplete="new-password" required minlength="8" />
+          <p v-if="error" class="mt-2 text-sm font-bold text-danger" role="alert">{{ error }}</p>
+          <p v-if="done" class="mt-2 text-sm font-bold text-success" role="status">{{ t('auth.passwordChanged') }}</p>
+          <div class="actions flex justify-end gap-2 mt-4 pt-4 border-t border-line">
+            <button type="button" class="btn" :disabled="busy" @click="emit('close')">{{ t('common.cancel') }}</button>
+            <button v-if="done" type="button" class="btn btn-primary" @click="emit('close')">
+              {{ t('common.close') }}
+            </button>
+            <button v-else type="submit" class="btn btn-primary" :disabled="busy">
+              {{ t('common.confirm') }}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
+  </Drawer>
 </template>

@@ -442,10 +442,10 @@ async fn ads_endpoint_returns_the_workspace_mirror() {
     let ads = body_json(get(app.clone(), "/api/ads").await).await;
     assert!(ads["fetchedAt"].is_number(), "{ads}");
     assert_eq!(ads["accounts"].as_array().unwrap().len(), 1);
-    assert_eq!(ads["campaigns"].as_array().unwrap().len(), 2);
-    assert_eq!(ads["adsets"].as_array().unwrap().len(), 2);
-    assert_eq!(ads["ads"].as_array().unwrap().len(), 2);
-    assert_eq!(ads["insights"].as_array().unwrap().len(), 2);
+    assert_eq!(ads["campaigns"].as_array().unwrap().len(), 8);
+    assert_eq!(ads["adsets"].as_array().unwrap().len(), 8);
+    assert_eq!(ads["ads"].as_array().unwrap().len(), 8);
+    assert_eq!(ads["insights"].as_array().unwrap().len(), 8);
     assert_eq!(ads["canManage"], false, "writes are opt-in");
     let campaign = ads["campaigns"]
         .as_array()
@@ -3209,7 +3209,7 @@ async fn unknown_routes_and_ready_endpoint() {
 async fn posts_feed_returns_all_months_when_month_is_omitted() {
     let app = app(new_state());
     let all = body_json(get(app.clone(), "/api/posts").await).await;
-    assert_eq!(all.as_array().unwrap().len(), 6);
+    assert_eq!(all.as_array().unwrap().len(), 40);
     let only_two = body_json(get(app, "/api/posts?month=2").await).await;
     assert_eq!(only_two.as_array().unwrap().len(), 5);
 }
@@ -4224,7 +4224,7 @@ async fn campaign_setup_schedule_and_cleanup() {
 
     // The seed ships a campaign linked to a content item.
     let listed = body_json(get(app.clone(), "/api/campaigns").await).await;
-    assert_eq!(listed.as_array().unwrap().len(), 2);
+    assert_eq!(listed.as_array().unwrap().len(), 6);
     assert_eq!(listed[0]["name"], "Spring Launch");
     assert_eq!(listed[0]["contentIds"][0], "c-march");
 

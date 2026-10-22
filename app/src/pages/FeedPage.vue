@@ -83,7 +83,6 @@ const monthLabel = computed(() => {
 </script>
 
 <template>
-  <h1 class="text-2xl font-bold mb-4">{{ t('feed.title') }}</h1>
   <SocialMediaBar v-if="!isClient" />
   <div v-if="isError" class="card">
     <p class="muted">Could not load posts: {{ loadError?.message }}</p>
