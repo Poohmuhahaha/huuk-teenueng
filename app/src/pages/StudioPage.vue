@@ -54,6 +54,18 @@ watch(editorOpen, (open) => {
   else void router.replace('/studio')
 })
 
+// Auto-select first item on desktop when loaded
+watch(
+  () => rows.value,
+  (list) => {
+    if (wide.value && !selectedId.value && list && list.length > 0) {
+      if (props.embedded) emit('update:id', list[0].id)
+      else void router.replace(`/studio/${list[0].id}`)
+    }
+  },
+  { immediate: true },
+)
+
 function select(id: string): void {
   if (id === selectedId.value) {
     editorOpen.value = true
@@ -107,19 +119,21 @@ function updatedLabel(row: ContentSummary): string {
   <div v-else ref="root" class="studio-page">
     <div class="grid grid-single gap-4 items-start">
     <DockBar label="Studio controls">
-      <div class="flex-1 min-w-0 m-0 [&>div]:w-full [&>div>button]:w-full">
-        <DropdownMenu :items="statusMenuItems" @select="onStatus">
-          <template #trigger>
-            <span class="btn inline-flex items-center justify-center gap-2 w-full h-touch" :aria-label="t('studio.filter')">
-              {{ currentStatusLabel }} <span aria-hidden="true">▾</span>
-            </span>
-          </template>
-        </DropdownMenu>
+      <div class="flex items-center justify-between w-full gap-3">
+        <div class="flex items-center gap-2">
+          <DropdownMenu :items="statusMenuItems" @select="onStatus">
+            <template #trigger>
+              <button type="button" class="btn w-auto inline-flex items-center gap-2" :aria-label="t('studio.filter')">
+                <span>{{ currentStatusLabel }}</span> <span aria-hidden="true">▾</span>
+              </button>
+            </template>
+          </DropdownMenu>
+        </div>
+        <button type="button" class="btn btn-primary btn-icon w-auto" :title="t('studio.new')" :aria-label="t('studio.new')"
+          :disabled="!canWrite || create.isPending.value" @click="newContent">
+          {{ create.isPending.value ? '…' : '+' }}
+        </button>
       </div>
-      <button type="button" class="btn btn-primary btn-icon" :title="t('studio.new')" :aria-label="t('studio.new')"
-        :disabled="!canWrite || create.isPending.value" @click="newContent">
-        {{ create.isPending.value ? '…' : '+' }}
-      </button>
     </DockBar>
 
     <div class="studio-main">

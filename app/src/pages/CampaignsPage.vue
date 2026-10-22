@@ -121,6 +121,17 @@ function select(id: string | null): void {
   void router.replace(id ? `/campaigns/${id}` : '/campaigns')
 }
 
+// Auto-select first campaign on desktop when loaded
+watch(
+  () => visible.value,
+  (list) => {
+    if ((deckFull.value || wide.value) && !selectedId.value && list && list.length > 0) {
+      select(list[0].id)
+    }
+  },
+  { immediate: true },
+)
+
 function fromCampaign(c: Campaign): Campaign {
   return { ...c, platforms: [...c.platforms], pillars: [...c.pillars], hashtags: [...c.hashtags], contentIds: [...c.contentIds] }
 }
@@ -233,10 +244,17 @@ async function destroy(): Promise<void> {
   <div class="camp-page" ref="root">
     <div class="camp-grid">
       <DockBar label="Campaign controls">
-        <MonthToggle :model-value="month" :year="year" @update:model-value="setMonth" @update:year="setYear" />
-        <span class="dock-sep" aria-hidden="true" />
-        <button class="btn btn-primary btn-icon" :disabled="!canWrite || create.isPending.value"
-          :title="t('campaign.new')" aria-label="New campaign" @click="newCampaign">{{ create.isPending.value ? '…' : '+' }}</button>
+        <div class="flex items-center justify-between w-full gap-3">
+          <div class="flex items-center gap-2">
+            <MonthToggle :model-value="month" :year="year" @update:model-value="setMonth" @update:year="setYear" />
+            <span class="dock-sep" aria-hidden="true" />
+            <span class="text-xs font-semibold text-muted tracking-wider uppercase">{{ (visible ?? []).length }} Campaigns</span>
+          </div>
+          <div class="flex items-center gap-2 ml-auto">
+            <button class="btn btn-primary btn-icon w-auto" :disabled="!canWrite || create.isPending.value"
+              :title="t('campaign.new')" aria-label="New campaign" @click="newCampaign">{{ create.isPending.value ? '…' : '+' }}</button>
+          </div>
+        </div>
       </DockBar>
 
       <div class="camp-main camp-list">

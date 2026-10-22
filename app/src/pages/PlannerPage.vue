@@ -215,6 +215,17 @@ function pick(p: Post): void {
   editorOpen.value = true
 }
 
+// Auto-select first topic on desktop when posts load
+watch(
+  () => posts.value,
+  (list) => {
+    if ((deckFull.value || wide.value) && !selectedId.value && list && list.length > 0) {
+      pick(list[0])
+    }
+  },
+  { immediate: true },
+)
+
 
 function goMonth(value: string | number): void {
   const next = validMonth(value)
@@ -294,16 +305,23 @@ watch(
   <div class="planner-page" ref="root">
     <div class="planner-grid">
     <DockBar label="Planner controls">
-      <MonthToggle :model-value="m" :year="year" @update:model-value="goMonth" @update:year="setYear" />
-      <span class="dock-sep" aria-hidden="true" />
-      <RouterLink class="btn btn-icon" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
-        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
-          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
-        </svg>
-      </RouterLink>
-      <button class="btn btn-primary btn-icon" :disabled="!canWrite || busy"
-        :title="canWrite ? t('planner.addTopic') : t('auth.noPerm')" aria-label="Add new topic" @click="addRow">{{ busy || addPost.isPending.value ? '…' : '+' }}</button>
+      <div class="flex items-center justify-between w-full gap-3">
+        <div class="flex items-center gap-2">
+          <MonthToggle :model-value="m" :year="year" @update:model-value="goMonth" @update:year="setYear" />
+          <span class="dock-sep" aria-hidden="true" />
+          <span class="text-xs font-semibold text-muted tracking-wider uppercase">{{ (posts ?? []).length }} Topics</span>
+        </div>
+        <div class="flex items-center gap-2 ml-auto">
+          <RouterLink class="btn btn-icon w-auto" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
+            </svg>
+          </RouterLink>
+          <button class="btn btn-primary btn-icon w-auto" :disabled="!canWrite || busy"
+            :title="canWrite ? t('planner.addTopic') : t('auth.noPerm')" aria-label="Add new topic" @click="addRow">{{ busy || addPost.isPending.value ? '…' : '+' }}</button>
+        </div>
+      </div>
     </DockBar>
 
     <div class="planner-main">

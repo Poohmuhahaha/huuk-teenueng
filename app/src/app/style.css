@@ -2791,8 +2791,8 @@ header.topbar .in-topbar .tabselect-item.active {
   font-weight: 600;
 }
 .deck.full .dock-bar {
-  max-width: 440px;
-  margin: 0 auto;
+  max-width: 100%;
+  width: 100%;
 }
 /* Dock toggle keeps its pill (border + surface + curve) instead of bare
    segments, so the month control reads as one control in the dock. */
@@ -3395,31 +3395,34 @@ header.topbar .in-topbar .tabselect-item.active {
 .brandpage .brand-body:not(.brand-hero) .field,
 .brandpage .brand-body:not(.brand-hero) input.field {
   width: 100% !important;
-  padding: 9px 13px !important;
+  padding: 10px 14px !important;
   margin-bottom: 0 !important;
   font-size: 13.5px !important;
   line-height: 1.4 !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
   border: none !important;
   outline: none !important;
-  border-radius: 8px !important;
+  border-radius: 10px !important;
   color: #ffffff !important;
-  box-shadow: none !important;
-  transition: background 0.15s ease;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .brandpage .brand-body:not(.brand-hero) .field:focus,
 .brandpage .brand-body:not(.brand-hero) input.field:focus {
-  background: rgba(255, 255, 255, 0.15) !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 0 0 2px rgba(255, 255, 255, 0.3) !important;
 }
 
 .brandpage .brand-body:not(.brand-hero) .lbl {
   font-size: 11px !important;
   font-weight: 700 !important;
-  letter-spacing: 0.06em !important;
+  letter-spacing: 0.08em !important;
   text-transform: uppercase !important;
-  color: rgba(255, 255, 255, 0.6) !important;
-  margin-bottom: 5px !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+  margin-bottom: 6px !important;
 }
 
 /* Step 1: Voice & Rules balanced 2-column layout */
@@ -3524,12 +3527,12 @@ header.topbar .in-topbar .tabselect-item.active {
 
 /* Zero stroke on all panels */
 .brandpage.has-custom-bg .panel {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
   border: none !important;
-  border-radius: 12px;
+  border-radius: 14px;
   color: #ffffff;
 }
 

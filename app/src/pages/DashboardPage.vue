@@ -204,15 +204,22 @@ function goMaster(): void {
   <div class="dash-page" ref="root">
     <div class="dash-grid">
       <DockBar label="Dashboard controls">
-        <MonthToggle v-model="month" v-model:year="year" />
-        <span class="dock-sep" aria-hidden="true" />
-        <RouterLink class="btn btn-icon" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
-          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
-            stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
-          </svg>
-        </RouterLink>
-        <RouterLink class="btn btn-primary btn-icon" to="/plan?tab=monthly" title="New topic" aria-label="New topic">+</RouterLink>
+        <div class="flex items-center justify-between w-full gap-3">
+          <div class="flex items-center gap-2">
+            <MonthToggle v-model="month" v-model:year="year" />
+            <span class="dock-sep" aria-hidden="true" />
+            <span class="text-xs font-semibold text-muted tracking-wider uppercase">Overview</span>
+          </div>
+          <div class="flex items-center gap-2 ml-auto">
+            <RouterLink class="btn btn-icon w-auto" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
+              </svg>
+            </RouterLink>
+            <RouterLink class="btn btn-primary btn-icon w-auto" to="/plan?tab=monthly" title="New topic" aria-label="New topic">+</RouterLink>
+          </div>
+        </div>
       </DockBar>
 
       <div class="dash-main">

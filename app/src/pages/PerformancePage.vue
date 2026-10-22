@@ -74,18 +74,22 @@ const growth = computed(() => {
   <div class="perf-page" ref="root">
     <div class="perf-grid">
       <DockBar label="Performance controls">
-        <MonthToggle v-model="month" v-model:year="year" />
-        <span class="dock-sep" aria-hidden="true" />
-        <div class="flex items-center gap-2">
-          <label class="sr-only" for="perf-platform">Platform</label>
-          <select id="perf-platform" class="field h-11 min-w-25 m-0" v-model="platform" aria-label="Platform">
-            <option v-for="o in setup?.platforms ?? []" :key="o" :value="o">{{ o }}</option>
-          </select>
-          <button class="btn btn-primary h-11 whitespace-nowrap px-4 flex-none" :disabled="!platform || imp.isPending.value || !canImport"
-            :title="canImport ? '' : t('auth.noPerm')"
-            @click="imp.mutate({ platform, month, year })">
-            {{ imp.isPending.value ? 'Importing…' : 'Import' }}
-          </button>
+        <div class="flex items-center justify-between w-full gap-3">
+          <div class="flex items-center gap-2">
+            <MonthToggle v-model="month" v-model:year="year" />
+            <span class="dock-sep" aria-hidden="true" />
+            <label class="sr-only" for="perf-platform">Platform</label>
+            <select id="perf-platform" class="field h-10 min-w-28 m-0 rounded-full" v-model="platform" aria-label="Platform">
+              <option v-for="o in setup?.platforms ?? []" :key="o" :value="o">{{ o }}</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2 ml-auto">
+            <button class="btn btn-primary h-10 whitespace-nowrap px-5 flex-none rounded-full" :disabled="!platform || imp.isPending.value || !canImport"
+              :title="canImport ? '' : t('auth.noPerm')"
+              @click="imp.mutate({ platform, month, year })">
+              {{ imp.isPending.value ? 'Importing…' : 'Import' }}
+            </button>
+          </div>
         </div>
       </DockBar>
 
