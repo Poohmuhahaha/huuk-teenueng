@@ -1281,7 +1281,6 @@ async function addDont(): Promise<void> {
               :title="`${i + 1}. ${t(s.title)}`"
               @click="step = i; finished = false"
             >
-              <span class="tab-num">{{ i + 1 }}</span>
               <span class="tab-label">{{ t(s.title) }}</span>
             </button>
           </nav>
