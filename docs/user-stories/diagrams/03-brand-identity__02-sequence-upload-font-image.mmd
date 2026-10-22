@@ -1,0 +1,35 @@
+%% 03-brand-identity — Sequence — Upload font / image
+sequenceDiagram
+  autonumber
+  actor O as Owner
+  participant BP as BrandPage
+  participant API as handlers.rs
+  participant FS as data/fonts or data/images
+  participant M as fonts.json manifest
+
+  O->>BP: เลือกไฟล์ (ฟอนต์/รูป)
+  BP->>BP: อ่านเป็น base64 (รูป: ย่อ/ตรวจ 32..500px ก่อน)
+  alt ฟอนต์
+    BP->>API: POST /api/brand/fonts {name,data}
+    API->>API: require_perm(brand.write) + fonts_dir
+    API->>API: decode base64, size <= 2MiB, magic (wOF2/wOFF/ttf/OTTO)
+    alt ผิด
+      API-->>BP: 400
+    else ผ่าน
+      API->>FS: เขียนไฟล์ (slug กัน traversal)
+      API->>M: อัปเดต manifest
+      API-->>BP: 200 FontAsset[]
+    end
+  else รูป
+    BP->>API: POST /api/brand/images {name,data,kind}
+    API->>API: require_perm(brand.write) + images_dir
+    API->>API: decode, <= 4MiB, magic png/jpg/gif/webp, 32..500px
+    alt ผิด
+      API-->>BP: 400
+    else ผ่าน
+      API->>FS: เขียนไฟล์ (image_slug)
+      API-->>BP: 200 { url, width, height }
+      BP->>API: PATCH /api/brand (เก็บ url ลง logos/moodboard)
+    end
+  end
+  BP->>BP: setQueryData(fonts/brand) + applyBrandTheme + invalidate

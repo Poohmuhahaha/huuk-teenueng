@@ -1,0 +1,492 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Huuk — Page & UI Inventory</title><style>
+:root{--ink:#000;--ink-body:#1a1a1a;--muted:#6b6b6b;--faint:#a3a3a3;--line:#e4e4e4;--paper:#fff;
+ --sans:"Inter Variable",Inter,ui-sans-serif,system-ui,-apple-system,"Noto Sans Thai",sans-serif;
+ --serif:Tinos,"Times New Roman",Times,Georgia,"Noto Serif Thai",serif;}
+*{box-sizing:border-box;border-radius:0}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 var(--sans);letter-spacing:-.011em;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:clamp(24px,5vw,72px)}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:700;line-height:1.1;letter-spacing:-.015em;text-wrap:balance}
+h1{font-size:clamp(32px,4.6vw,50px);letter-spacing:-.02em;margin:.1em 0 .3em}
+h2{font-size:clamp(20px,2.6vw,28px);margin:1.6em 0 .4em;padding-top:.5em;border-top:1px solid var(--ink)}
+h3{font-size:17px;margin:1.3em 0 .3em}
+h4{font-size:15px;margin:1em 0 .2em}
+p,ul,ol{margin:.4em 0}
+blockquote{margin:.6em 0;padding:.5em .9em;border-left:3px solid var(--ink);color:var(--muted);background:#fafafa}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;background:rgba(0,0,0,.05);border:1px solid var(--line);padding:.5px 4px}
+hr{border:0;border-top:1px solid var(--line);margin:1.6em 0}
+table{width:100%;border-collapse:collapse;margin:.8em 0;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:8px 9px;border-bottom:1px solid var(--line)}
+th{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--ink)}
+tbody tr:hover{background:rgba(0,0,0,.025)}
+ul{padding-left:1.15em}
+strong{font-weight:600}
+a{color:var(--ink)}
+hr + h2{border-top:0}
+@media print{ .wrap{max-width:none;padding:0} h2{break-after:avoid} table{break-inside:auto} tr{break-inside:avoid} @page{margin:16mm} }
+</style></head>
+<body><div class="wrap"><h1>Huuk — Pages &amp; Elements by User Story</h1>
+<blockquote>
+<p>อ้างจาก user story ทั้ง <strong>101</strong> รายการ + โครง compact IA ที่แก้ในโค้ดจริง (<code>core/screens.ts</code>, <code>app/router</code>, hub pages) แล้ว</p>
+</blockquote>
+<h2>สรุปจำนวน</h2>
+<table>
+<thead>
+<tr>
+<th>ประเภท</th>
+<th>จำนวน</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Pages (แอป + shell)</strong></td>
+<td><strong>6</strong> (Home · Plan · Content · Promote · Analyze · Settings)</td>
+</tr>
+<tr>
+<td><strong>Pages (public / onboarding, ไม่มี shell)</strong></td>
+<td><strong>6</strong> (Welcome · Login · Register · Plans · Read · 404)</td>
+</tr>
+<tr>
+<td><strong>รวม Pages ทั้งหมด</strong></td>
+<td><strong>12</strong></td>
+</tr>
+<tr>
+<td>Tabs (ภายใน hub)</td>
+<td>14</td>
+</tr>
+<tr>
+<td>Overlays (Sheet/Popup/Modal/Drawer — ไม่นับเป็นหน้า)</td>
+<td>12</td>
+</tr>
+</tbody></table>
+<h2>แผนที่หน้า → story</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Page (route)</th>
+<th>Tabs</th>
+<th>stories</th>
+<th>#</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Home <code>/dashboard</code></td>
+<td>–</td>
+<td>US-06-01, US-06-04, US-08-07</td>
+<td>3</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Plan <code>/plan</code></td>
+<td>Monthly / Calendar / Ideas / Hashtags</td>
+<td>US-04-01..10, US-05-01..06</td>
+<td>16</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Content <code>/content</code></td>
+<td>Studio / Feed preview</td>
+<td>US-10-01..13 (+feed = US-04-10)</td>
+<td>13</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Promote <code>/promote</code></td>
+<td>Campaigns / Meta Ads</td>
+<td>US-07-01..07, US-09-01..08</td>
+<td>15</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Analyze <code>/analyze</code></td>
+<td>Performance / Finance</td>
+<td>US-06-02, US-06-03, US-06-05, US-06-06</td>
+<td>4</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Settings <code>/settings</code></td>
+<td>Brand / Workspace / Members / Connections</td>
+<td>US-02-01..08, US-03-01..10, US-08-01..06/08, US-11-01..07, US-01-09..11</td>
+<td>35</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Welcome <code>/welcome</code></td>
+<td>–</td>
+<td>US-00-01, US-02-01</td>
+<td>2</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Login <code>/login</code></td>
+<td>–</td>
+<td>US-01-02</td>
+<td>1</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Register <code>/register</code></td>
+<td>–</td>
+<td>US-01-01</td>
+<td>1</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Plans <code>/plans</code></td>
+<td>–</td>
+<td>US-01-08</td>
+<td>1</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Read <code>/read</code>, <code>/read/:slug</code></td>
+<td>–</td>
+<td>US-12-01..05</td>
+<td>5</td>
+</tr>
+<tr>
+<td>12</td>
+<td>404</td>
+<td>–</td>
+<td>US-12-05</td>
+<td>1</td>
+</tr>
+</tbody></table>
+<h2>รายละเอียดหน้า + Element ที่ต้องมี</h2>
+<h3>1) Home — <code>/dashboard</code></h3>
+<p><strong>Stories:</strong> US-06-01 · US-06-04 · US-08-07</p>
+<p><strong>Sections / elements</strong></p>
+<ul>
+<li>Month tabs (CarouselTabs)</li>
+<li>KPI cards ×6 — Total · Posted · Pending · WIP · Views · Likes</li>
+<li><strong>Live section</strong> — header + <code>Synced {time}</code> + connected-account chips (Meta/IG stats)</li>
+<li>Live posts — card grid (thumbnail · kind · caption · likes/comments/shares/views) หรือ empty/reconnect state</li>
+<li><strong>Active campaigns</strong> — alert list + table (Campaign · Status · Spend) + Open Ads</li>
+<li>Planned vs posted chart (BarChart) · By platform chips · By status chips</li>
+<li>Top 5 by views table</li>
+</ul>
+<p><strong>Buttons</strong></p>
+<ul>
+<li>Sync now (Live) · Open Ads · Edit (Top-5 row)</li>
+<li>KPI/table sort ไม่มีปุ่ม; ProtectedModal ปุ่ม Cancel/Confirm</li>
+</ul>
+<p><strong>Overlays</strong></p>
+<ul>
+<li>ProtectedModal (แก้ computed cell)</li>
+</ul>
+<p><strong>States</strong></p>
+<ul>
+<li>loading · error (+Try again) · empty (ยังไม่มีโพสต์/ยังไม่เชื่อม) · reconnect-needed</li>
+</ul>
+<h3>2) Plan — <code>/plan</code></h3>
+<p><strong>Tabs:</strong> Monthly · Calendar · Ideas · Hashtags
+<strong>Stories:</strong> US-04-01..10 · US-05-01..06</p>
+<p><strong>Monthly (Planner) — element</strong></p>
+<ul>
+<li>Month tabs + <code>N topics · M today</code></li>
+<li>Master table: search · sortable headers · select checkbox · Status chip · selected count</li>
+<li>Row editor: Topic · Pillar · Format · Goal · Date · Time · Status · Hook · Caption · CTA · Hashtag group</li>
+<li>StatusFunnel (Start→Design→Dev→Done) · Platform chips · CopyBar (copy-paste)</li>
+<li>Lock chip “Locked by {name}” + note</li>
+</ul>
+<p><strong>Monthly — buttons</strong></p>
+<ul>
+<li><ul>
+<li>New topic</li>
+</ul>
+</li>
+<li>Save row</li>
+<li>Duplicate</li>
+<li>Delete</li>
+<li>Lock / Unlock</li>
+<li>Request edit of computed field</li>
+<li>Try again</li>
+</ul>
+<p><strong>Calendar — element / buttons</strong></p>
+<ul>
+<li>Month tabs · week-start toggle (<strong>Sunday</strong>/<strong>Monday</strong>) · current month</li>
+<li>Filters (selects): Pillar · Platform · Format · Status</li>
+<li>Display toggles: pillar · platform · status</li>
+<li>CalendarGrid (WEEK 1–6)</li>
+</ul>
+<p><strong>Ideas — element / buttons</strong></p>
+<ul>
+<li>Table: Topic · Format · Idea · Link · Done(checkbox) · Promote</li>
+<li>Capture form: Topic · Format · Promote to month(select) · Idea · Link · <strong>Add idea</strong></li>
+</ul>
+<p><strong>Hashtags — element / buttons</strong></p>
+<ul>
+<li>HashtagGroups (groups + add tag/group) · Try again</li>
+</ul>
+<p><strong>Overlays / States</strong></p>
+<ul>
+<li>ProtectedModal · loading/empty/error · no-permission disable · locked-by-other</li>
+</ul>
+<h3>3) Content — <code>/content</code></h3>
+<p><strong>Tabs:</strong> Studio · Feed preview
+<strong>Stories:</strong> US-10-01..13 (feed = US-04-10)</p>
+<p><strong>Studio — list</strong></p>
+<ul>
+<li>Search field · status tabs (All · Draft · In review · Scheduled · Published · Archived)</li>
+<li>Item: title · status chip · excerpt · author · updated · words · tags · <strong>+ New</strong></li>
+</ul>
+<p><strong>Studio — editor</strong></p>
+<ul>
+<li>Title field · status chip · save-state (Saving… · Conflict · Unsaved · Saved)</li>
+<li>Fields: URL slug · Type (Article/Page/Note) · Summary · Body(Markdown)+toolbar (B/I/H2/•/1./”/<code>&lt;/&gt;</code>/🔗) · word count · Tags · Hero URL</li>
+<li>SEO (details): SEO title (+counter) · SEO description (+counter)</li>
+<li>Preview pane · Share card (URL + Copy link · Open) · Conflict banner</li>
+</ul>
+<p><strong>Studio — buttons</strong></p>
+<ul>
+<li>Save · Publish ▾ (Publish now · schedule datetime · Schedule · Unpublish) · Submit for review / Back to draft</li>
+<li>Duplicate · History (n) · Archive / Restore to draft · Delete · view toggle (Write · Split · Preview)</li>
+<li>Conflict: Reload latest · Keep mine · Copy link · Try again</li>
+</ul>
+<p><strong>Feed preview</strong></p>
+<ul>
+<li>SocialMediaBar · platform tabs(+count) · Show feed up to(date) · Size(select variants)</li>
+<li>Canvas meta line · FeedGrid 3×3</li>
+</ul>
+<p><strong>Overlays / States</strong></p>
+<ul>
+<li>Publish menu <code>[Popup]</code> · Revisions drawer <code>[Drawer]</code> (list + preview + Restore this version + Close) · sign-in card · loading/empty/error</li>
+</ul>
+<h3>4) Promote — <code>/promote</code></h3>
+<p><strong>Tabs:</strong> Campaigns · Meta Ads
+<strong>Stories:</strong> US-07-01..07 · US-09-01..08</p>
+<p><strong>Campaigns — element</strong></p>
+<ul>
+<li>List: name · status badge · start→end · N linked · budget</li>
+<li>Editor: Campaign name · Status · Objective · Start date · End date · Platforms chips · Pillars chips · Budget(฿) · Goal metric · Goal target · Hashtags · Owner · Notes</li>
+<li>Schedule table (Content · Date · Status) · Link content (checkbox list)</li>
+</ul>
+<p><strong>Campaigns — buttons</strong></p>
+<ul>
+<li>New campaign</li>
+<li>Save</li>
+<li>Delete</li>
+</ul>
+<p><strong>Meta Ads — element</strong></p>
+<ul>
+<li>Header + Synced time · opt-in badge (Management on / Read-only)</li>
+<li>Account picker (select/chip) · KPI tiles (Spend · Results · CTR · CPC)</li>
+<li>Campaign table (Campaign · Objective · Status · Budget · Spend · Results · CTR · CPC · action)</li>
+<li>Expanded: Settings dl · Actions · Ad sets (name/status/optimization/targeting/promoted/ads)</li>
+<li>Audit trail (Recent actions)</li>
+</ul>
+<p><strong>Meta Ads — buttons</strong></p>
+<ul>
+<li>Sync ads · Allow campaign management / Turn off management · Boost</li>
+<li>Pause / Resume · Edit budget · Duplicate · Reconnect Meta</li>
+</ul>
+<p><strong>Overlays / States</strong></p>
+<ul>
+<li>DatePickerPopup · Ads dialogs <code>[Modal]</code> ×3 (Edit budget · opt-in confirm · Boost a post) · loading/empty/reconnect/read-only</li>
+</ul>
+<h3>5) Analyze — <code>/analyze</code></h3>
+<p><strong>Tabs:</strong> Performance · Finance
+<strong>Stories:</strong> US-06-02 · US-06-03 · US-06-05 · US-06-06</p>
+<p><strong>Performance</strong></p>
+<ul>
+<li>Import metrics card: Platform(select) · Month(select) · result text</li>
+<li>Platform goals table (Platform · Start · Goal · Now · Delta)</li>
+<li>Views by month chart (BarChart) · Per-post +7 days table (Topic · Posted · +7d · Likes · Views)</li>
+<li>LiveSection (table)</li>
+</ul>
+<p><strong>Performance — buttons</strong></p>
+<ul>
+<li>Import · Try again</li>
+</ul>
+<p><strong>Finance</strong></p>
+<ul>
+<li>BudgetCards (Income · Expense · Balance)</li>
+<li>Income by month chart · Expense by month chart · Transactions table (TxnTable)</li>
+<li>Log transaction: Date · Amount · Kind (IN/OUT) · Sub-category</li>
+</ul>
+<p><strong>Finance — buttons</strong></p>
+<ul>
+<li>Add transaction</li>
+</ul>
+<p><strong>States</strong></p>
+<ul>
+<li>loading ledger · error · no-permission</li>
+</ul>
+<h3>6) Settings — <code>/settings</code></h3>
+<p><strong>Tabs:</strong> Brand · Workspace · Members · Connections
+<strong>Stories:</strong> US-02-01..08 · US-03-01..10 · US-08-01..06/08 · US-11-01..07 · US-01-09..11</p>
+<p><strong>Brand tab</strong></p>
+<ul>
+<li>Identity: Channel name · Positioning · Slogan · Audience · Voice · Do panel(input+Add) · Don&#39;t panel(input+Add)</li>
+<li>Logos ×3 (Main/Secondary/Social): preview · <strong>Upload image</strong> · URL field · remove × · bounds hint · Resize this image</li>
+<li>Palette: live strip · 4 tiles(color picker+role+★+sample) · hex field · Copy</li>
+<li>Typography: preview · imported fonts(pick · Remove font) · suggested · Import font</li>
+<li>Style: Corner radius · Accent fill · Stroke (range+number) · Shadows (None/Soft/Strong) · live sample</li>
+<li>Export: Copy CSS · Download JSON · Upload JSON</li>
+<li>Moodboard (≤12): grid(remove × · Resize) · Add images · URL + Add</li>
+</ul>
+<p><strong>Workspace tab (config + permissions + accounts)</strong></p>
+<ul>
+<li>Year · Owner · Workspace name</li>
+<li>Option lists ×5 (Pillars/Formats/Goals/Statuses/Platforms): chips + input + Add</li>
+<li>Show editable-cell colors (checkbox)</li>
+<li>Users: rows(name · role · remove ×) + new user name/role + Add</li>
+<li>Accounts: rows(name · email · N sessions · remove ×)</li>
+<li>Create sign-in account: Name · Email · Role · Initial password + Create account → temp password + Copy</li>
+<li>Auth: Require login (checkbox) · Roles matrix table + Add role + Save permissions</li>
+</ul>
+<p><strong>Members tab</strong></p>
+<ul>
+<li>Add by email + <strong>Add</strong> · member rows (name · email · role chip · Owner badge · You chip · Remove) · owner-only notice</li>
+</ul>
+<p><strong>Connections tab</strong></p>
+<ul>
+<li>Per-platform rows (status dot · name · connect/manage) — SocialMediaBar; opens PlatformLogin</li>
+</ul>
+<p><strong>Overlays / States</strong></p>
+<ul>
+<li>PlatformLogin <code>[Full]</code> (account/token/expires/last sync/media · Scopes · Open profile · Reconnect · Sync now · Disconnect) · read-only hints · loading/error</li>
+</ul>
+<h3>Public / Onboarding (ไม่มี shell)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Page</th>
+<th>route</th>
+<th>stories</th>
+<th>elements</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>7) Welcome</td>
+<td><code>/welcome</code></td>
+<td>US-00-01 · US-02-01</td>
+<td>โลโก้ · onboarding title/body · “Signed in as {name}” · Workspace name field · <strong>Create workspace</strong> · hint</td>
+<td></td>
+</tr>
+<tr>
+<td>8) Login</td>
+<td><code>/login</code></td>
+<td>US-01-02</td>
+<td>brand(logo+workspace) · Email · Password · <strong>Log in</strong> · “No account? Register” · error(401/429)</td>
+<td></td>
+</tr>
+<tr>
+<td>9) Register</td>
+<td><code>/register</code></td>
+<td>US-01-01</td>
+<td>Name · Email · Password(min 12) · <strong>Create account</strong> · “Already have an account? Log in” · closed notice</td>
+<td></td>
+</tr>
+<tr>
+<td>10) Plans</td>
+<td><code>/plans</code></td>
+<td>US-01-08</td>
+<td>3 plan cards(badge · name · tagline · price · features · CTA · Current) · <strong>Continue with Free</strong> · <strong>Contact sales</strong> · Back to app / Log in</td>
+<td></td>
+</tr>
+<tr>
+<td>11) Read</td>
+<td><code>/read, /read/:slug</code></td>
+<td>US-12-01..05</td>
+<td>header(brand · All posts · Back to app) · index list · article(meta · title · excerpt · hero · markdown body · tag chips) · not-found</td>
+<td></td>
+</tr>
+<tr>
+<td>12) 404</td>
+<td><code>*</code></td>
+<td>US-12-05</td>
+<td>title · message · <strong>Back to the first screen</strong> · <strong>Open the planner</strong></td>
+<td></td>
+</tr>
+</tbody></table>
+<h2>Overlays (Sheet / Popup / Modal / Drawer — ไม่นับเป็นหน้า)</h2>
+<table>
+<thead>
+<tr>
+<th>Overlay</th>
+<th>ชนิด</th>
+<th>element / ปุ่ม</th>
+<th>stories</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Account menu (avatar)</strong></td>
+<td>Popup</td>
+<td>ProfilePanel(name+Save) · Social connect rows · Workspace switcher(list+Create/Rename/Delete) · Workspace settings · Guide · Change password · Sign out everywhere · Log out</td>
+<td>US-01-03..07, US-02-02..05</td>
+</tr>
+<tr>
+<td><strong>Settings sheet</strong></td>
+<td>Dialog</td>
+<td>เหมือน Settings › Workspace (config/options/permissions/accounts)</td>
+<td>US-11-01..07, US-01-09..11</td>
+</tr>
+<tr>
+<td><strong>LoginModal</strong></td>
+<td>Modal</td>
+<td>mode login/register · Name · Email · Password · switch · Cancel · submit</td>
+<td>US-01-01/02</td>
+</tr>
+<tr>
+<td><strong>ChangePasswordModal</strong></td>
+<td>Modal</td>
+<td>Current · New · Confirm · Cancel · Confirm/Close</td>
+<td>US-01-06</td>
+</tr>
+<tr>
+<td><strong>ProtectedModal</strong></td>
+<td>Modal</td>
+<td>title · message · “ไม่ต้องแสดง 5 นาที” · Cancel · Confirm</td>
+<td>US-04-03</td>
+</tr>
+<tr>
+<td><strong>PlatformLogin</strong></td>
+<td>Full</td>
+<td>account/token/expires/last sync/media · Scopes · Open profile · Reconnect · Sync now · Disconnect · profile URL + Connect</td>
+<td>US-08-02..06/08</td>
+</tr>
+<tr>
+<td><strong>OAuth page picker</strong></td>
+<td>Modal</td>
+<td>title · hint · page list(Connect this Page) · Close</td>
+<td>US-08-03</td>
+</tr>
+<tr>
+<td><strong>Guide</strong></td>
+<td>Modal</td>
+<td>guide content · Close</td>
+<td>US-00-01</td>
+</tr>
+<tr>
+<td><strong>DatePickerPopup</strong></td>
+<td>Popup</td>
+<td>date grid · Select date · Clear · Today</td>
+<td>US-04-03, US-07-02</td>
+</tr>
+<tr>
+<td><strong>Ads dialogs ×3</strong></td>
+<td>Modal</td>
+<td>Edit budget · opt-in confirm · Boost a post</td>
+<td>US-09-03/05/07</td>
+</tr>
+<tr>
+<td><strong>Publish menu</strong></td>
+<td>Popup</td>
+<td>Publish now · schedule datetime · Schedule · Unpublish</td>
+<td>US-10-06/07/08</td>
+</tr>
+<tr>
+<td><strong>Revisions drawer</strong></td>
+<td>Drawer</td>
+<td>version list · preview · Restore this version · Close</td>
+<td>US-10-11/12</td>
+</tr>
+</tbody></table>
+<h2>State ที่ทุกหน้าต้องมี (wireframe)</h2>
+<p><code>loading</code> · <code>empty</code> · <code>error (+Try again)</code> · <code>no-permission (disable/hide + tooltip)</code> · <code>reconnect-needed</code> (หน้าที่ผูก platform)</p>
+</div></body></html>

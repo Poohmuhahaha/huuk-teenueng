@@ -1,0 +1,28 @@
+%% 00-user-stories — User Flow — huuk (end-to-end journey)
+%% Entry → auth → workspace → role branch (Owner/Editor vs Client) → publish → public read
+flowchart TD
+  Entry(["เปิด huuk.teenueng.com"]) --> Restore["restore session<br/>GET /api/auth/me"]
+  Restore --> Ready{"boot พร้อม?"}
+  Ready -->|"no"| Boot["boot loader"]
+  Ready -->|"yes"| PublicGate{"route เป็น public?"}
+  PublicGate -->|"yes"| PublicPage["Login / Register / Plans / Read"]
+  PublicGate -->|"no"| AuthGate{"authRequired<br/>และยังไม่ล็อกอิน?"}
+  AuthGate -->|"yes"| Login["ล็อกอิน หรือ สมัครบัญชี"]
+  AuthGate -->|"no"| WsGate{"มี workspace?"}
+  Login --> WsGate
+  WsGate -->|"ไม่มี"| Setup["ตั้งค่า workspace แรก<br/>(owner)"]
+  WsGate -->|"มีแล้ว"| RoleGate{"role"}
+  Setup --> Shell
+  RoleGate -->|"Owner / Editor"| Shell["AppShell — deck 14 การ์ด"]
+  RoleGate -->|"Client"| Studio["Content Studio"]
+  Shell --> Planner["Planner / Calendar<br/>วางแผน + ล็อกโพสต์"]
+  Shell --> Brand["Brand identity<br/>CI + ธีมทั้งเว็บ"]
+  Shell --> Perf["Performance / Finance"]
+  Shell --> Camp["Campaigns / Meta Ads / Live"]
+  Shell --> Conn["Platform connections<br/>OAuth"]
+  Shell --> Settings["Settings / Users / Roles"]
+  Settings -->|"onboard ลูกค้า"| Studio
+  Studio --> Draft["เขียน / autosave / revision"]
+  Draft --> Publish["publish หรือ schedule"]
+  Publish --> Read["Public read page<br/>read/slug"]
+  Shell --> Logout["ออกจากระบบ<br/>(เครื่องนี้ / ทุกอุปกรณ์)"]

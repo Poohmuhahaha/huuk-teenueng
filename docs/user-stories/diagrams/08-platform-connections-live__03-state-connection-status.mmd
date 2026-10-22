@@ -1,0 +1,8 @@
+%% 08-platform-connections-live — State — Connection status
+stateDiagram-v2
+  [*] --> disconnected
+  disconnected --> connected: OAuth callback (redirect) หรือ connect (mock)
+  connected --> connected: sync (refresh)
+  connected --> disconnected: disconnect (clear token)
+  connected --> error: token หมดอายุ (hasToken=false / live.error)
+  error --> connected: reconnect (beginOAuth)

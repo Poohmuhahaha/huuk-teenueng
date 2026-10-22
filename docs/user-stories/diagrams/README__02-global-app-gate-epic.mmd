@@ -1,0 +1,15 @@
+%% README — Global app gate (ทุก epic เริ่มที่นี่)
+flowchart TD
+  Boot["App.vue mount"] --> Restore["restore() → GET /api/auth/me"]
+  Restore --> Ready{"ready = restored && !setupPending"}
+  Ready -->|no| Loading["boot loader"]
+  Ready -->|yes| Public{"route.meta.public?"}
+  Public -->|yes| Render["RouterView (login/register/plans/read)"]
+  Public -->|no| Auth{"authRequired && !isLoggedIn?"}
+  Auth -->|yes| LoginGate["LoginPage"]
+  Auth -->|no| Ws{"มี workspace?"}
+  Ws -->|no, ล็อกอินอยู่| Setup["WorkspaceSetupPage"]
+  Ws -->|yes| Shell["AppShell + ScreensDeck"]
+  Shell --> Role{"role == Client?"}
+  Role -->|yes| Studio["deck เหลือ Content Studio"]
+  Role -->|no| AllCards["deck ครบ 14 การ์ด"]

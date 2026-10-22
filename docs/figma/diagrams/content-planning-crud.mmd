@@ -1,0 +1,35 @@
+flowchart TD
+  subgraph Query["Read path (TanStack Query)"]
+    P["PlannerPage<br/>usePosts(month)"] --> GP["GET /api/posts?month=N"]
+    AP["Dashboard/Performance/Feed<br/>useAllPosts()"] --> GA["GET /api/posts"]
+    I["IdeasPage<br/>useIdeas()"] --> GI["GET /api/ideas"]
+    T["HashtagsPage<br/>useTags()"] --> GT["GET /api/tags"]
+    M["Dashboard/Performance<br/>useMetrics()"] --> GM["GET /api/metrics"]
+  end
+
+  GP --> HList["list_posts: filter month<br/>invalid month -> [] เงียบ ๆ"]
+  GA --> HList2["list_posts: all"]
+
+  subgraph Mut["Mutation path"]
+    Save["Planner.save()<br/>whitelist EDITABLE fields"] --> PATCH["PATCH /api/posts/:id"]
+    Add["addPost"] --> POST["POST /api/posts"]
+    Lock["lock/unlock"] --> LK["POST /api/posts/:id/lock"]
+    Promote["promoteIdea(id, month)"] --> PRO["POST /api/ideas/:id/promote?month="]
+    Import["importMetrics(platform, month)"] --> IMP["POST /api/metrics/import"]
+    AddTxn["addTxn"] --> TXN["POST /api/txns"]
+  end
+
+  PATCH --> VPerm["require_perm(posts.write)"]
+  VPerm --> VLock{"post.lockedBy ถูกตั้ง<br/>และ actor ไม่ใช่เจ้าของ?"}
+  VLock -->|yes| C409["409 Conflict"]
+  VLock -->|no| VVal["validate_post<br/>month 1-12, status in setup.statuses, platforms in setup.platforms"]
+  VVal --> Apply["PostPatch.apply (double_option สำหรับ date)"]
+  Apply --> Inv["invalidate ['posts'] + ['metrics']"]
+
+  LK --> VLPerm["require_perm(posts.lock)"]
+  VLPerm --> LockLogic["lock ต้องว่าง/unlock ต้องเป็นเจ้าของ<br/>demo ใช้ user จาก body"]
+
+  IMP --> IMPerm["require_perm(metrics.import)"]
+  IMPerm --> Pseudo["สร้าง metric pseudo (deterministic hash)<br/>upsert by (postId, platform)"]
+
+  Inv --> UI["หน้าจอ refetch -> MasterTable/FeedGrid อัปเดต"]

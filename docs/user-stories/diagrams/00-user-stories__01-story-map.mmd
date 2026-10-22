@@ -1,0 +1,142 @@
+%% Huuk — User Stories (101 stories · 13 epics)
+flowchart TB
+  subgraph E00_sub["E00 Landing & Onboarding · 1"]
+    direction LR
+    US0001["US-00-01<br/>As a: new user<br/>I want: learn what the app can do before using and be guided to sign up<br/>So that: I can decide with confidence and sign up<br/>Priority: High · Estimate: —"]
+  end
+  subgraph E01_sub["E01 Auth & Account · 11"]
+    direction LR
+    US0101["US-01-01<br/>As a: Anonymous<br/>I want: สมัครบัญชีด้วยชื่อ/อีเมล/รหัสผ่าน<br/>So that: เริ่มใช้ระบบ<br/>Priority: Must · Estimate: —"]
+    US0102["US-01-02<br/>As a: Anonymous<br/>I want: ล็อกอินด้วยอีเมล+รหัสผ่าน<br/>So that: เข้าถึงข้อมูลของฉัน<br/>Priority: Must · Estimate: —"]
+    US0103["US-01-03<br/>As a: ผู้ใช้ที่เคยล็อกอิน<br/>I want: เปิดแอปแล้วยังล็อกอินอยู่<br/>So that: ไม่ต้องล็อกอินซ้ำ<br/>Priority: Must · Estimate: —"]
+    US0104["US-01-04<br/>As a: ผู้ใช้<br/>I want: ออกจากระบบเครื่องนี้<br/>So that: ป้องกันคนอื่นใช้ต่อ<br/>Priority: Must · Estimate: —"]
+    US0105["US-01-05<br/>As a: ผู้ใช้<br/>I want: ออกจากระบบทุกอุปกรณ์<br/>So that: ตัด session ที่ค้างทั้งหมด<br/>Priority: Should · Estimate: —"]
+    US0106["US-01-06<br/>As a: ผู้ใช้<br/>I want: เปลี่ยนรหัสผ่าน<br/>So that: ความปลอดภัย<br/>Priority: Must · Estimate: —"]
+    US0107["US-01-07<br/>As a: ผู้ใช้<br/>I want: แก้ชื่อที่แสดง<br/>So that: ให้ทีมเห็นชื่อถูกต้อง<br/>Priority: Should · Estimate: —"]
+    US0108["US-01-08<br/>As a: ผู้ใช้<br/>I want: เลือกแพ็กเกจ (free/pro/business)<br/>So that: ระบุแพ็กที่ใช้<br/>Priority: Could · Estimate: —"]
+    US0109["US-01-09<br/>As a: Owner<br/>I want: ดูรายชื่อบัญชี + จำนวน session<br/>So that: ตรวจสอบการใช้งาน<br/>Priority: Should · Estimate: —"]
+    US0110["US-01-10<br/>As a: Owner<br/>I want: สร้างบัญชีให้ลูกค้า (ได้ temp password ครั้งเดียว)<br/>So that: onboard ลูกค้า<br/>Priority: Must · Estimate: —"]
+    US0111["US-01-11<br/>As a: Owner<br/>I want: ลบบัญชี<br/>So that: ถอนสิทธิ์<br/>Priority: Should · Estimate: —"]
+  end
+  subgraph E02_sub["E02 Workspace & Members · 8"]
+    direction LR
+    US0201["US-02-01<br/>As a: ผู้ใช้ที่ล็อกอินครั้งแรก<br/>I want: สร้าง workspace แรก<br/>So that: เริ่มใช้ planner<br/>Priority: Must · Estimate: —"]
+    US0202["US-02-02<br/>As a: ผู้ใช้<br/>I want: สลับ workspace<br/>So that: แยกแบรนด์/งาน<br/>Priority: Must · Estimate: —"]
+    US0203["US-02-03<br/>As a: ผู้ใช้<br/>I want: สร้าง workspace เพิ่ม<br/>So that: ทำงานหลายแบรนด์<br/>Priority: Should · Estimate: —"]
+    US0204["US-02-04<br/>As a: Owner<br/>I want: เปลี่ยนชื่อ workspace<br/>So that: ตั้งชื่อให้ตรงแบรนด์<br/>Priority: Should · Estimate: —"]
+    US0205["US-02-05<br/>As a: Owner<br/>I want: ลบ workspace<br/>So that: เลิกใช้แบรนด์นั้น<br/>Priority: Should · Estimate: —"]
+    US0206["US-02-06<br/>As a: Owner<br/>I want: ดูรายชื่อสมาชิก<br/>So that: รู้ว่าใครเข้าถึงได้<br/>Priority: Should · Estimate: —"]
+    US0207["US-02-07<br/>As a: Owner<br/>I want: เพิ่มสมาชิกด้วยอีเมล<br/>So that: ให้ทีมเข้าถึง<br/>Priority: Must · Estimate: —"]
+    US0208["US-02-08<br/>As a: Owner<br/>I want: ลบสมาชิก<br/>So that: ถอนสิทธิ์<br/>Priority: Should · Estimate: —"]
+  end
+  subgraph E03_sub["E03 Brand Identity · 10"]
+    direction LR
+    US0301["US-03-01<br/>As a: Owner<br/>I want: กรอกข้อมูลแบรนด์ (positioning/slogan/audience/voice)<br/>So that: วางรากฐาน CI<br/>Priority: Must · Estimate: —"]
+    US0302["US-03-02<br/>As a: Owner<br/>I want: กำหนด do/don't<br/>So that: เป็น guideline ทีม<br/>Priority: Should · Estimate: —"]
+    US0303["US-03-03<br/>As a: Owner<br/>I want: กำหนดพาเลตต์สี<br/>So that: ใช้สีให้ตรงแบรนด์<br/>Priority: Must · Estimate: —"]
+    US0304["US-03-04<br/>As a: Owner<br/>I want: ดูตัวอย่างเว็บเปลี่ยนธีมทันที<br/>So that: เห็นผลก่อนบันทึก<br/>Priority: Should · Estimate: —"]
+    US0305["US-03-05<br/>As a: Owner<br/>I want: ปรับ radius/fill/stroke/shadow<br/>So that: ปรับหน้าตาเว็บ<br/>Priority: Could · Estimate: —"]
+    US0306["US-03-06<br/>As a: Owner<br/>I want: อัปโหลดโลโก้ (สูงสุด 3)<br/>So that: ใช้ในแบรนด์<br/>Priority: Must · Estimate: —"]
+    US0307["US-03-07<br/>As a: Owner<br/>I want: อัปโหลด moodboard (สูงสุด 12)<br/>So that: อ้างอิงงานภาพ<br/>Priority: Should · Estimate: —"]
+    US0308["US-03-08<br/>As a: Owner<br/>I want: อัปโหลดฟอนต์เอง (woff2/woff/ttf/otf)<br/>So that: ใช้ฟอนต์แบรนด์<br/>Priority: Should · Estimate: —"]
+    US0309["US-03-09<br/>As a: Owner<br/>I want: ลบฟอนต์/รูปที่อัปโหลด<br/>So that: จัดการไฟล์<br/>Priority: Should · Estimate: —"]
+    US0310["US-03-10<br/>As a: Owner<br/>I want: export/import แบรนด์เป็น JSON<br/>So that: ย้าย/สำรอง CI<br/>Priority: Could · Estimate: —"]
+  end
+  subgraph E04_sub["E04 Content Planner · 10"]
+    direction LR
+    US0401["US-04-01<br/>As a: Editor<br/>I want: ดูตารางเดือนที่เลือก<br/>So that: วางแผนรายเดือน<br/>Priority: Must · Estimate: —"]
+    US0402["US-04-02<br/>As a: Editor<br/>I want: เพิ่มแถวคอนเทนต์ใหม่<br/>So that: เริ่มงานชิ้นใหม่<br/>Priority: Must · Estimate: —"]
+    US0403["US-04-03<br/>As a: Editor<br/>I want: เลือกแถวแล้วแก้ทุกฟิลด์<br/>So that: ปรับรายละเอียดโพสต์<br/>Priority: Must · Estimate: —"]
+    US0404["US-04-04<br/>As a: Editor<br/>I want: บันทึกการแก้ไข<br/>So that: เก็บงาน<br/>Priority: Must · Estimate: —"]
+    US0405["US-04-05<br/>As a: Editor<br/>I want: ลบแถว<br/>So that: เอาโพสต์ที่ไม่ใช้ออก<br/>Priority: Should · Estimate: —"]
+    US0406["US-04-06<br/>As a: Editor<br/>I want: ล็อกแถวที่กำลังแก้<br/>So that: กันคนอื่นทับ<br/>Priority: Must · Estimate: —"]
+    US0407["US-04-07<br/>As a: Editor<br/>I want: ปลดล็อกเมื่อแก้เสร็จ<br/>So that: ให้คนอื่นแก้ต่อ<br/>Priority: Must · Estimate: —"]
+    US0408["US-04-08<br/>As a: Editor<br/>I want: กรองตาม pillar/format/status/platform<br/>So that: หางานง่าย<br/>Priority: Should · Estimate: —"]
+    US0409["US-04-09<br/>As a: Editor<br/>I want: เปิดโพสต์จากลิงก์ (`?post=id`)<br/>So that: แชร์ลิงก์ตรง<br/>Priority: Could · Estimate: —"]
+    US0410["US-04-10<br/>As a: Editor<br/>I want: ดูปฏิทิน/ฟีดรวมจากโพสต์<br/>So that: ภาพรวม<br/>Priority: Should · Estimate: —"]
+  end
+  subgraph E05_sub["E05 Ideas & Hashtags · 6"]
+    direction LR
+    US0501["US-05-01<br/>As a: Editor<br/>I want: ดูคลังไอเดีย<br/>So that: มีที่เก็บไอเดีย<br/>Priority: Must · Estimate: —"]
+    US0502["US-05-02<br/>As a: Editor<br/>I want: เพิ่มไอเดีย (topic/format/idea/link)<br/>So that: จดไว้ก่อน<br/>Priority: Must · Estimate: —"]
+    US0503["US-05-03<br/>As a: Editor<br/>I want: ทำเครื่องหมายว่าทำแล้ว/ยัง<br/>So that: ติดตามสถานะ<br/>Priority: Should · Estimate: —"]
+    US0504["US-05-04<br/>As a: Editor<br/>I want: promote ไอเดียเป็นโพสต์ในเดือนที่เลือก<br/>So that: ต่อยอดเป็นงานจริง<br/>Priority: Must · Estimate: —"]
+    US0505["US-05-05<br/>As a: Editor<br/>I want: ดูกลุ่มแฮชแท็ก<br/>So that: หยิบใช้เร็ว<br/>Priority: Must · Estimate: —"]
+    US0506["US-05-06<br/>As a: Editor<br/>I want: เพิ่มแฮชแท็กเข้ากลุ่ม<br/>So that: ขยายคลัง<br/>Priority: Should · Estimate: —"]
+  end
+  subgraph E06_sub["E06 Performance & Finance · 6"]
+    direction LR
+    US0601["US-06-01<br/>As a: Editor<br/>I want: ดูแดชบอร์ด KPI (views/likes/status/top5)<br/>So that: เห็นภาพรวม<br/>Priority: Must · Estimate: —"]
+    US0602["US-06-02<br/>As a: Editor<br/>I want: นำเข้า metrics ของแพลตฟอร์มต่อเดือน<br/>So that: วัดผลได้<br/>Priority: Must · Estimate: —"]
+    US0603["US-06-03<br/>As a: Editor<br/>I want: ดูตาราง metrics ต่อโพสต์ +7 วัน<br/>So that: วิเคราะห์<br/>Priority: Should · Estimate: —"]
+    US0604["US-06-04<br/>As a: Editor<br/>I want: ดู Ads glance ในแดชบอร์ด<br/>So that: เห็นโฆษณาควบคู่<br/>Priority: Could · Estimate: —"]
+    US0605["US-06-05<br/>As a: Owner<br/>I want: ดูรายรับ/รายจ่าย/ยอดคงเหลือ<br/>So that: ดูแลการเงิน<br/>Priority: Must · Estimate: —"]
+    US0606["US-06-06<br/>As a: Owner<br/>I want: บันทึกรายการ (IN/OUT)<br/>So that: เก็บบัญชี<br/>Priority: Must · Estimate: —"]
+  end
+  subgraph E07_sub["E07 Campaigns · 7"]
+    direction LR
+    US0701["US-07-01<br/>As a: Editor<br/>I want: ดูรายการแคมเปญ<br/>So that: ภาพรวมแคมเปญ<br/>Priority: Must · Estimate: —"]
+    US0702["US-07-02<br/>As a: Editor<br/>I want: สร้างแคมเปญ (brief/ช่วงเวลา/เป้า)<br/>So that: วางแผนแคมเปญ<br/>Priority: Must · Estimate: —"]
+    US0703["US-07-03<br/>As a: Editor<br/>I want: แก้แคมเปญ<br/>So that: อัปเดตแผน<br/>Priority: Must · Estimate: —"]
+    US0704["US-07-04<br/>As a: Editor<br/>I want: ผูก content เข้าแคมเปญ<br/>So that: เห็นกำหนดการ<br/>Priority: Should · Estimate: —"]
+    US0705["US-07-05<br/>As a: Owner<br/>I want: ลบแคมเปญ<br/>So that: เอาแคมเปญยกเลิกออก<br/>Priority: Should · Estimate: —"]
+    US0706["US-07-06<br/>As a: Editor<br/>I want: เปิดแคมเปญจากลิงก์ (`/campaigns/:id`)<br/>So that: แชร์ตรง<br/>Priority: Could · Estimate: —"]
+    US0707["US-07-07<br/>As a: Editor<br/>I want: ดูตารางกำหนดการของ content ที่ผูก<br/>So that: เห็น timeline<br/>Priority: Should · Estimate: —"]
+  end
+  subgraph E08_sub["E08 Connections & Live · 8"]
+    direction LR
+    US0801["US-08-01<br/>As a: Owner<br/>I want: ดูสถานะการเชื่อมต่อทุกแพลตฟอร์ม<br/>So that: รู้ว่าเชื่อมอะไรไว้<br/>Priority: Must · Estimate: —"]
+    US0802["US-08-02<br/>As a: Owner<br/>I want: เชื่อมต่อ Meta (Facebook/Instagram)<br/>So that: ดึงโพสต์ + insight<br/>Priority: Must · Estimate: —"]
+    US0803["US-08-03<br/>As a: Owner<br/>I want: เลือก Page เมื่อบัญชีมีหลาย Page<br/>So that: ผูกถูกเพจ<br/>Priority: Must · Estimate: —"]
+    US0804["US-08-04<br/>As a: Owner<br/>I want: เชื่อมต่อ YouTube / TikTok<br/>So that: รวมช่องทาง<br/>Priority: Should · Estimate: —"]
+    US0805["US-08-05<br/>As a: Owner<br/>I want: ยกเลิกการเชื่อมต่อ<br/>So that: ถอนสิทธิ์<br/>Priority: Should · Estimate: —"]
+    US0806["US-08-06<br/>As a: Owner<br/>I want: Sync ข้อมูลด้วยมือ<br/>So that: ดึงล่าสุดทันที<br/>Priority: Must · Estimate: —"]
+    US0807["US-08-07<br/>As a: Editor<br/>I want: ดู Live mirror (โพสต์จริง + engagement)<br/>So that: เห็นผลลัพธ์จริง<br/>Priority: Must · Estimate: —"]
+    US0808["US-08-08<br/>As a: Owner<br/>I want: reconnect เมื่อ token หมดอายุ<br/>So that: เชื่อมต่อกลับ<br/>Priority: Should · Estimate: —"]
+  end
+  subgraph E09_sub["E09 Meta Ads · 8"]
+    direction LR
+    US0901["US-09-01<br/>As a: Owner<br/>I want: ดูภาพรวมบัญชีโฆษณา/แคมเปญ/โฆษณา<br/>So that: เห็นสถานะโฆษณา<br/>Priority: Must · Estimate: —"]
+    US0902["US-09-02<br/>As a: Owner<br/>I want: Sync ข้อมูลโฆษณา<br/>So that: ดึงล่าสุด<br/>Priority: Must · Estimate: —"]
+    US0903["US-09-03<br/>As a: Owner<br/>I want: เปิด/ปิดสิทธิ์จัดการแคมเปญ<br/>So that: ควบคุมความเสี่ยง<br/>Priority: Must · Estimate: —"]
+    US0904["US-09-04<br/>As a: Owner<br/>I want: เปิด/ปิด/archive แคมเปญ<br/>So that: ควบคุมการยิง<br/>Priority: Should · Estimate: —"]
+    US0905["US-09-05<br/>As a: Owner<br/>I want: ปรับงบ (daily/lifetime)<br/>So that: คุมค่าใช้จ่าย<br/>Priority: Should · Estimate: —"]
+    US0906["US-09-06<br/>As a: Owner<br/>I want: duplicate แคมเปญ<br/>So that: ต่อยอดเร็ว<br/>Priority: Could · Estimate: —"]
+    US0907["US-09-07<br/>As a: Owner<br/>I want: boost โพสต์เป็นแคมเปญ<br/>So that: เพิ่มreach<br/>Priority: Could · Estimate: —"]
+    US0908["US-09-08<br/>As a: Owner<br/>I want: ดู audit trail<br/>So that: ตรวจสอบย้อนหลัง<br/>Priority: Should · Estimate: —"]
+  end
+  subgraph E10_sub["E10 Content Studio (CMS) · 13"]
+    direction LR
+    US1001["US-10-01<br/>As a: Editor/Client<br/>I want: ดูรายการ content + ค้นหา/กรอง status<br/>So that: หาเนื้อหา<br/>Priority: Must · Estimate: —"]
+    US1002["US-10-02<br/>As a: Editor/Client<br/>I want: สร้าง content ใหม่<br/>So that: เริ่มเขียน<br/>Priority: Must · Estimate: —"]
+    US1003["US-10-03<br/>As a: Editor/Client<br/>I want: เขียน Markdown + preview<br/>So that: ดูตัวอย่าง<br/>Priority: Must · Estimate: —"]
+    US1004["US-10-04<br/>As a: Editor/Client<br/>I want: autosave ทุก ~1.5 วิ<br/>So that: ไม่หลุดงาน<br/>Priority: Must · Estimate: —"]
+    US1005["US-10-05<br/>As a: Editor/Client<br/>I want: แก้ชนกันแล้วเลือก reload/keep mine<br/>So that: ไม่ทับงานคนอื่น<br/>Priority: Must · Estimate: —"]
+    US1006["US-10-06<br/>As a: Editor/Client<br/>I want: publish<br/>So that: เผยแพร่<br/>Priority: Must · Estimate: —"]
+    US1007["US-10-07<br/>As a: Editor/Client<br/>I want: unpublish<br/>So that: ถอน<br/>Priority: Should · Estimate: —"]
+    US1008["US-10-08<br/>As a: Editor/Client<br/>I want: ตั้งเวลา publish<br/>So that: วางแผน<br/>Priority: Must · Estimate: —"]
+    US1009["US-10-09<br/>As a: Editor/Client<br/>I want: duplicate<br/>So that: ต่อจากของเดิม<br/>Priority: Should · Estimate: —"]
+    US1010["US-10-10<br/>As a: Owner<br/>I want: ลบ content<br/>So that: เอาเนื้อหาออก<br/>Priority: Should · Estimate: —"]
+    US1011["US-10-11<br/>As a: Editor<br/>I want: ดูประวัติ revision + preview<br/>So that: ย้อนดู<br/>Priority: Should · Estimate: —"]
+    US1012["US-10-12<br/>As a: Editor<br/>I want: restore revision<br/>So that: ย้อนกลับ<br/>Priority: Should · Estimate: —"]
+    US1013["US-10-13<br/>As a: Editor<br/>I want: คัดลอกลิงก์ public<br/>So that: แชร์<br/>Priority: Could · Estimate: —"]
+  end
+  subgraph E11_sub["E11 Settings & Permissions · 8"]
+    direction LR
+    US1101["US-11-01<br/>As a: Owner<br/>I want: ดู/แก้ค่าตั้งต้น (ปี, owner, workspaceName)<br/>So that: ตั้งระบบ<br/>Priority: Must · Estimate: —"]
+    US1102["US-11-02<br/>As a: Owner<br/>I want: เพิ่มตัวเลือก (pillar/format/goal/status/platform)<br/>So that: ป้อน dropdown<br/>Priority: Must · Estimate: —"]
+    US1103["US-11-03<br/>As a: Owner<br/>I want: เพิ่ม/ลบ user ใน directory + กำหนด role<br/>So that: จัดทีม<br/>Priority: Must · Estimate: —"]
+    US1104["US-11-04<br/>As a: Owner<br/>I want: สร้าง/แก้ role + ติ๊ก permission<br/>So that: คุมสิทธิ์<br/>Priority: Must · Estimate: —"]
+    US1105["US-11-05<br/>As a: Owner<br/>I want: เปิด/ปิด authRequired<br/>So that: บังคับล็อกอิน<br/>Priority: Should · Estimate: —"]
+    US1106["US-11-06<br/>As a: Owner<br/>I want: กำหนดชื่อคอลัมน์/สีที่แก้ได้<br/>So that: ปรับ planner<br/>Priority: Could · Estimate: —"]
+    US1107["US-11-07<br/>As a: ผู้ใช้<br/>I want: เห็นเฉพาะสิ่งที่ role อนุญาต<br/>So that: ป้องกัน misuse<br/>Priority: Must · Estimate: —"]
+    US1108["US-11-08<br/>As a: Owner<br/>I want: เปิด registration / จัดการบัญชี<br/>So that: onboard<br/>Priority: Should · Estimate: —"]
+  end
+  subgraph E12_sub["E12 Public Delivery · 5"]
+    direction LR
+    US1201["US-12-01<br/>As a: Anonymous<br/>I want: ดูรายการบทความที่เผยแพร่<br/>So that: รู้ว่ามีอะไร<br/>Priority: Must · Estimate: —"]
+    US1202["US-12-02<br/>As a: Anonymous<br/>I want: อ่านบทความเต็มจาก slug<br/>So that: อ่านเนื้อหา<br/>Priority: Must · Estimate: —"]
+    US1203["US-12-03<br/>As a: Anonymous<br/>I want: เห็นเฉพาะ published<br/>So that: ไม่เห็น draft<br/>Priority: Must · Estimate: —"]
+    US1204["US-12-04<br/>As a: Editor<br/>I want: แชร์ลิงก์ public ให้ลูกค้า<br/>So that: ส่งงาน<br/>Priority: Should · Estimate: —"]
+    US1205["US-12-05<br/>As a: Anonymous<br/>I want: ดูหน้า 404 เมื่อ slug ไม่มี/ไม่ publish<br/>So that: รู้ว่าหาไม่เจอ<br/>Priority: Should · Estimate: —"]
+  end

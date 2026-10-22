@@ -1,0 +1,20 @@
+%% 10-content-studio-cms — Flow — Studio overview
+flowchart TD
+  Studio["/studio/:id?"] --> List["GET /api/content?status&q"]
+  List --> New{"action"}
+  New -->|"สร้าง"| C["POST /api/content (content.write)"]
+  C --> CU["router → /studio/:id"]
+  New -->|"เลือก"| Open["GET /api/content/:id"]
+  Open --> Edit["แก้ + autosave PATCH (version)"]
+  Edit --> V{"409?"}
+  V -->|yes| Conflict["Reload latest / Keep mine"]
+  V -->|no| Saved["version++ + revision"]
+  Open --> Pub["POST /publish (content.publish)"]
+  Open --> Unp["POST /unpublish"]
+  Open --> Sch["POST /schedule"]
+  Open --> Dup["POST /duplicate (content.write)"]
+  Open --> Del["DELETE (content.delete)"]
+  Open --> Rev["GET /revisions + POST /restore"]
+  Pub --> PubOk["status=published"]
+  Sch --> Prom["promote_due_scheduled (lazy)"]
+  Prom --> PubOk

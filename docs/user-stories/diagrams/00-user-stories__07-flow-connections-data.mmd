@@ -1,0 +1,32 @@
+%% User Flow 04 — Connections -> data features (OAuth states + gating)
+flowchart TD
+  P["/profile — Platforms (platforms.manage)"] --> List["GET /api/platforms — ConnectionView hasToken"]
+  List --> St{"status?"}
+  St -->|"disconnected"| Conn["Connect"]
+  St -->|"connected แต่ hasToken=false"| Reconnect["Reconnect — token หมดอายุ"]
+  St -->|"connected"| Sync["Sync"]
+
+  Conn --> HasCred{"provider มี credential?"}
+  HasCred -->|"no"| Mock["mock connect — @handle หรือ URL"]
+  HasCred -->|"yes"| OAuth["OAuth redirect — state 128-bit TTL 10 นาที"]
+  OAuth --> Callback["callback — validate state single-use"]
+  Callback --> Acc{"กี่บัญชี?"}
+  Acc -->|"1"| Applied["apply token + spawn live refresh"]
+  Acc -->|"หลาย"| Pick["เลือก Page (pending TTL 10 นาที) → choose"]
+  Pick --> Applied
+  Reconnect --> OAuth
+  Mock --> Applied
+
+  Applied --> Connected["status = connected"]
+  Sync --> SChk{"status connected?"}
+  SChk -->|"no"| S400["400"]
+  SChk -->|"yes"| Connected
+  Connected --> Live["Live mirror GET /api/live — refresh ทุก 30 นาที"]
+  Connected --> Metrics["Import metrics (metrics.import) → Dashboard/Performance"]
+  Connected --> Ads["Meta Ads GET /api/ads"]
+  Ads --> Manage{"ads_manage เปิดอยู่?"}
+  Manage -->|"no"| RO["อ่านอย่างเดียว"]
+  Manage -->|"yes"| Mut["status / budget / duplicate / boost + AdsAudit"]
+  Mut --> MChk{"manage_context ผ่าน?"}
+  MChk -->|"no"| M400["400 unknown campaign หรือยังไม่เปิด"]
+  MChk -->|"yes"| Graph["Graph POST → mirror + audit"]

@@ -1,0 +1,9 @@
+%% 12-public-delivery — US-12-03 — Visibility rule
+flowchart TD
+  Req["GET /api/public/content/:slug"] --> Promote["promote_due_scheduled"]
+  Promote --> Find{"พบ slug?"}
+  Find -->|no| E404["404"]
+  Find -->|yes| Pub{"status == published?"}
+  Pub -->|no| E404b["404 (draft/review/scheduled/archived ไม่เห็น)"]
+  Pub -->|yes| Ret["PublicContent (body markdown)"]
+  Ret --> MD["FE renderMarkdown (escape ก่อน)"]

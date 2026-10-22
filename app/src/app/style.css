@@ -3631,7 +3631,7 @@ header.topbar .in-topbar .tabselect-item.active {
   background: rgba(255, 255, 255, 0.16) !important;
 }
 
-/* ---- Brand Guideline Book Dock Row: Transparent background, no white BG ---- */
+/* ---- Brand Guideline Book Dock Row: Liquid Glass floating capsule matching Topbar Navbar ---- */
 .brand-dock-row {
   display: flex;
   align-items: center;
@@ -3639,13 +3639,21 @@ header.topbar .in-topbar .tabselect-item.active {
   gap: 12px;
   width: 100%;
   max-width: 100%;
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 9999px;
-  padding: 4px 0 !important;
-  box-shadow: none !important;
+  padding: 6px 10px 6px 12px !important;
+  border: 3px solid transparent !important;
+  border-radius: 9999px !important;
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 250, 252, 0.9) 55%, rgba(243, 243, 246, 0.9) 100%) padding-box,
+    linear-gradient(180deg, #ffffff 0%, #e6e6e6 25%, #c9c9c9 50%, #e6e6e6 75%, #ffffff 100%) border-box !important;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 24px -6px rgba(0, 0, 0, 0.12),
+    0 24px 48px -12px rgba(0, 0, 0, 0.12) !important;
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
   box-sizing: border-box;
-  min-height: 48px;
+  min-height: 52px;
 }
 
 /* Stepper navigation on the left: Back, Chapter Nav Tabs, Next grouped together */
@@ -3688,18 +3696,38 @@ header.topbar .in-topbar .tabselect-item.active {
   border-radius: 9999px;
   font-size: 13px;
   font-weight: 600;
-  background: var(--surface) !important;
-  border: 1px solid var(--line);
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 0 !important;
+  color: rgba(20, 20, 25, 0.75);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 6px rgba(0, 0, 0, 0.05);
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .brand-dock-row .btn-tool:hover,
 .brand-dock-row .btn-tool.active {
-  background: var(--wash) !important;
-  border-color: var(--ink);
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #0a0a0c;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 1), 0 6px 16px -4px rgba(148, 160, 181, 0.4);
+}
+
+.brand-dock-row .btn-tool.btn-pdf {
+  background: linear-gradient(180deg, #26262a 0%, #08080a 100%) !important;
+  border: 0 !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+    0 7px 16px -6px rgba(0, 0, 0, 0.38) !important;
+}
+
+.brand-dock-row .btn-tool.btn-pdf:hover {
+  background: linear-gradient(180deg, rgba(37, 37, 41, 0.88) 0%, rgba(8, 8, 10, 0.88) 100%) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+    0 10px 20px -6px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* ---- Chapter Toggle Dropdown (Sleek Minimal Control requested by user) ---- */
@@ -4114,28 +4142,34 @@ header.topbar .in-topbar .tabselect-item.active {
   height: 38px !important;
   padding: 0 14px !important;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   border-radius: 9999px;
   border: 0 !important;
   background: transparent;
-  color: var(--muted);
+  color: rgba(20, 20, 25, 0.65);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   flex: 0 0 auto !important;
   width: auto !important;
   max-width: max-content !important;
 }
 
 .brand-book-tab:hover {
-  background: var(--wash);
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.6);
+  color: #0a0a0c;
 }
 
 .brand-book-tab.active {
-  background: var(--ink);
+  background: linear-gradient(180deg, #26262a 0%, #08080a 100%);
   color: #fff;
   border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+    0 4px 12px -2px rgba(0, 0, 0, 0.35);
+  font-weight: 600;
 }
 
 .brand-book-tab .tab-num {
@@ -4146,8 +4180,8 @@ header.topbar .in-topbar .tabselect-item.active {
   height: 20px;
   border-radius: 50%;
   font-size: 11px;
-  background: var(--wash);
-  color: var(--ink);
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(20, 20, 25, 0.75);
   font-weight: 700;
 }
 

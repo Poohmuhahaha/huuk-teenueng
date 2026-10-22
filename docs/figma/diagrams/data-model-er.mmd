@@ -1,0 +1,21 @@
+erDiagram
+  Store ||--|| SetupConfig : has
+  Store ||--o{ Post : global
+  Store ||--o{ Idea : global
+  Store ||--o{ HashtagGroup : global
+  Store ||--o{ Metric : global
+  Store ||--o{ Txn : global
+  Store ||--o{ Content : global
+  Store ||--o{ Campaign : global
+  Store ||--o{ Workspace : "brand/live/ads/connections"
+  Store ||--o{ Account : accounts
+  Store ||--o{ Session : "hashed key -> Session"
+  Store ||--o{ OAuthState : ephemeral
+  Store ||--o{ PendingPick : ephemeral
+  Store ||--o{ TokenVault : "platform_tokens + _enc"
+  Workspace ||--|| Brand : owns
+  Workspace ||--o{ PlatformConnection : owns
+  Workspace ||--|| LiveData : owns
+  Workspace ||--|| AdsData : owns
+  Content ||--o{ ContentRevision : "max 20"
+  Campaign ||--o{ Content : "contentIds"

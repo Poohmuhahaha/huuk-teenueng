@@ -1,0 +1,21 @@
+%% 07-campaigns — Flow — Campaign CRUD
+flowchart TD
+  Open["/campaigns/:id?"] --> List["GET /api/campaigns"]
+  Open --> CList["GET /api/content (ผูก content)"]
+  List --> Pick{"action"}
+  Pick -->|"สร้าง"| C["POST /api/campaigns"]
+  C --> CPerm{"campaigns.write?"}
+  CPerm -->|no| E403["403"]
+  CPerm -->|yes| CVal{"validate: name/status/metric/dates/budget/contentIds"}
+  CVal -->|fail| E400["400"]
+  CVal -->|ok| CSave["owner=actor|setup.owner + timestamps + invalidate ['campaigns']"]
+  Pick -->|"แก้"| U["PATCH /api/campaigns/:id"]
+  U --> UVal{"validate patch"}
+  UVal -->|fail| E400b["400"]
+  UVal -->|ok| USave["updatedAt + invalidate"]
+  Pick -->|"ลบ"| D["DELETE /api/campaigns/:id"]
+  D --> DPerm{"campaigns.delete?"}
+  DPerm -->|no| E403b["403"]
+  DPerm -->|yes| D404{"มีจริง?"}
+  D404 -->|no| E404["404"]
+  D404 -->|yes| DGo["ลบ + invalidate"]

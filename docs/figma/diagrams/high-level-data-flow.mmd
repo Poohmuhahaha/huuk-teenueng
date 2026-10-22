@@ -1,0 +1,48 @@
+flowchart TD
+  subgraph ClientLayer["Client Layer"]
+    Browser["Browser SPA<br/>Vue 3 + Vue Router hash + TanStack Query<br/>build จาก app/ (Vite)"]
+    Tauri["Tauri Desktop Shell<br/>desktop/src/main.rs<br/>spawn sidecar + WebView"]
+  end
+
+  subgraph Edge["Edge / Reverse Proxy"]
+    Nginx["Nginx (app/Dockerfile)<br/>static SPA + /api/ proxy<br/>limit_req 5r/s auth · 30r/s api"]
+    Caddy["Caddy (profile tls)<br/>TLS + encode gzip<br/>handle /api/* -> api:8787"]
+  end
+
+  subgraph Backend["Rust Axum Backend (server/)"]
+    MW["Middleware stack<br/>require_read_auth · security_headers<br/>timeout 30s · DefaultBodyLimit 256KB · CORS"]
+    Routes["Route table (lib.rs:67-248)<br/>handlers.rs · workspaces.rs · oauth.rs"]
+    AdsLive["Feature modules<br/>ads.rs · live.rs · oauth.rs · secrets.rs"]
+    Store["Store (single in-memory truth)<br/>Arc of RwLock of Store"]
+    Loops["Background tasks<br/>persist 5s · live_refresh · ads_refresh"]
+  end
+
+  subgraph Persist["Persistence (no DB)"]
+    Snap["data/content-planner.json<br/>atomic write, 0600<br/>(secrets แบบ seal แล้ว)"]
+    Files["data/fonts/ · data/images/<br/>base64 uploads"]
+  end
+
+  subgraph Providers["External Providers"]
+    Meta["Meta Graph API v26.0<br/>Facebook Page + IG + Ads"]
+    Google["Google Identity / YouTube"]
+    TikTok["TikTok API"]
+  end
+
+  Browser -->|"HTTPS /api/* (Bearer + X-Workspace-Id)"| Caddy
+  Nginx -->|"same-origin /api/"| MW
+  Caddy -->|"reverse_proxy api:8787"| MW
+  Caddy -->|"/ assets"| Nginx
+  Nginx -->|"static SPA"| Browser
+  Tauri -->|"HTTP 127.0.0.1:8787<br/>DEMO_MODE=1"| MW
+  Tauri -.->|"bundled app/dist"| Browser
+
+  MW --> Routes
+  Routes --> AdsLive
+  Routes -->|"read/write"| Store
+  AdsLive --> Store
+  Loops -->|"read/write"| Store
+  Store -->|"snapshot_bytes()"| Snap
+  Store --> Files
+  Loops -->|"access_token ใน query/form"| Meta
+  Loops --> Google
+  Loops --> TikTok

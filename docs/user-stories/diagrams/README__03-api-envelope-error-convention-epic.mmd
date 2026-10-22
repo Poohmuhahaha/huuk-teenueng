@@ -1,0 +1,13 @@
+%% README — API envelope & error convention (ใช้ร่วมทุก epic)
+flowchart LR
+  UI["Frontend (TanStack Query)"] -->|"fetch + Bearer + X-Workspace-Id"| MW["Axum middleware"]
+  MW --> H["Handler"]
+  H -->|success| J["JSON 200/204"]
+  H -->|"ApiError"| Err["{'error': msg} + status"]
+  Err --> E400["400 bad request"]
+  Err --> E401["401 unauthorized"]
+  Err --> E403["403 forbidden"]
+  Err --> E404["404 not found"]
+  Err --> E409["409 conflict"]
+  Err --> E429["429 too many requests"]
+  Err --> E500["500 internal"]

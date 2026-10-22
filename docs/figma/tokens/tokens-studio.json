@@ -1,0 +1,124 @@
+{
+  "global": {
+    "color": {
+      "ink":        { "value": "#000000", "type": "color", "description": "Accent — the only accent. CTA fill, focus ring, active state, structural borders." },
+      "paper":      { "value": "#ffffff", "type": "color", "description": "Canvas + card surface. Inverted text on ink." },
+      "paper-frosted": { "value": "rgba(255, 255, 255, 0.88)", "type": "color", "description": "Sticky header surface (88% alpha) + blur(12px)." },
+      "muted":      { "value": "#6b6b6b", "type": "color", "description": "Ledes, secondary body, eyebrow at rest." },
+      "faint":      { "value": "#a3a3a3", "type": "color", "description": "Metadata, captions, counters, inactive lang." },
+      "line":       { "value": "#e4e4e4", "type": "color", "description": "1px hairline: bands, tags, media frames." },
+      "ink-body":   { "value": "#1a1a1a", "type": "color", "description": "Work-card descriptions (near-black)." },
+      "sketch-stroke": { "value": "#e3e3e3", "type": "color", "description": "Hero illustration line strokes only." },
+      "sketch-fill":   { "value": "#f1f1f1", "type": "color", "description": "Hero illustration skyline blocks only." },
+      "sketch-moon":   { "value": "#eaeaea", "type": "color", "description": "Hero illustration sun/moon disc only." },
+      "floor":         { "value": "#cfcfcf", "type": "color", "description": "Hero illustration floor band only." }
+    },
+
+    "fontFamilies": {
+      "main":      { "value": "Tinos", "type": "fontFamilies", "description": "Display serif (speaks): wordmark, hero, headings, product names. Tinos is Times-metric-compatible." },
+      "secondary": { "value": "Inter Variable", "type": "fontFamilies", "description": "Functional sans (works): body, UI, labels, buttons." }
+    },
+
+    "fontWeights": {
+      "regular":  { "value": "Regular", "type": "fontWeights" },
+      "medium":   { "value": "Medium", "type": "fontWeights" },
+      "semibold": { "value": "SemiBold", "type": "fontWeights" },
+      "bold":     { "value": "Bold", "type": "fontWeights" }
+    },
+
+    "fontSizes": {
+      "display-1": { "value": "92", "type": "fontSizes", "description": "clamp(42px, 6vw, 92px) — hero headline" },
+      "display-2": { "value": "80", "type": "fontSizes", "description": "clamp(36px, 6.2vw, 80px) — final CTA" },
+      "heading-1": { "value": "44", "type": "fontSizes", "description": "clamp(28px, 3.6vw, 44px) — section band titles" },
+      "heading-2": { "value": "36", "type": "fontSizes", "description": "clamp(26px, 2.2vw, 36px) — product names" },
+      "heading-3": { "value": "21", "type": "fontSizes", "description": "Principle column titles" },
+      "title":     { "value": "28", "type": "fontSizes", "description": "clamp(22px, 2.4vw, 28px) — team names" },
+      "row-title": { "value": "30", "type": "fontSizes", "description": "clamp(20px, 2.4vw, 30px) — capability rows (Tinos 400)" },
+      "wordmark":  { "value": "18", "type": "fontSizes", "description": "Header/footer wordmark, lowercase" },
+      "lede":      { "value": "20", "type": "fontSizes", "description": "clamp(17px, 1.4vw, 20px)" },
+      "body-md":   { "value": "17", "type": "fontSizes", "description": "Default body" },
+      "body-sm":   { "value": "16", "type": "fontSizes", "description": "Bios / principle bodies" },
+      "button":    { "value": "15", "type": "fontSizes" },
+      "button-sm": { "value": "13", "type": "fontSizes", "description": "Header compact CTA" },
+      "caption":   { "value": "14", "type": "fontSizes" },
+      "eyebrow":   { "value": "12", "type": "fontSizes", "description": "Uppercase section eyebrow" },
+      "label":     { "value": "12", "type": "fontSizes", "description": "Uppercase micro-label" },
+      "tag":       { "value": "11", "type": "fontSizes", "description": "Feature tag pill" }
+    },
+
+    "lineHeights": {
+      "display": { "value": "1.02", "type": "lineHeights" },
+      "heading-2": { "value": "1.04", "type": "lineHeights" },
+      "body": { "value": "1.55", "type": "lineHeights" },
+      "label": { "value": "1.7", "type": "lineHeights" }
+    },
+
+    "letterSpacing": {
+      "display-1": { "value": "-2%", "type": "letterSpacing" },
+      "display-2": { "value": "-2%", "type": "letterSpacing" },
+      "heading-1": { "value": "-1.5%", "type": "letterSpacing" },
+      "heading-2": { "value": "-1.5%", "type": "letterSpacing" },
+      "title":     { "value": "-1%", "type": "letterSpacing" },
+      "row-title": { "value": "-1%", "type": "letterSpacing" },
+      "wordmark":  { "value": "-1%", "type": "letterSpacing" },
+      "lede":      { "value": "-1.1%", "type": "letterSpacing" },
+      "body-md":   { "value": "-1.1%", "type": "letterSpacing" },
+      "body-sm":   { "value": "-1.1%", "type": "letterSpacing" },
+      "button":    { "value": "-1%", "type": "letterSpacing" },
+      "eyebrow":   { "value": "22%", "type": "letterSpacing" },
+      "label":     { "value": "8%", "type": "letterSpacing" },
+      "tag":       { "value": "8%", "type": "letterSpacing" }
+    },
+
+    "spacing": {
+      "base": { "value": "4", "type": "spacing" },
+      "xxs":  { "value": "6", "type": "spacing" },
+      "xs":   { "value": "12", "type": "spacing" },
+      "sm":   { "value": "16", "type": "spacing" },
+      "md":   { "value": "26", "type": "spacing" },
+      "lg":   { "value": "34", "type": "spacing" },
+      "xl":   { "value": "48", "type": "spacing" },
+      "xxl":  { "value": "76", "type": "spacing" },
+      "gutter": { "value": "80", "type": "spacing", "description": "Fluid edge gutter clamp(24px,5vw,80px)" }
+    },
+
+    "borderRadius": {
+      "none":   { "value": "0", "type": "borderRadius", "description": "Every UI surface. Squareness is the identity." },
+      "sketch": { "value": "4", "type": "borderRadius", "description": "Only the hero window SVG rx." }
+    },
+
+    "borderWidth": {
+      "hairline": { "value": "1", "type": "borderWidth", "description": "1px line / ink outline" }
+    },
+
+    "boxShadow": {
+      "hard-lift": {
+        "value": { "x": "6", "y": "6", "blur": "0", "spread": "0", "color": "#000000", "type": "dropShadow" },
+        "type": "boxShadow",
+        "description": "The only shadow. Solid, zero blur. Pair with translate(-3px,-3px) on hover."
+      }
+    },
+
+    "motion": {
+      "ease": { "value": [0.22, 1, 0.36, 1], "type": "cubicBezier", "description": "Expo-out" },
+      "ease-quick": { "value": [0.4, 0, 0.2, 1], "type": "cubicBezier" }
+    },
+
+    "duration": {
+      "quick": { "value": "0.2s", "type": "duration" },
+      "reveal": { "value": "0.6s", "type": "duration" },
+      "hero":  { "value": "0.7s", "type": "duration" },
+      "hop":   { "value": "0.9s", "type": "duration" }
+    },
+
+    "other": {
+      "breakpoint-sm":      { "value": "520", "type": "other" },
+      "breakpoint-md":      { "value": "860", "type": "other" },
+      "breakpoint-lg":      { "value": "900", "type": "other" },
+      "header-height":      { "value": "68", "type": "other", "description": "Sticky header height" },
+      "container-width":    { "value": "100%", "type": "other", "description": "Full-bleed; no centred max-width column" },
+      "focus-ring-width":   { "value": "2", "type": "other" },
+      "focus-ring-offset":  { "value": "3", "type": "other" }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+flowchart LR
+  Create["POST /api/workspaces<br/>platforms.manage<br/>owner=email, cap 50"] --> Active["setActiveWorkspace(id)<br/>localStorage cp.workspace"]
+  Active --> Switch["X-Workspace-Id ทุก request"]
+  Switch --> Invalidate["invalidateQueries() ทั้ง cache"]
+  Rename["PATCH /api/workspaces/:id<br/>visible_to (member ก็ผ่าน ⚠️)"] --> Active
+  Delete["DELETE /api/workspaces/:id<br/>ห้ามลบตัวสุดท้าย, คืน fallback"] --> Cleartok["clear_workspace_tokens + ลบ oauth state/pick"]
+  Delete --> Invalidate
+  Members["GET/POST/DELETE /members<br/>ensure_owner (owner-only)"] --> Members

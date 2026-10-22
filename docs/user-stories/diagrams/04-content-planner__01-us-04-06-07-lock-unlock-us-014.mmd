@@ -1,0 +1,9 @@
+%% 04-content-planner — US-04-06/07 — Lock / Unlock (US-014)
+stateDiagram-v2
+  [*] --> Unlocked
+  Unlocked --> LockedByOther: ผู้ใช้ A lock
+  Unlocked --> LockedByMe: ผู้ใช้ B lock (B=actor)
+  LockedByMe --> Unlocked: B unlock
+  LockedByOther --> Unlocked: A unlock
+  LockedByOther --> LockedByOther: B พยายามแก้ → 409
+  LockedByMe --> LockedByMe: B แก้ได้

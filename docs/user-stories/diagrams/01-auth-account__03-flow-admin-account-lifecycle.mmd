@@ -1,0 +1,27 @@
+%% 01-auth-account — Flow — Admin account lifecycle
+flowchart TD
+  Start["Owner เปิด Settings > Accounts"] --> List["GET /api/auth/accounts (users.manage)"]
+  List --> Action{"ทำอะไร"}
+  Action -->|"สร้างบัญชี"| Create["POST /api/auth/accounts"]
+  Create --> CVal{"role มีจริง / email+name ไม่ซ้ำ?"}
+  CVal -->|no| C400["400/409"]
+  CVal -->|yes| CPw{"ส่ง password มา?"}
+  CPw -->|no| Gen["generate cp-‹12hex›"]
+  CPw -->|yes| Use["ใช้ที่ส่งมา"]
+  Gen --> Save["Argon2id + สร้าง account + directory role"]
+  Use --> Save
+  Save --> Ret["200 { account, temporaryPassword } (ครั้งเดียว)"]
+
+  Action -->|"ลบบัญชี"| Del["DELETE /api/auth/accounts/{email}"]
+  Del --> DSelf{"ลบตัวเอง?"}
+  DSelf -->|yes| D400["400"]
+  DSelf -->|no| DLast{"เป็นแอดมินคนสุดท้าย && authRequired?"}
+  DLast -->|yes| D400b["400"]
+  DLast -->|no| D404{"มีบัญชีจริง?"}
+  D404 -->|no| D404b["404"]
+  D404 -->|yes| DGo["ลบ account + sessions + directory entry"]
+
+  Action -->|"เปลี่ยน role/แพ็กเกจ"| Plan["POST /api/auth/plan (self)"]
+  Plan --> Pv{"plan ถูกต้อง?"}
+  Pv -->|no| P400["400"]
+  Pv -->|yes| POk["200 { user }"]
