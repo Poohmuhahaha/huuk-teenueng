@@ -68,7 +68,7 @@ function onWheel(e: WheelEvent): void {
 <template>
   <nav
     v-if="tabs.length"
-    class="subnavbar py-2 px-4 sm:px-6 border-b border-line bg-surface/90 backdrop-blur-[10px] backdrop-saturate-[1.4] touch-pan-y flex justify-center items-center"
+    class="subnavbar py-2 px-4 sm:px-6 bg-transparent touch-pan-y flex justify-center items-center"
     :aria-label="`${activeScreen?.label ?? ''} sections`"
     @wheel="onWheel"
   >

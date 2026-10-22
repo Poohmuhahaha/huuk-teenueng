@@ -2697,8 +2697,9 @@ header.topbar .in-topbar .tabselect-item.active {
     content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%;
     background: var(--ink); margin-right: 10px;
   }
-  /* Phones: the pill row floats on its own — drop the bar's hairline. */
-  .subnavbar.below-topbar { border-bottom-width: 0; overflow: hidden; padding-left: 12px; padding-right: 12px; }
+  /* The subnavbar pill row floats seamlessly without a dividing hairline */
+  .subnavbar,
+  .subnavbar.below-topbar { border-bottom: 0 !important; border-bottom-width: 0 !important; overflow: hidden; padding-left: 12px; padding-right: 12px; }
   /* Phones: 4 enlarged pills overflow 390px viewports. Let the row swipe
      (scroll starts at the left, never center-clipped) with a hidden bar. */
   .hubtabs { width: 100%; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
