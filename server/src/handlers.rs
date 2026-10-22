@@ -989,7 +989,7 @@ pub async fn set_plan(
     AppJson(body): AppJson<PlanBody>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let plan = body.plan.trim().to_lowercase();
-    const PLANS: [&str; 3] = ["free", "pro", "business"];
+    const PLANS: [&str; 7] = ["free", "starter", "growth", "agency", "pro", "business", "enterprise"];
     if !PLANS.contains(&plan.as_str()) {
         return Err(ApiError::bad_request("unknown plan"));
     }

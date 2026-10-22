@@ -14,7 +14,7 @@ const loggedIn = computed(() => currentUser.value !== null)
 const currentPlan = computed(() => currentUser.value?.plan ?? null)
 
 interface Plan {
-  id: 'free' | 'pro' | 'business'
+  id: string
   name: string
   tag: string
   price: string
@@ -23,12 +23,16 @@ interface Plan {
 }
 
 const plans: Plan[] = [
-  { id: 'free', name: 'plans.free', tag: 'plans.freeTag', price: 'plans.freePrice',
-    features: ['plans.freeF1', 'plans.freeF2', 'plans.freeF3'] },
-  { id: 'pro', name: 'plans.pro', tag: 'plans.proTag', price: 'plans.contactPrice', popular: true,
-    features: ['plans.proF1', 'plans.proF2', 'plans.proF3'] },
-  { id: 'business', name: 'plans.business', tag: 'plans.businessTag', price: 'plans.contactPrice',
-    features: ['plans.businessF1', 'plans.businessF2', 'plans.businessF3'] },
+  { id: 'free', name: 'Free', tag: 'Community Edition สำหรับใช้งานเดี่ยว', price: 'ฟรีตลอดชีพ',
+    features: ['1 บัญชีผู้ใช้ / 1 Workspace', 'ปฏิทินคอนเทนต์ 12 เดือน', 'Content Studio & Markdown Editor', 'ระบบ Brand Identity'] },
+  { id: 'starter', name: 'Starter', tag: 'สำหรับครีเอเตอร์เดี่ยว & ฟรีแลนซ์', price: '฿390 / เดือน',
+    features: ['ปฏิทินคอนเทนต์ไม่จำกัด', 'Content Studio & Export', 'คลังไอเดีย Backlog & แท็ก', 'Cloud Auto Sync'] },
+  { id: 'growth', name: 'Growth', tag: 'สำหรับแบรนด์และทีม 2–5 คน', price: '฿1,290 / เดือน',
+    features: ['สูงสุด 5 ที่นั่งในทีม (RBAC)', 'จัดการแคมเปญ & บันทึกค่าใช้จ่าย', 'Dashboard สถิติยอดวิว & ผู้ติดตาม', 'เชื่อมต่อ Social OAuth'] },
+  { id: 'agency', name: 'Agency Pro', tag: 'The Killer Wedge สำหรับเอเจนซี', price: '฿3,900 / เดือน', popular: true,
+    features: ['Guest Magic Link ตรวจงานมือถือ', 'Video Timecode Proofing ระดับวินาที', 'Visual Diff Slider ตรวจเทียบภาพ', 'ส่งออก White-Label PDF Report'] },
+  { id: 'enterprise', name: 'Enterprise', tag: 'สำหรับองค์กร & มีเดียเฮาส์', price: '฿8,900 / เดือน',
+    features: ['ไม่จำกัด Workspaces & แบรนด์', 'Custom Domain ตรวจงาน', 'Dedicated S3 Storage & Priority Transcode', 'ทีมซัพพอร์ต 24/7'] },
 ]
 
 async function continueFree(): Promise<void> {
@@ -40,6 +44,23 @@ async function continueFree(): Promise<void> {
   busy.value = 'free'
   try {
     await choosePlan('free')
+    await router.push('/brand?onboarding=1')
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    busy.value = ''
+  }
+}
+
+async function selectTier(planId: string): Promise<void> {
+  if (!loggedIn.value) {
+    await router.push('/register')
+    return
+  }
+  error.value = ''
+  busy.value = planId
+  try {
+    await choosePlan(planId)
     await router.push('/brand?onboarding=1')
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
@@ -62,20 +83,22 @@ async function continueFree(): Promise<void> {
       <p class="plans-sub">{{ t('plans.subtitle') }}</p>
       <div class="plans-grid">
         <div v-for="plan in plans" :key="plan.id" class="plan-card" :class="{ popular: plan.popular }">
-          <span v-if="plan.popular" class="plan-badge">{{ t('plans.popular') }}</span>
-          <strong>{{ t(plan.name) }}</strong>
-          <p class="plan-tag">{{ t(plan.tag) }}</p>
-          <p class="plan-price">{{ t(plan.price) }}</p>
+          <span v-if="plan.popular" class="plan-badge">Popular</span>
+          <strong>{{ plan.name }}</strong>
+          <p class="plan-tag">{{ plan.tag }}</p>
+          <p class="plan-price">{{ plan.price }}</p>
           <ul class="plan-list">
-            <li v-for="f in plan.features" :key="f">{{ t(f) }}</li>
+            <li v-for="f in plan.features" :key="f">{{ f }}</li>
           </ul>
           <div class="plan-cta">
-            <button v-if="plan.id === 'free'" class="btn btn-primary" style="width: 100%;"
+            <button v-if="plan.id === 'free'" class="btn btn-primary w-full"
               :disabled="busy === 'free'" @click="continueFree">
               {{ busy === 'free' ? t('common.loading') : t('plans.continueFree') }}
             </button>
-            <a v-else class="btn" style="width: 100%; text-align: center;"
-              href="https://teenueng.com" target="_blank" rel="noopener">{{ t('plans.contact') }}</a>
+            <button v-else class="btn w-full" :class="plan.popular ? 'btn-primary' : ''"
+              :disabled="busy === plan.id || currentPlan === plan.id" @click="selectTier(plan.id)">
+              {{ busy === plan.id ? t('common.loading') : currentPlan === plan.id ? 'แพ็กเกจปัจจุบัน' : `เลือก ${plan.name}` }}
+            </button>
           </div>
           <p v-if="currentPlan === plan.id" class="plan-current">{{ t('plans.current') }}</p>
         </div>

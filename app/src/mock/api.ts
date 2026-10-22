@@ -305,7 +305,8 @@ export async function setPlan(plan: string): Promise<{ user: User }> {
   const account = activeAccount()
   if (!account) throw new Error('401 unauthorized')
   const next = plan.trim().toLowerCase()
-  if (!['free', 'pro', 'business'].includes(next)) throw new Error('unknown plan')
+  const validPlans = ['free', 'starter', 'growth', 'agency', 'pro', 'business', 'enterprise']
+  if (!validPlans.includes(next)) throw new Error('unknown plan')
   account.plan = next
   return { user: clone(accountUser(account)) }
 }
