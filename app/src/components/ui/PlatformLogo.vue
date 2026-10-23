@@ -1,16 +1,21 @@
 <script setup lang="ts">
-// Brand glyphs (Simple Icons paths, drawn in currentColor so they follow the
-// monochrome theme): one shared component instead of per-page copies.
+// Brand glyphs and official app-icon squircle tiles matching official platform brand identities.
 import { computed } from 'vue'
 import { platformIdBySetupName } from '@/core/platforms'
 
 const props = withDefaults(
-  defineProps<{ id?: string; name?: string; size?: number }>(),
-  { size: 16 },
+  defineProps<{
+    id?: string
+    name?: string
+    size?: number
+    tile?: boolean
+    color?: boolean
+  }>(),
+  { size: 16, tile: false, color: true },
 )
 
 const LOGOS: Record<string, string> = {
-  linkedin: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z',
+  linkedin: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452z',
   threads: 'M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.216.094.321.142 1.49.7 2.58 1.761 3.154 3.07.797 1.82.871 4.79-1.548 7.158-1.85 1.81-4.094 2.628-7.277 2.65Zm1.003-11.69c-.242 0-.487.007-.739.021-1.836.103-2.98.946-2.916 2.143.067 1.256 1.452 1.839 2.784 1.767 1.224-.065 2.818-.543 3.086-3.71a10.5 10.5 0 0 0-2.215-.221z',
   pinterest: 'M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z',
   bluesky: 'M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.624 6.479.815 2.736 3.713 3.66 6.383 3.364.136-.02.275-.039.415-.056-.138.022-.276.04-.415.056-3.912.58-7.387 2.005-2.83 7.078 5.013 5.19 6.87-1.113 7.823-4.308.953 3.195 2.05 9.271 7.733 4.308 4.267-4.308 1.172-6.498-2.74-7.078a8.741 8.741 0 0 1-.415-.056c.14.017.279.036.415.056 2.67.297 5.568-.628 6.383-3.364.246-.828.624-5.79.624-6.478 0-.69-.139-1.861-.902-2.206-.659-.298-1.664-.62-4.3 1.24C16.046 4.748 13.087 8.687 12 10.8Z',
@@ -28,18 +33,113 @@ const LOGOS: Record<string, string> = {
   meta: 'M6.915 4.03c-1.968 0-3.683 1.28-4.871 3.113C.704 9.208 0 11.883 0 14.449c0 .706.07 1.369.21 1.973a6.624 6.624 0 0 0 .265.86 5.297 5.297 0 0 0 .371.761c.696 1.159 1.818 1.927 3.593 1.927 1.497 0 2.633-.671 3.965-2.444.76-1.012 1.144-1.626 2.663-4.32l.756-1.339.186-.325c.061.1.121.196.183.3l2.152 3.595c.724 1.21 1.665 2.556 2.47 3.314 1.046.987 1.992 1.22 3.06 1.22 1.075 0 1.876-.355 2.455-.843a3.743 3.743 0 0 0 .81-.973c.542-.939.861-2.127.861-3.745 0-2.72-.681-5.357-2.084-7.45-1.282-1.912-2.957-2.93-4.716-2.93-1.047 0-2.088.467-3.053 1.308-.652.57-1.257 1.29-1.82 2.05-.69-.875-1.335-1.547-1.958-2.056-1.182-.966-2.315-1.303-3.454-1.303zm10.16 2.053c1.147 0 2.188.758 2.992 1.999 1.132 1.748 1.647 4.195 1.647 6.4 0 1.548-.368 2.9-1.839 2.9-.58 0-1.027-.23-1.664-1.004-.496-.601-1.343-1.878-2.832-4.358l-.617-1.028a44.908 44.908 0 0 0-1.255-1.98c.07-.109.141-.224.211-.327 1.12-1.667 2.118-2.602 3.358-2.602zm-10.201.553c1.265 0 2.058.791 2.675 1.446.307.327.737.871 1.234 1.579l-1.02 1.566c-.757 1.163-1.882 3.017-2.837 4.338-1.191 1.649-1.81 1.817-2.486 1.817-.524 0-1.038-.237-1.383-.794-.263-.426-.464-1.13-.464-2.046 0-2.221.63-4.535 1.66-6.088.454-.687.964-1.226 1.533-1.533a2.264 2.264 0 0 1 1.088-.285z',
 }
 
+const BRAND_COLORS: Record<string, string> = {
+  linkedin: '#0A66C2',
+  threads: '#101010',
+  pinterest: '#E60023',
+  bluesky: '#1185FE',
+  youtube: '#FF0000',
+  x: '#101010',
+  twitter: '#1DA1F2',
+  google_business: '#4285F4',
+  googlemybusiness: '#4285F4',
+  google: '#4285F4',
+  instagram: '#E1306C',
+  substack: '#FF6719',
+  mastodon: '#6364FF',
+  tiktok: '#101010',
+  facebook: '#1877F2',
+  meta: '#0866FF',
+}
+
+const TILE_BACKGROUNDS: Record<string, string> = {
+  linkedin: '#0A66C2',
+  threads: '#000000',
+  pinterest: '#E60023',
+  bluesky: '#1185FE',
+  youtube: '#FF0000',
+  x: '#000000',
+  twitter: '#1DA1F2',
+  google_business: '#4285F4',
+  googlemybusiness: '#4285F4',
+  google: '#4285F4',
+  instagram: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+  substack: '#FF6719',
+  mastodon: '#6364FF',
+  tiktok: '#000000',
+  facebook: '#1877F2',
+  meta: '#1877F2',
+}
+
 const key = computed<string | null>(() => {
-  // "Facebook" is a legacy label for the Meta login, but its glyph is still
-  // the f — resolve it before the shared login mapping below.
   if (props.id === 'facebook' || props.name?.trim().toLowerCase() === 'facebook') return 'facebook'
   if (props.id && props.id in LOGOS) return props.id
   if (props.name) return platformIdBySetupName(props.name) ?? null
   if (props.id) return platformIdBySetupName(props.id) ?? null
   return null
 })
+
 const d = computed(() => (key.value ? LOGOS[key.value] : null))
+
+const brandColor = computed(() => {
+  if (!props.color || !key.value) return 'currentColor'
+  return BRAND_COLORS[key.value] || 'currentColor'
+})
+
+const tileBg = computed(() => {
+  if (!key.value) return '#000000'
+  return TILE_BACKGROUNDS[key.value] || '#000000'
+})
+
+const innerSize = computed(() => Math.round(props.size * 0.58))
+const tileRadius = computed(() => Math.round(props.size * 0.24))
 </script>
 
 <template>
-  <svg v-if="d" class="flex-none" :width="size" :height="size" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path :d="d" /></svg>
+  <!-- Full squircle app tile (exact match for iOS/Android social app icons) -->
+  <div
+    v-if="tile && key"
+    class="flex-none flex items-center justify-center select-none shadow-2xs overflow-hidden shrink-0"
+    :style="{
+      width: `${size}px`,
+      height: `${size}px`,
+      borderRadius: `${tileRadius}px`,
+      background: tileBg,
+    }"
+  >
+    <!-- Multi-part official tiles: YouTube, Pinterest, Facebook/Meta -->
+    <svg v-if="key === 'youtube'" :width="innerSize" :height="innerSize" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <rect x="3" y="6" width="18" height="12" rx="3.5" fill="#ffffff" />
+      <polygon points="10,8.5 15.5,12 10,15.5" fill="#FF0000" />
+    </svg>
+
+    <svg v-else-if="key === 'pinterest'" :width="innerSize" :height="innerSize" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9.5" fill="#ffffff" />
+      <path fill="#E60023" d="M12.017 2.5C6.78 2.5 2.54 6.74 2.54 11.977c0 4.02 2.5 7.45 6.03 8.83-.08-.75-.16-1.9.03-2.72.17-.74 1.11-4.71 1.11-4.71s-.28-.57-.28-1.41c0-1.32.77-2.3 1.72-2.3.81 0 1.2.61 1.2 1.34 0 .81-.52 2.03-.78 3.16-.23.94.47 1.71 1.4 1.71 1.68 0 2.98-1.78 2.98-4.34 0-2.27-1.63-3.85-3.96-3.85-2.7 0-4.28 2.03-4.28 4.12 0 .82.31 1.7.7 2.17.08.1.09.18.07.27-.07.3-.23.95-.26 1.08-.04.18-.14.21-.32.13-1.18-.55-1.92-2.28-1.92-3.68 0-2.99 2.17-5.74 6.27-5.74 3.29 0 5.85 2.35 5.85 5.48 0 3.27-2.06 5.9-4.93 5.9-.96 0-1.86-.5-2.18-1.09l-.59 2.25c-.21.83-.79 1.86-1.18 2.49.89.27 1.82.42 2.81.42 5.23 0 9.48-4.24 9.48-9.48C21.5 6.74 17.25 2.5 12.017 2.5z" />
+    </svg>
+
+    <svg v-else-if="key === 'facebook' || key === 'meta'" :width="innerSize" :height="innerSize" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9.5" fill="#ffffff" />
+      <path fill="#1877F2" d="M13.2 18v-5.2h1.8l.3-2.1h-2.1V9.3c0-.6.2-1 1-1h1.1V6.4c-.5-.1-1.1-.1-1.6-.1-1.6 0-2.7 1-2.7 2.8v1.6H9.2v2.1h1.8V18h2.2z" />
+    </svg>
+
+    <!-- Standard single-path white glyphs on brand background -->
+    <svg v-else-if="d" :width="innerSize" :height="innerSize" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true" focusable="false">
+      <path :d="d" />
+    </svg>
+  </div>
+
+  <!-- Standard SVG glyph with brand color fill -->
+  <svg
+    v-else-if="d"
+    class="flex-none transition-colors"
+    :width="size"
+    :height="size"
+    viewBox="0 0 24 24"
+    :fill="brandColor"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path :d="d" />
+  </svg>
 </template>

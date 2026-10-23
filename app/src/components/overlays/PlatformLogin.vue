@@ -187,9 +187,9 @@ async function onSync(): Promise<void> {
             :disabled="busy"
             @click="emit('close')"
           >×</button>
-          <div class="flex items-center gap-2 mb-4">
-            <PlatformLogo :id="platform ?? ''" :size="24" />
-            <h2 id="plogin-title" class="m-0 text-xl font-bold font-display text-ink">{{ meta.name }}</h2>
+          <div class="flex items-center gap-2.5 mb-4">
+            <PlatformLogo :id="platform ?? ''" :size="32" tile />
+            <div role="heading" aria-level="2" class="m-0 text-xl font-bold font-sans text-ink">{{ meta.name }}</div>
           </div>
 
           <p v-if="!mayManage" class="plogin-note">{{ t('auth.noPerm') }}</p>

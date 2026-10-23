@@ -135,7 +135,7 @@ function onToggleActive(id: PlatformId, event: Event): void {
         <div>
           <div class="flex items-center justify-between gap-2 mb-3">
             <div class="flex items-center gap-2.5">
-              <PlatformLogo :id="p.id" :size="24" />
+              <PlatformLogo :id="p.id" :size="32" tile />
               <strong class="text-base font-bold text-ink">{{ p.name }}</strong>
             </div>
 
