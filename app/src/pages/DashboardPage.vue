@@ -13,6 +13,8 @@ import DockBar from '@/components/ui/DockBar.vue'
 import KpiCard from '@/components/ui/KpiCard.vue'
 import BarChart from '@/components/ui/BarChart.vue'
 import LineChart from '@/components/ui/LineChart.vue'
+import StatusChip from '@/components/ui/StatusChip.vue'
+import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import ProtectedModal from '@/components/overlays/ProtectedModal.vue'
 
 const router = useRouter()
@@ -219,6 +221,20 @@ const trendData = computed(() => {
   }
 })
 
+function postLikes(postId: string): number {
+  return (metricsQ.data.value ?? []).filter((m) => m.postId === postId).reduce((s, m) => s + m.likes, 0)
+}
+
+const top5TotalViews = computed(() =>
+  (stats.value?.top5 ?? []).reduce((s, t) => s + t.views, 0),
+)
+
+const top5TotalLikes = computed(() =>
+  (stats.value?.top5 ?? []).reduce((s, t) => s + postLikes(t.post.id), 0),
+)
+
+const bestPost = computed(() => stats.value?.top5?.[0] ?? null)
+
 function askEdit(): void {
   if (guardSuppressed()) {
     goMaster()
@@ -423,18 +439,142 @@ function goMaster(): void {
           </template>
 
           <template v-else>
-            <h2 style="margin-top: 0;">Top 5 by views</h2>
-            <TableFrame>
-              <thead><tr><th>Topic</th><th>Status</th><th class="num">Views</th><th></th></tr></thead>
-              <tbody>
-                <tr v-for="t in stats.top5" :key="t.post.id" style="cursor: default;">
-                  <td>{{ t.post.topic }}</td>
-                  <td>{{ t.post.status }}</td>
-                  <td>{{ t.views.toLocaleString('en-US') }}</td>
-                  <td><button class="btn" @click="askEdit">Edit</button></td>
-                </tr>
-              </tbody>
-            </TableFrame>
+            <section class="top-posts-glance flex flex-col gap-6 text-left">
+              <!-- Header with Action -->
+              <div class="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <div class="text-xs font-bold uppercase tracking-wider text-muted mb-0.5">Engagement Leaderboard</div>
+                  <h2 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight m-0 font-display text-ink">Top 5 by views</h2>
+                </div>
+                <button type="button" class="btn text-xs py-2 px-4 inline-flex items-center gap-2 font-bold hover:border-ink shadow-xs" @click="askEdit">
+                  <span>Open Planner</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Top KPI Summary Cards -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="border border-line rounded-xl bg-surface p-4 shadow-xs flex flex-col justify-between">
+                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Top 5 Total Views</div>
+                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ top5TotalViews.toLocaleString() }}</div>
+                  <div class="text-2xs text-muted mt-1">Combined views of top 5 posts</div>
+                </div>
+
+                <div class="border border-line rounded-xl bg-surface p-4 shadow-xs flex flex-col justify-between">
+                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Top 5 Total Likes</div>
+                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ top5TotalLikes.toLocaleString() }}</div>
+                  <div class="text-2xs text-accent font-semibold mt-1">Direct audience engagement</div>
+                </div>
+
+                <div class="border border-line rounded-xl bg-surface p-4 shadow-xs flex flex-col justify-between">
+                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Top Performer</div>
+                  <div class="text-base font-bold text-ink truncate mt-1.5" :title="bestPost?.post.topic">{{ bestPost?.post.topic ?? '-' }}</div>
+                  <div class="text-2xs text-success font-semibold mt-1 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                    {{ bestPost?.views.toLocaleString() }} views
+                  </div>
+                </div>
+              </div>
+
+              <!-- #1 Spotlight Hero Card -->
+              <div v-if="bestPost" class="border border-line rounded-xl bg-surface p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-start gap-4 min-w-0">
+                  <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 flex items-center justify-center font-extrabold text-xl font-mono flex-none">
+                    #1
+                  </div>
+                  <div class="flex flex-col gap-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-xs uppercase font-extrabold tracking-wider text-muted">Monthly Champion</span>
+                      <span v-if="bestPost.post.pillar" class="inline-flex px-2 py-0.5 rounded text-2xs font-semibold bg-wash text-muted border border-faint">
+                        {{ bestPost.post.pillar }}
+                      </span>
+                      <span v-if="bestPost.post.format" class="inline-flex px-2 py-0.5 rounded text-2xs font-medium text-muted">
+                        {{ bestPost.post.format }}
+                      </span>
+                    </div>
+                    <div class="text-lg sm:text-xl font-bold text-ink truncate" :title="bestPost.post.topic">
+                      {{ bestPost.post.topic }}
+                    </div>
+                    <div v-if="bestPost.post.hook || bestPost.post.caption" class="text-xs text-muted line-clamp-1 italic">
+                      "{{ bestPost.post.hook || bestPost.post.caption }}"
+                    </div>
+                    <div v-if="bestPost.post.platforms?.length" class="flex items-center gap-1.5 mt-1">
+                      <PlatformLogo v-for="pl in bestPost.post.platforms" :key="pl" :name="pl" :size="14" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-6 border-t md:border-t-0 md:border-l border-faint pt-3 md:pt-0 md:pl-6 flex-none">
+                  <div class="flex flex-col">
+                    <span class="text-2xs uppercase font-bold text-muted">Total Views</span>
+                    <span class="text-2xl font-extrabold font-mono text-ink">{{ bestPost.views.toLocaleString() }}</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="text-2xs uppercase font-bold text-muted">Likes</span>
+                    <span class="text-2xl font-extrabold font-mono text-accent">{{ postLikes(bestPost.post.id).toLocaleString() }}</span>
+                  </div>
+                  <button type="button" class="btn text-xs py-1.5 px-3.5 font-semibold" @click="askEdit">
+                    Edit
+                  </button>
+                </div>
+              </div>
+
+              <!-- Top 5 Rankings Table -->
+              <div class="flex flex-col gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-muted">Full Rankings</span>
+                <TableFrame>
+                  <thead>
+                    <tr>
+                      <th class="w-[50px] text-center">Rank</th>
+                      <th>Topic & Details</th>
+                      <th class="w-[100px]">Status</th>
+                      <th class="num w-[120px]">Views</th>
+                      <th class="num w-[100px]">Likes</th>
+                      <th class="w-[90px] text-right"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(t, idx) in stats?.top5 ?? []" :key="t.post.id">
+                      <td class="text-center">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-md font-mono text-xs font-bold"
+                          :class="idx === 0 ? 'bg-amber-500/15 text-amber-600 border border-amber-500/30' : idx === 1 ? 'bg-slate-400/15 text-slate-600 border border-slate-400/30' : idx === 2 ? 'bg-amber-700/15 text-amber-800 border border-amber-700/30' : 'bg-wash text-muted border border-faint'">
+                          #{{ idx + 1 }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="flex flex-col gap-0.5">
+                          <strong class="font-bold text-ink text-sm">{{ t.post.topic }}</strong>
+                          <div class="flex items-center gap-2 text-2xs text-muted flex-wrap">
+                            <span v-if="t.post.pillar" class="font-medium text-muted">{{ t.post.pillar }}</span>
+                            <span v-if="t.post.format">· {{ t.post.format }}</span>
+                            <span v-if="t.post.date">· {{ t.post.date }}</span>
+                            <div v-if="t.post.platforms?.length" class="inline-flex items-center gap-1 ml-1">
+                              <PlatformLogo v-for="pl in t.post.platforms" :key="pl" :name="pl" :size="12" />
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <StatusChip :status="t.post.status" />
+                      </td>
+                      <td class="num font-bold font-mono text-ink text-sm">
+                        {{ t.views.toLocaleString('en-US') }}
+                      </td>
+                      <td class="num font-mono text-muted text-sm">
+                        {{ postLikes(t.post.id).toLocaleString('en-US') }}
+                      </td>
+                      <td class="text-right">
+                        <button type="button" class="btn text-xs py-1 px-3 w-auto inline-flex items-center justify-center font-semibold hover:border-ink" @click="askEdit">
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </TableFrame>
+              </div>
+            </section>
           </template>
         </template>
       </div>
