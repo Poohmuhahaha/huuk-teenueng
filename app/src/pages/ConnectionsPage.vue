@@ -99,27 +99,18 @@ function onToggleActive(id: PlatformId, event: Event): void {
 </script>
 
 <template>
-  <div class="connections-page max-w-4xl mx-auto px-4 sm:px-6 py-6 w-full text-left">
+  <div class="connections-page w-full px-6 sm:px-8 py-6 text-left font-sans flex flex-col flex-1">
     <!-- Header -->
     <header class="mb-6">
-      <div class="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <div class="text-xs font-bold uppercase tracking-wider text-muted mb-0.5">Brand &amp; Social Workspace</div>
-          <div class="flex items-center">
-            <h1 class="text-3xl sm:text-4xl font-extrabold uppercase tracking-tight m-0 font-display text-ink">
-              {{ activeWs?.name || 'Studio' }}
-            </h1>
-            <InfoTip text="Link social media accounts to publish content, schedule campaigns, and track live analytics." />
-          </div>
+      <div class="flex items-center gap-2">
+        <div role="heading" aria-level="2" class="text-base sm:text-lg font-bold text-ink tracking-tight font-sans">
+          {{ activeWs?.name || 'Workspace Channels' }}
         </div>
-
-        <div class="flex items-center gap-2">
-          <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-wash border border-faint text-muted shadow-xs">
-            <span class="w-2 h-2 rounded-full" :class="connectedCount > 0 ? 'bg-success' : 'bg-muted'" />
-            <span>{{ connectedCount }} of {{ PLATFORMS.length }} connected</span>
-          </span>
-        </div>
+        <InfoTip text="Link social media accounts to publish content, schedule campaigns, and track live analytics." />
       </div>
+      <p class="text-xs text-muted mt-1 mb-0 font-sans">
+        Brand &amp; Social Workspace connections for publishing and live analytics.
+      </p>
     </header>
 
     <p v-if="actionError" class="autherr text-xs text-danger mb-4" role="alert">{{ actionError }}</p>
@@ -288,8 +279,11 @@ function onToggleActive(id: PlatformId, event: Event): void {
     <DockBar label="Platform connections">
       <div class="flex items-center justify-between w-full gap-3">
         <div class="flex items-center gap-2">
-          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-wash border border-faint text-muted shadow-2xs">
-            <span class="w-2 h-2 rounded-full" :class="connectedCount > 0 ? 'bg-success' : 'bg-muted'" />
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-wash border border-faint text-muted shadow-2xs">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink shrink-0" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
             <span>{{ connectedCount }} of {{ PLATFORMS.length }} connected</span>
           </span>
         </div>
