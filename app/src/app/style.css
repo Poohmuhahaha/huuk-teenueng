@@ -1026,6 +1026,8 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 .slide-dock {
   flex: none;
   width: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 .slide-dock:empty {
   display: none;
@@ -1161,9 +1163,7 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
   .card-scroll,
   .card-scroll.studio-scroll .studio-main,
   .card-scroll.perf-scroll .perf-main,
-  .card-scroll.planner-scroll .planner-detail,
   .card-scroll.camp-scroll .camp-detail,
-  .card-scroll.planner-scroll .planner-grid > .p-drawer,
   .card-scroll.dash-scroll .dash-main { overscroll-behavior-x: auto; }
 }
 
@@ -2337,7 +2337,16 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .planner-grid > * {
   min-width: 0;
 }
-.card-scroll.planner-scroll .planner-grid,
+.card-scroll.planner-scroll .planner-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+}
 .card-scroll.camp-scroll .camp-grid {
   flex: 1;
   min-height: 0;
@@ -2381,9 +2390,7 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .card-scroll.planner-scroll .planner-main .tblwrap {
   border: 0; border-radius: 0; background: transparent;
 }
-.card-scroll.planner-scroll .planner-detail,
 .card-scroll.camp-scroll .camp-detail,
-.card-scroll.planner-scroll .planner-grid > .p-drawer,
 .card-scroll.camp-scroll .camp-grid > .p-drawer {
   border-left: 1px solid var(--line);
   padding-left: 28px;
@@ -2816,7 +2823,6 @@ header.topbar .in-topbar .tabselect-item.active {
 /* Wizard footer: keep step buttons centred as a pair. */
 .brandpage .dock-bar { justify-content: center; }
 .card-scroll.dash-scroll .dash-grid { grid-template-columns: minmax(0, 1fr); }
-.card-scroll.planner-scroll .planner-grid,
 .card-scroll.camp-scroll .camp-grid { grid-template-columns: 340px minmax(0, 1fr); }
 
 /* ---- auth pages: mobile WHOOP style + desktop split ---- */

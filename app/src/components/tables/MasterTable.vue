@@ -9,7 +9,7 @@ import type { Post } from '@/mock/db'
 import StatusChip from '@/components/ui/StatusChip.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
 
-const props = defineProps<{ rows: Post[]; loading?: boolean }>()
+const props = defineProps<{ rows: Post[]; loading?: boolean; selectedId?: string | null }>()
 const emit = defineEmits<{ select: [post: Post] }>()
 
 const features = tableFeatures({
@@ -116,7 +116,10 @@ function onRowKeydown(e: KeyboardEvent, post: Post): void {
           <td colspan="6" class="text-center text-muted">No rows yet.</td>
         </tr>
         <tr v-for="row in table.getRowModel().rows" :key="row.id"
-          :class="checked.has(row.original.id) ? 'selected' : ''" tabindex="0"
+          :class="[
+            checked.has(row.original.id) ? 'selected' : '',
+            selectedId === row.original.id ? '!bg-wash font-semibold' : ''
+          ]" tabindex="0"
           @click="emit('select', row.original)"
           @keydown.enter.prevent="onRowKeydown($event, row.original)"
           @keydown.space.prevent="onRowKeydown($event, row.original)">

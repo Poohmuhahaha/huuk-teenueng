@@ -116,10 +116,10 @@ const drawerStyle = computed(() => {
   <Transition name="p-drawer-anim" :duration="280">
     <div
       v-if="!inline && open"
-      class="p-drawer-backdrop z-[1000] bg-black/45 backdrop-blur-[2px] flex flex-col justify-end overflow-hidden"
+      class="p-drawer-backdrop z-[1000] bg-black/45 backdrop-blur-[2px] flex overflow-hidden"
       :class="[
         contained ? 'absolute inset-0' : 'fixed inset-0',
-        side === 'bottom' ? 'pt-3' : '',
+        side === 'bottom' ? 'flex-col justify-end pt-3' : 'flex-row justify-end',
         `p-drawer-side-${side}`,
       ]"
       @click.self="dismissable ? open = false : null"

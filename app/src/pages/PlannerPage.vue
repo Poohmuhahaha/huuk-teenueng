@@ -215,18 +215,6 @@ function pick(p: Post): void {
   editorOpen.value = true
 }
 
-// Auto-select first topic on desktop when posts load
-watch(
-  () => posts.value,
-  (list) => {
-    if ((deckFull.value || wide.value) && !selectedId.value && list && list.length > 0) {
-      pick(list[0])
-    }
-  },
-  { immediate: true },
-)
-
-
 function goMonth(value: string | number): void {
   const next = validMonth(value)
   if (next === null || next === month.value) return
@@ -330,7 +318,7 @@ watch(
         <p class="muted">Could not load posts: {{ loadError?.message }}</p>
         <button class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
       </div>
-      <MasterTable v-else-if="(posts ?? []).length" :rows="posts ?? []" @select="pick" />
+      <MasterTable v-else-if="(posts ?? []).length" :rows="posts ?? []" :selected-id="selectedId" @select="pick" />
       <div v-else class="card planner-empty flex flex-col items-start gap-2.5">
         <p class="muted">{{ t('planner.empty') }}</p>
         <button class="btn btn-primary" :disabled="!canWrite || busy"
@@ -340,15 +328,11 @@ watch(
       <p v-if="!selected && actionError" class="autherr" role="alert">{{ actionError }}</p>
     </div>
 
-    <div v-if="(deckFull || wide) && !editorOpen" class="planner-detail">
-      <p class="muted">{{ t('planner.pick') }}</p>
-      <p class="muted">{{ t('planner.pickHint') }}</p>
-    </div>
     <Drawer
       v-model="editorOpen"
       class="editor-sheet"
-      :inline="deckFull || wide"
-      :side="deckFull ? 'right' : 'bottom'"
+      :inline="false"
+      :side="deckFull || wide ? 'right' : 'bottom'"
       :width="'480px'"
       contained
       :title="draft.topic || t('planner.newTopic')"
