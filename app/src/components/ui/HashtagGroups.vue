@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { HashtagGroup } from '@/mock/db'
+import type { TrackedTag } from '@/composables/useHashtagTracker'
 
 const props = defineProps<{
   groups: HashtagGroup[]
   /** Async add handler; the draft clears only when it resolves. */
   add?: (groupId: string, tag: string) => Promise<void>
+  /** Tracked stats per tag */
+  tagStats?: Map<string, TrackedTag>
+  /** Helper to find discovered tags from posts for a group */
+  getDiscoveredTags?: (groupTitle: string, existingTags: string[]) => TrackedTag[]
 }>()
 
 const drafts = ref<Record<string, string>>({})
@@ -27,14 +32,23 @@ async function copyText(key: string, text: string): Promise<void> {
   }
 }
 
-function copyGroup(g: HashtagGroup): void {
-  const text = g.tags.map((t) => `#${t.replace(/^#/, '')}`).join(' ')
-  void copyText(g.id, text)
-}
-
 function copySingleTag(gId: string, t: string): void {
   const tag = `#${t.replace(/^#/, '')}`
   void copyText(`${gId}-${t}`, tag)
+}
+
+function getCount(tag: string): number {
+  if (!props.tagStats) return 0
+  const normalized = tag.trim().toLowerCase().replace(/^#/, '')
+  return props.tagStats.get(normalized)?.count ?? 0
+}
+
+function getTagTooltip(tag: string): string {
+  const normalized = tag.trim().toLowerCase().replace(/^#/, '')
+  const stat = props.tagStats?.get(normalized)
+  if (!stat || stat.count === 0) return `Click to copy #${tag} (0 posts)`
+  const titles = stat.posts.map((p) => p.title).join(', ')
+  return `Click to copy #${tag} · Used in ${stat.count} ${stat.count === 1 ? 'post' : 'posts'} (${titles})`
 }
 
 async function submit(groupId: string): Promise<void> {
@@ -51,80 +65,118 @@ async function submit(groupId: string): Promise<void> {
     busy.value = false
   }
 }
+
+async function addDiscoveredTag(groupId: string, tag: string): Promise<void> {
+  if (!props.add || busy.value) return
+  busy.value = true
+  try {
+    await props.add(groupId, tag)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    busy.value = false
+  }
+}
 </script>
 
 <template>
-  <div class="hashtag-grid grid grid-cols-1 md:grid-cols-2 gap-4 w-full flex-1">
+  <div class="hashtag-stack flex flex-col gap-6 w-full max-w-4xl mx-auto py-2">
+    <!-- Category Cards matching reference Image 7 -->
     <div
       v-for="g in groups"
       :key="g.id"
-      class="border border-line rounded-2xl bg-surface p-5 shadow-xs flex flex-col justify-between hover:border-ink/25 transition-all"
+      class="border border-line rounded-2xl bg-surface p-8 shadow-xs flex flex-col items-center justify-between transition-all hover:border-ink/20"
     >
-      <!-- Group Header -->
-      <div class="flex items-center justify-between pb-3 border-b border-line/60">
-        <div class="flex items-center gap-2.5">
-          <h3 class="font-bold text-base text-ink m-0 tracking-tight">{{ g.title }}</h3>
-          <span class="text-2xs font-semibold px-2 py-0.5 rounded-full bg-wash text-muted border border-faint font-mono">
-            {{ g.tags.length }} {{ g.tags.length === 1 ? 'tag' : 'tags' }}
-          </span>
-        </div>
+      <!-- Title: Centered -->
+      <h3 class="font-bold text-lg text-ink text-center m-0 tracking-tight">
+        {{ g.title }}
+      </h3>
 
-        <button
-          type="button"
-          class="px-3 py-1 rounded-full text-xs font-semibold transition-all border border-line cursor-pointer select-none"
-          :class="copiedKey === g.id ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-surface text-muted hover:text-ink hover:bg-wash hover:border-ink shadow-2xs'"
-          title="Copy all tags in this category"
-          @click="copyGroup(g)"
-        >
-          <span v-if="copiedKey === g.id">Copied ✓</span>
-          <span v-else>Copy all</span>
-        </button>
-      </div>
-
-      <!-- Tags Flow -->
-      <div class="flex flex-wrap gap-1.5 py-4 flex-1 content-start min-h-[64px]">
+      <!-- Tag Pills: Centered with post usage counts -->
+      <div class="flex items-center justify-center flex-wrap gap-2.5 py-6 w-full min-h-[58px]">
         <button
           v-for="(t, i) in g.tags"
           :key="`${t}-${i}`"
           type="button"
-          class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border border-line text-ink transition-all cursor-pointer select-none group"
-          :class="copiedKey === `${g.id}-${t}` ? 'bg-emerald-500 !text-white border-emerald-500' : 'bg-surface hover:bg-wash hover:border-ink shadow-2xs'"
-          :title="`Click to copy #${t}`"
+          class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer select-none group"
+          :class="[
+            copiedKey === `${g.id}-${t}`
+              ? '!bg-emerald-500 !text-white !border-emerald-500 shadow-xs'
+              : 'border-line bg-surface hover:border-ink hover:bg-wash text-ink shadow-2xs'
+          ]"
+          :title="getTagTooltip(t)"
           @click="copySingleTag(g.id, t)"
         >
           <span>#{{ t }}</span>
-          <span v-if="copiedKey === `${g.id}-${t}`" class="text-[10px]">✓</span>
+          <!-- Dynamic count tracked from posts -->
+          <span
+            v-if="getCount(t) > 0"
+            class="text-[10px] font-mono px-1.5 py-0.2 rounded-full transition-colors"
+            :class="copiedKey === `${g.id}-${t}` ? 'bg-white/20 text-white' : 'bg-wash text-muted group-hover:text-ink border border-faint'"
+          >
+            {{ getCount(t) }}
+          </span>
+          <span v-if="copiedKey === `${g.id}-${t}`" class="text-[10px] ml-0.5">✓</span>
         </button>
-        <span v-if="!g.tags.length" class="text-xs text-muted/60 italic py-2">
-          No tags in this group yet.
+
+        <!-- Discovered tags dynamically tracked from fetched posts for this category -->
+        <template v-if="getDiscoveredTags">
+          <div
+            v-for="disc in getDiscoveredTags(g.title, g.tags)"
+            :key="disc.tag"
+            class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border border-dashed border-ink/30 bg-wash/50 text-ink/80 hover:border-ink transition-all"
+            :title="`Discovered from ${disc.count} post(s). Click '+' to save to ${g.title}.`"
+          >
+            <span
+              class="cursor-pointer hover:underline"
+              @click="copySingleTag(g.id, disc.tag)"
+            >
+              #{{ disc.tag }}
+            </span>
+            <span class="text-[10px] font-mono opacity-70">({{ disc.count }})</span>
+            <button
+              v-if="add"
+              type="button"
+              class="w-4 h-4 rounded-full bg-ink/10 hover:bg-ink hover:text-white flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer border-0 p-0 ml-0.5"
+              title="Save to this group"
+              @click.stop="addDiscoveredTag(g.id, disc.tag)"
+            >
+              +
+            </button>
+          </div>
+        </template>
+
+        <span v-if="!g.tags.length" class="text-xs text-muted/60 italic py-1">
+          No tags in this category yet.
         </span>
       </div>
 
-      <!-- Quick Add Tag Input Bar -->
-      <div class="flex items-center gap-2 pt-3 border-t border-faint">
-        <div class="relative flex-1">
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted/60 font-mono text-xs select-none pointer-events-none">#</span>
+      <!-- Underline input + ADD button matching Image 7 -->
+      <form
+        class="w-full flex items-center gap-4 pt-4 border-t border-transparent"
+        @submit.prevent="submit(g.id)"
+      >
+        <div class="relative flex-1 flex items-center border-b border-ink/80 focus-within:border-ink transition-colors pb-1">
           <input
-            class="w-full pl-7 pr-3 py-1.5 rounded-full border border-line bg-surface text-xs text-ink placeholder:text-muted/50 focus:outline-none focus:border-ink transition-colors shadow-2xs"
             :value="drafts[g.id] ?? ''"
-            placeholder="add tag..."
+            type="text"
+            placeholder="new tag"
             :aria-label="`New tag for ${g.title}`"
             :disabled="!add || busy"
+            class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-0 leading-normal"
             @input="drafts[g.id] = ($event.target as HTMLInputElement).value"
-            @keyup.enter="submit(g.id)"
           />
         </div>
         <button
-          type="button"
-          class="btn px-3.5 py-1.5 rounded-full bg-ink text-white text-xs font-semibold hover:bg-ink/90 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
+          type="submit"
+          class="px-6 py-1 rounded-full border border-ink bg-transparent text-xs font-bold uppercase tracking-wider text-ink hover:bg-ink hover:text-white active:scale-95 transition-all cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
           :disabled="!add || busy || !(drafts[g.id] ?? '').trim()"
-          @click="submit(g.id)"
         >
-          {{ busy ? '…' : 'Add' }}
+          {{ busy ? '…' : 'ADD' }}
         </button>
-      </div>
+      </form>
     </div>
   </div>
 
-  <p v-if="error" class="autherr mt-3" role="alert">{{ error }}</p>
+  <p v-if="error" class="autherr mt-3 text-center" role="alert">{{ error }}</p>
 </template>
