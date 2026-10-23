@@ -203,44 +203,30 @@ function goAdd(date?: string): void {
 
 <template>
   <div ref="root" class="cal-container">
-    <!-- Header with Action (matching Huuk design system in Dashboard) -->
-    <header class="flex items-center justify-between flex-wrap gap-4 pb-1 flex-none">
-      <div>
-        <div class="text-xs font-bold uppercase tracking-wider text-muted mb-0.5">
-          Content Schedule · {{ monthName(month) }} {{ year }}
-        </div>
-        <h2 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight m-0 font-display text-ink leading-tight">
-          Calendar
-        </h2>
-      </div>
-
-      <!-- Right: View Mode Capsule (Month / Agenda) -->
-      <div class="flex items-center gap-3">
-        <div class="inline-flex items-center gap-1 p-1 bg-wash border border-line rounded-full shadow-2xs">
-          <button
-            type="button"
-            class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer select-none whitespace-nowrap"
-            :class="viewMode === 'grid' ? '!bg-ink !text-white shadow-xs font-bold' : 'text-muted hover:text-ink hover:bg-surface/60'"
-            @click="viewMode = 'grid'"
-          >
-            Month
-          </button>
-          <button
-            type="button"
-            class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer select-none whitespace-nowrap"
-            :class="viewMode === 'agenda' ? '!bg-ink !text-white shadow-xs font-bold' : 'text-muted hover:text-ink hover:bg-surface/60'"
-            @click="viewMode = 'agenda'"
-          >
-            Agenda
-          </button>
-        </div>
-      </div>
-    </header>
-
     <!-- Standard Huuk DockBar (teleports to slide-dock at bottom of deck) -->
     <DockBar label="Calendar controls">
       <div class="flex items-center justify-between w-full gap-3">
         <div class="flex items-center gap-2">
+          <!-- View switcher capsule -->
+          <div class="inline-flex items-center gap-1 p-1 bg-wash border border-line rounded-full shadow-2xs">
+            <button
+              type="button"
+              class="px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer select-none whitespace-nowrap"
+              :class="viewMode === 'grid' ? '!bg-ink !text-white shadow-xs font-bold' : 'text-muted hover:text-ink hover:bg-surface/60'"
+              @click="viewMode = 'grid'"
+            >
+              Month
+            </button>
+            <button
+              type="button"
+              class="px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer select-none whitespace-nowrap"
+              :class="viewMode === 'agenda' ? '!bg-ink !text-white shadow-xs font-bold' : 'text-muted hover:text-ink hover:bg-surface/60'"
+              @click="viewMode = 'agenda'"
+            >
+              Agenda
+            </button>
+          </div>
+          <span class="dock-sep" aria-hidden="true" />
           <span class="text-xs font-semibold text-muted tracking-wider uppercase font-mono">
             {{ posts?.length ?? 0 }} Posts
           </span>
