@@ -13,6 +13,7 @@ import { t } from '@/core/i18n'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import PlatformLogin from '@/components/overlays/PlatformLogin.vue'
 import InfoTip from '@/components/ui/InfoTip.vue'
+import DockBar from '@/components/ui/DockBar.vue'
 
 const { data: workspaces } = useWorkspaces()
 const activeWs = computed(() =>
@@ -283,5 +284,19 @@ function onToggleActive(id: PlatformId, event: Event): void {
 
     <!-- Platform Login Modal -->
     <PlatformLogin :platform="loginFor" @close="loginFor = null" />
+
+    <DockBar label="Platform connections">
+      <div class="flex items-center justify-between w-full gap-3">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-wash border border-faint text-muted shadow-2xs">
+            <span class="w-2 h-2 rounded-full" :class="connectedCount > 0 ? 'bg-success' : 'bg-muted'" />
+            <span>{{ connectedCount }} of {{ PLATFORMS.length }} connected</span>
+          </span>
+        </div>
+        <div class="text-xs text-muted">
+          {{ canManage ? 'Tokens and permissions are encrypted and synced.' : t('auth.noPerm') }}
+        </div>
+      </div>
+    </DockBar>
   </div>
 </template>

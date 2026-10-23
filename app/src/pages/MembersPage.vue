@@ -10,6 +10,7 @@ import { activeWorkspaceId } from '@/core/workspace'
 import { currentUser } from '@/core/session'
 import { t } from '@/core/i18n'
 import InfoTip from '@/components/ui/InfoTip.vue'
+import DockBar from '@/components/ui/DockBar.vue'
 import type { WorkspaceMember } from '@/mock/db'
 
 const { data: workspaces, isPending: workspacesPending } = useWorkspaces()
@@ -77,7 +78,7 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
 </script>
 
 <template>
-  <div class="members-page max-w-3xl mx-auto px-4 sm:px-6 py-6 w-full text-left font-sans">
+  <div class="members-page w-full px-6 sm:px-8 py-6 text-left font-sans flex flex-col flex-1">
     <!-- Header -->
     <div class="flex items-center justify-between flex-wrap gap-4 mb-5">
       <div>
@@ -137,10 +138,10 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
       <p v-if="isPending" class="text-muted">{{ t('common.loading') }}</p>
 
       <!-- Members Table Frame -->
-      <div v-else class="tblwrap rounded-xl border border-line bg-surface overflow-hidden shadow-2xs">
-        <div class="px-4 py-3 bg-surface-2/60 border-b border-faint flex items-center justify-between text-2xs font-bold uppercase tracking-wider text-muted font-sans">
+      <div v-else class="tblwrap rounded-xl border border-line bg-surface overflow-hidden shadow-2xs w-full">
+        <div class="px-5 py-3 bg-surface-2/60 border-b border-faint flex items-center justify-between text-2xs font-bold uppercase tracking-wider text-muted font-sans">
           <span>Member</span>
-          <div class="flex items-center gap-8">
+          <div class="flex items-center gap-12 sm:gap-16">
             <span class="w-20 text-center">Role</span>
             <span class="w-16 text-right">Action</span>
           </div>
@@ -150,7 +151,7 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
           <li
             v-for="m in rows"
             :key="m.email"
-            class="panel member-row flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-wash/50 transition-colors"
+            class="panel member-row flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-wash/50 transition-colors"
           >
             <div class="flex items-center gap-3 min-w-0 mr-auto">
               <div class="w-8 h-8 rounded-full bg-wash border border-line flex items-center justify-center font-bold text-xs text-ink shrink-0 font-sans">
@@ -165,7 +166,7 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
               </div>
             </div>
 
-            <div class="flex items-center gap-8 shrink-0">
+            <div class="flex items-center gap-12 sm:gap-16 shrink-0">
               <div class="w-20 flex justify-center">
                 <span v-if="isOwnerRow(m)" class="badge badge-success text-xs font-semibold py-0.5 px-2.5 rounded-full">{{ t('members.owner') }}</span>
                 <span v-else-if="m.role" class="chip text-xs py-0.5 px-2.5 rounded-full font-medium">{{ m.role }}</span>
@@ -188,6 +189,20 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
       </div>
 
       <p v-if="!(members?.members.length)" class="text-muted text-xs mt-3">{{ t('members.empty') }}</p>
+
+      <DockBar label="Members controls">
+        <div class="flex items-center justify-between w-full gap-3">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-wash border border-faint text-muted shadow-2xs">
+              <span class="w-2 h-2 rounded-full bg-success" />
+              <span>{{ rows.length }} {{ rows.length === 1 ? 'member' : 'members' }}</span>
+            </span>
+          </div>
+          <div class="text-xs text-muted">
+            {{ isOwner ? t('members.hint') : t('members.onlyOwner') }}
+          </div>
+        </div>
+      </DockBar>
     </template>
   </div>
 </template>
