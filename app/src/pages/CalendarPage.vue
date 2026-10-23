@@ -7,12 +7,30 @@ import { usePosts } from '@/core/queries'
 import { navDate, yearOfDate } from '@/core/navdate'
 import { monthOfDate } from '@/core/deeplink'
 import { deckFull } from '@/core/deck'
+import { useWidePane } from '@/composables/useWidePane'
 import { monthName } from '@/core/i18n'
 import type { Post } from '@/mock/db'
 
 const router = useRouter()
+const root = ref<HTMLElement | null>(null)
+const { wide } = useWidePane(root, 'cal-scroll')
+const isWide = computed(() => deckFull.value || wide.value)
+
 const month = ref<number>(new Date().getMonth() + 1)
-const view = ref<'today' | 'calendar'>('today')
+const view = ref<'today' | 'calendar' | 'both'>('both')
+
+// Keep view responsive: on wide screen default to 'both' unless user specifically toggled, on mobile fallback to 'calendar'
+watch(
+  isWide,
+  (val) => {
+    if (val && view.value !== 'today' && view.value !== 'calendar') {
+      view.value = 'both'
+    } else if (!val && view.value === 'both') {
+      view.value = 'calendar'
+    }
+  },
+  { immediate: true },
+)
 
 const year = ref<number>(new Date().getFullYear())
 const { data: posts, isPending, isError, error: loadError, refetch } = usePosts(month, year)
@@ -117,10 +135,11 @@ function goAdd(): void {
 </script>
 
 <template>
-  <div class="smartcal" :class="{ split: deckFull }">
-    <!-- top: Today / Calendar toggle + add (toggle is redundant in full page) -->
+  <div ref="root" class="smartcal" :class="{ split: isWide && view === 'both', 'view-calendar': view === 'calendar', 'view-today': view === 'today' }">
+    <!-- top: Today / Calendar toggle + add -->
     <div class="sc-top">
-      <div v-if="!deckFull" class="sc-seg" role="tablist">
+      <div class="sc-seg" role="tablist">
+        <button v-if="isWide" type="button" :class="{ on: view === 'both' }" @click="view = 'both'">Overview</button>
         <button type="button" :class="{ on: view === 'today' }" @click="view = 'today'">Today</button>
         <button type="button" :class="{ on: view === 'calendar' }" @click="view = 'calendar'">Calendar</button>
       </div>
@@ -133,8 +152,8 @@ function goAdd(): void {
       <button type="button" class="btn" @click="() => refetch()">Retry</button>
     </div>
 
-    <!-- TODAY (always visible in full page, left column) -->
-    <section v-if="view === 'today' || deckFull" class="sc-today">
+    <!-- TODAY (always visible in overview/both or today view) -->
+    <section v-if="view === 'today' || (isWide && view === 'both')" class="sc-today">
       <div class="sc-weekday">{{ weekday(todayISO) }}</div>
       <div class="sc-daterow">
         <div class="sc-bigdate">
@@ -176,8 +195,8 @@ function goAdd(): void {
       </div>
     </section>
 
-    <!-- CALENDAR (always visible in full page, right column) -->
-    <section v-if="view === 'calendar' || deckFull" class="sc-cal">
+    <!-- CALENDAR (always visible in overview/both or calendar view) -->
+    <section v-if="view === 'calendar' || (isWide && view === 'both')" class="sc-cal">
       <div class="sc-month">
         <button type="button" class="sc-navtext" @click="shiftMonth(-1)">{{ prevMon }}</button>
         <strong>{{ shortMonths[month - 1] }}</strong>
