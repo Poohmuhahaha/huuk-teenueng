@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// Content Calendar — Full month grid view with per-day scheduled post chips,
-// alongside an Agenda/Timeline view for focused daily tasks.
+// Content Calendar — Unified Month Calendar Grid with per-day post chips,
+// paired with an Agenda view for daily timeline focus.
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePosts } from '@/core/queries'
@@ -21,7 +21,7 @@ const month = ref<number>(new Date().getMonth() + 1)
 const year = ref<number>(new Date().getFullYear())
 const { data: posts, isPending, isError, error: loadError, refetch } = usePosts(month, year)
 
-// View modes: 'grid' (classic 7-day monthly calendar) or 'agenda' (daily timeline & tasks)
+// View mode: 'grid' (Month grid) or 'agenda' (daily timeline)
 const viewMode = ref<'grid' | 'agenda'>('grid')
 
 // Sync with navbar date
@@ -208,27 +208,50 @@ function goAdd(date?: string): void {
 
 <template>
   <div ref="root" class="cal-container">
-    <!-- Header Controls: MonthToggle, Jump Today, View Mode toggle, Add Post -->
-    <header class="cal-topbar">
-      <div class="cal-nav-group flex items-center gap-2">
+    <!-- Header Toolbar: MonthToggle, Today, View Mode Capsule, New Post -->
+    <header class="flex items-center justify-between gap-4 flex-wrap pb-3.5 border-b border-line">
+      <!-- Left: MonthToggle + Today jump -->
+      <div class="flex items-center gap-2.5">
         <MonthToggle v-model="month" v-model:year="year" class="!w-auto min-w-[170px]" />
-        <button type="button" class="cal-today-btn" @click="goToday">
+        <button
+          type="button"
+          class="px-3.5 py-2 rounded-full border border-line bg-surface text-xs font-semibold text-ink hover:bg-ink hover:text-white hover:border-ink transition-all cursor-pointer shadow-2xs"
+          @click="goToday"
+        >
           Today
         </button>
       </div>
 
+      <!-- Right: View Mode Capsule (Month / Agenda) + New Post Button -->
       <div class="flex items-center gap-3">
-        <!-- View Mode Switcher -->
-        <div class="sc-seg" role="tablist">
-          <button type="button" :class="{ on: viewMode === 'grid' }" @click="viewMode = 'grid'">
-            ▦ Month
+        <div class="inline-flex items-center gap-1 p-1 bg-wash border border-line rounded-full shadow-2xs">
+          <button
+            type="button"
+            class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer select-none whitespace-nowrap"
+            :class="viewMode === 'grid' ? '!bg-ink !text-white shadow-xs font-bold' : 'text-muted hover:text-ink hover:bg-surface/60'"
+            @click="viewMode = 'grid'"
+          >
+            Month
           </button>
-          <button type="button" :class="{ on: viewMode === 'agenda' }" @click="viewMode = 'agenda'">
-            ☰ Agenda
+          <button
+            type="button"
+            class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer select-none whitespace-nowrap"
+            :class="viewMode === 'agenda' ? '!bg-ink !text-white shadow-xs font-bold' : 'text-muted hover:text-ink hover:bg-surface/60'"
+            @click="viewMode = 'agenda'"
+          >
+            Agenda
           </button>
         </div>
 
-        <button type="button" class="sc-add" aria-label="Add post" title="Add new post" @click="() => goAdd()">+</button>
+        <button
+          type="button"
+          class="btn btn-primary rounded-full px-4 py-2 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs hover:shadow-sm transition-all"
+          title="Add new post"
+          @click="() => goAdd()"
+        >
+          <span class="text-sm leading-none font-bold">+</span>
+          <span>New post</span>
+        </button>
       </div>
     </header>
 
@@ -238,48 +261,54 @@ function goAdd(date?: string): void {
       <button type="button" class="btn" @click="() => refetch()">Retry</button>
     </div>
 
-    <!-- VIEW 1: CLASSIC 7-DAY MONTH CALENDAR GRID -->
-    <div v-else-if="viewMode === 'grid'" class="cal-grid-wrapper">
+    <!-- VIEW 1: MONTH CALENDAR GRID FRAME -->
+    <div v-else-if="viewMode === 'grid'" class="cal-frame">
       <!-- Days of Week Header -->
-      <div class="cal-dow-row">
-        <div v-for="dow in DOW_HEADERS" :key="dow">{{ dow }}</div>
+      <div class="cal-dow-grid">
+        <div v-for="dow in DOW_HEADERS" :key="dow" class="cal-dow-cell">
+          {{ dow }}
+        </div>
       </div>
 
-      <!-- Month Grid Cells -->
-      <div class="cal-month-grid">
+      <!-- Days Grid Cells -->
+      <div class="cal-days-grid">
         <div
           v-for="cell in monthCells"
           :key="cell.date"
-          class="cal-cell"
+          class="cal-day-cell"
           :class="{
             outside: !cell.isCurrentMonth,
-            'is-today': cell.isToday,
-            'has-posts': cell.posts.length > 0,
+            today: cell.isToday,
           }"
           @click="selectDay(cell.date)"
         >
-          <div class="cal-cell-header">
-            <span class="cal-day-num" :class="{ today: cell.isToday }">
+          <!-- Cell Header: Day Number -->
+          <div class="flex items-center justify-between mb-1.5">
+            <span
+              class="text-xs font-semibold select-none"
+              :class="[
+                cell.isToday
+                  ? 'w-6 h-6 rounded-full bg-ink text-white flex items-center justify-center font-bold text-[11px] shadow-2xs'
+                  : cell.isCurrentMonth ? 'text-ink pl-0.5' : 'text-muted/40 pl-0.5'
+              ]"
+            >
               {{ cell.dayNum }}
-            </span>
-            <span v-if="cell.posts.length" class="text-[10px] font-mono text-muted">
-              {{ cell.posts.length }} {{ cell.posts.length === 1 ? 'post' : 'posts' }}
             </span>
           </div>
 
           <!-- List of posts inside this day cell -->
-          <div class="flex flex-col gap-1 mt-1 overflow-hidden">
+          <div class="flex flex-col gap-1 overflow-hidden flex-1">
             <button
               v-for="p in cell.posts.slice(0, 3)"
               :key="p.id"
               type="button"
-              class="cal-post-chip"
+              class="cal-chip"
               :title="`${p.time || ''} · ${p.topic} (${p.status})`"
               @click.stop="openPost(p)"
             >
-              <span class="cal-status-dot" :class="statusDotClass(p.status)" />
-              <span v-if="p.time" class="font-mono text-[10px] opacity-70 flex-none">{{ p.time }}</span>
-              <span class="truncate font-medium flex-1 text-left">{{ p.topic || 'Untitled' }}</span>
+              <span class="cal-dot" :class="statusDotClass(p.status)" />
+              <span v-if="p.time" class="cal-time">{{ p.time }}</span>
+              <span class="cal-title">{{ p.topic || 'Untitled' }}</span>
             </button>
             <div v-if="cell.posts.length > 3" class="text-[10px] text-muted font-medium pl-1">
               +{{ cell.posts.length - 3 }} more
