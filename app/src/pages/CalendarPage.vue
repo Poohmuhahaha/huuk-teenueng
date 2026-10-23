@@ -8,7 +8,6 @@ import { navDate, yearOfDate } from '@/core/navdate'
 import { monthOfDate } from '@/core/deeplink'
 import { deckFull } from '@/core/deck'
 import { useWidePane } from '@/composables/useWidePane'
-import MonthToggle from '@/components/ui/MonthToggle.vue'
 import { monthName } from '@/core/i18n'
 import type { Post } from '@/mock/db'
 
@@ -185,13 +184,6 @@ function monShort(iso: string): string {
   ]
 }
 
-function goToday(): void {
-  const now = new Date()
-  month.value = now.getMonth() + 1
-  year.value = now.getFullYear()
-  selectedDay.value = todayISO.value
-}
-
 function statusDotClass(status?: string): string {
   const s = (status ?? '').toLowerCase()
   if (s === 'done') return 'bg-emerald-500'
@@ -210,18 +202,15 @@ function goAdd(date?: string): void {
 
 <template>
   <div ref="root" class="cal-container">
-    <!-- Header Toolbar: MonthToggle, Today, View Mode Capsule, New Post -->
-    <header class="flex items-center justify-between gap-4 flex-wrap pb-2.5 border-b border-line flex-none">
-      <!-- Left: MonthToggle + Today jump -->
-      <div class="flex items-center gap-2.5">
-        <MonthToggle v-model="month" v-model:year="year" class="!w-auto min-w-[170px]" />
-        <button
-          type="button"
-          class="px-3.5 py-2 rounded-full border border-line bg-surface text-xs font-semibold text-ink hover:bg-ink hover:text-white hover:border-ink transition-all cursor-pointer shadow-2xs"
-          @click="goToday"
-        >
-          Today
-        </button>
+    <!-- Header with Action (matching Huuk design system in Dashboard) -->
+    <header class="flex items-center justify-between flex-wrap gap-4 pb-2 border-b border-line flex-none">
+      <div>
+        <div class="text-xs font-bold uppercase tracking-wider text-muted mb-0.5">
+          Content Schedule · {{ monthName(month) }} {{ year }}
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight m-0 font-display text-ink leading-tight">
+          Calendar
+        </h2>
       </div>
 
       <!-- Right: View Mode Capsule (Month / Agenda) + New Post Button -->
