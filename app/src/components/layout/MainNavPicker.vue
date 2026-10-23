@@ -7,6 +7,7 @@
 import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { deckPeek } from '@/core/deck'
+import { getRememberedTab } from '@/core/subnav'
 
 interface NavLink {
   to: string
@@ -49,7 +50,13 @@ function onBtn(): void {
 function go(to: string): void {
   menuOpen.value = false
   if (isActive(to)) return
-  void router.push(to)
+  const remembered = getRememberedTab(to)
+  if (remembered) {
+    const { tab: _t, ...rest } = (route.query ?? {}) as Record<string, string>
+    void router.push({ path: to, query: { ...rest, tab: remembered } })
+  } else {
+    void router.push(to)
+  }
 }
 
 watch(

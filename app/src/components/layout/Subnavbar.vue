@@ -5,6 +5,7 @@
 import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { screenOf } from '@/core/screens'
+import { getRememberedTab, setRememberedTab } from '@/core/subnav'
 import HubTabs from '@/components/ui/HubTabs.vue'
 
 withDefaults(defineProps<{ idPrefix?: string; select?: boolean }>(), { idPrefix: 'hubtab', select: false })
@@ -18,11 +19,16 @@ const tabs = computed(() => activeScreen.value?.tabs ?? [])
 const activeTab = computed(() => {
   const q = route.query.tab
   if (typeof q === 'string' && tabs.value.some((t) => t.id === q)) return q
+  if (activeScreen.value) {
+    const remembered = getRememberedTab(activeScreen.value.path)
+    if (remembered && tabs.value.some((t) => t.id === remembered)) return remembered
+  }
   return tabs.value[0]?.id ?? ''
 })
 
 function go(id: string): void {
   if (!activeScreen.value) return
+  setRememberedTab(activeScreen.value.path, id)
   void router.replace({ query: { ...route.query, tab: id } })
 }
 

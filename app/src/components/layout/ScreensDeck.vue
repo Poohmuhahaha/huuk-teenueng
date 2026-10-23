@@ -8,6 +8,7 @@ import { screens } from '@/core/screens'
 import type { Screen } from '@/core/screens'
 import { deckFull, deckPeek } from '@/core/deck'
 import { currentRole } from '@/core/auth'
+import { getRememberedTab } from '@/core/subnav'
 import NotFoundPage from '@/pages/NotFoundPage.vue'
 
 const route = useRoute()
@@ -229,6 +230,15 @@ function scrollToIndex(i: number, smooth = true): void {
   beginSync(Math.round(Math.min(750, Math.max(260, 200 + distance * 0.3))))
 }
 
+function queryForScreen(s: Screen): Record<string, string> {
+  const { tab: _currentTab, ...rest } = (route.query ?? {}) as Record<string, string>
+  const remembered = getRememberedTab(s.path)
+  if (remembered) {
+    return { ...rest, tab: remembered }
+  }
+  return rest
+}
+
 async function goTo(i: number): Promise<void> {
   const clamped = Math.min(visible.value.length - 1, Math.max(0, i))
   index.value = clamped
@@ -236,7 +246,7 @@ async function goTo(i: number): Promise<void> {
   scrollToIndex(clamped)
   const s = visible.value[clamped]
   if (s && !s.match.some((m) => matches(m, route.path))) {
-    router.replace({ path: s.to, query: route.query })
+    router.replace({ path: s.to, query: queryForScreen(s) })
   }
 }
 
@@ -249,7 +259,7 @@ function commit(): void {
   deckPeek.value = visible.value[i]?.to ?? null
   const s = visible.value[i]
   if (s && !s.match.some((m) => matches(m, route.path))) {
-    router.replace({ path: s.to, query: route.query })
+    router.replace({ path: s.to, query: queryForScreen(s) })
   }
 }
 

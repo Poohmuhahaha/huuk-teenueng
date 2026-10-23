@@ -19,6 +19,7 @@ import Subnavbar from './Subnavbar.vue'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
 import { activeMonth, activeYear } from '@/core/navdate'
 import { deckPeek } from '@/core/deck'
+import { getRememberedTab } from '@/core/subnav'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,7 +28,7 @@ const router = useRouter()
 // Missing/invalid ?tab= falls back to 'brand', mirroring useHubTab.
 const onBrand = computed(
   () => (route.path === '/branding' || route.path.startsWith('/branding/') || route.path === '/settings' || route.path.startsWith('/settings/'))
-    && !['members', 'connections'].includes(route.query.tab as string),
+    && !['members', 'connections'].includes((route.query.tab as string) || getRememberedTab('/branding') || ''),
 )
 const qc = useQueryClient()
 
@@ -197,6 +198,15 @@ const navLinks = computed<NavLink[]>(() =>
       ],
 )
 
+function targetFor(l: NavLink): { path: string; query?: Record<string, string> } {
+  const remembered = getRememberedTab(l.to)
+  if (remembered) {
+    const { tab: _t, ...rest } = (route.query ?? {}) as Record<string, string>
+    return { path: l.to, query: { ...rest, tab: remembered } }
+  }
+  return { path: l.to }
+}
+
 function isActive(l: NavLink): boolean {
   // Segment match: '/plan' must not match '/plans'. '/' matches only itself.
   const path = deckPeek.value ?? route.path
@@ -225,7 +235,7 @@ watch(
       <MainNavPicker :links="navLinks" :expanded="navOpen" @toggle="navOpen = !navOpen" />
       <nav class="links">
         <div class="nav-toggle-group">
-          <RouterLink v-for="l in navLinks" :key="l.to" :to="l.to" class="navlink"
+          <RouterLink v-for="l in navLinks" :key="l.to" :to="targetFor(l)" class="navlink"
             :class="{ active: isActive(l) }"
             :aria-current="isActive(l) ? 'page' : undefined">
             {{ l.label }}
