@@ -8,6 +8,7 @@ import { navDate, yearOfDate } from '@/core/navdate'
 import { monthOfDate } from '@/core/deeplink'
 import { deckFull } from '@/core/deck'
 import { useWidePane } from '@/composables/useWidePane'
+import MonthToggle from '@/components/ui/MonthToggle.vue'
 import { monthName } from '@/core/i18n'
 import type { Post } from '@/mock/db'
 
@@ -182,18 +183,6 @@ function monShort(iso: string): string {
   ]
 }
 
-function shiftMonth(delta: number): void {
-  let nextM = month.value + delta
-  if (nextM > 12) {
-    nextM = 1
-    year.value += 1
-  } else if (nextM < 1) {
-    nextM = 12
-    year.value -= 1
-  }
-  month.value = nextM
-}
-
 function goToday(): void {
   const now = new Date()
   month.value = now.getMonth() + 1
@@ -219,19 +208,11 @@ function goAdd(date?: string): void {
 
 <template>
   <div ref="root" class="cal-container">
-    <!-- Header Controls: Month title, Prev/Next, Jump Today, View Mode toggle, Add Post -->
+    <!-- Header Controls: MonthToggle, Jump Today, View Mode toggle, Add Post -->
     <header class="cal-topbar">
-      <div class="cal-nav-group">
-        <button type="button" class="cal-nav-btn" aria-label="Previous month" @click="shiftMonth(-1)">
-          ‹
-        </button>
-        <h2 class="text-xl sm:text-2xl font-bold font-display text-ink tracking-tight m-0 select-none">
-          {{ monthName(month) }} {{ year }}
-        </h2>
-        <button type="button" class="cal-nav-btn" aria-label="Next month" @click="shiftMonth(1)">
-          ›
-        </button>
-        <button type="button" class="cal-today-btn ml-1" @click="goToday">
+      <div class="cal-nav-group flex items-center gap-2">
+        <MonthToggle v-model="month" v-model:year="year" class="!w-auto min-w-[170px]" />
+        <button type="button" class="cal-today-btn" @click="goToday">
           Today
         </button>
       </div>
