@@ -236,13 +236,13 @@ function onToggleActive(id: PlatformId, event: Event): void {
           <template v-if="statusOf(p.id) === 'connected'">
             <button
               type="button"
-              class="btn text-xs py-1.5 px-3.5 flex-1 inline-flex items-center justify-center gap-1.5"
+              class="btn text-xs py-1.5 px-3 flex-1 inline-flex items-center justify-center gap-1.5"
               :disabled="!canManage"
               :title="canManage ? 'Manage connection settings' : t('auth.noPerm')"
               :aria-label="`Manage ${p.name}`"
               @click="loginFor = p.id"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-none" aria-hidden="true">
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
               </svg>
@@ -250,13 +250,13 @@ function onToggleActive(id: PlatformId, event: Event): void {
             </button>
             <button
               type="button"
-              class="btn btn-danger text-xs py-1.5 px-3 inline-flex items-center gap-1.5"
+              class="btn btn-danger text-xs py-1.5 px-3 flex-1 inline-flex items-center justify-center gap-1.5"
               :class="{ 'font-bold ring-2 ring-danger': confirmDisconnectId === p.id }"
               :disabled="!canManage || disconnect.isPending.value"
               :title="canManage ? 'Disconnect this account' : t('auth.noPerm')"
               @click="handleDisconnect(p.id)"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-none" aria-hidden="true">
                 <path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                 <path d="m5.16 11.75-1.72 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                 <line x1="2" y1="2" x2="22" y2="22" />
