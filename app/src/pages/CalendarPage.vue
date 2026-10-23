@@ -150,6 +150,8 @@ const monthCells = computed<MonthCell[]>(() => {
   return cells
 })
 
+const rowCount = computed(() => Math.ceil(monthCells.value.length / 7))
+
 function fmtTime(value: string | undefined): string {
   if (!value) return '—'
   const [h, m] = value.split(':').map(Number)
@@ -209,7 +211,7 @@ function goAdd(date?: string): void {
 <template>
   <div ref="root" class="cal-container">
     <!-- Header Toolbar: MonthToggle, Today, View Mode Capsule, New Post -->
-    <header class="flex items-center justify-between gap-4 flex-wrap pb-3.5 border-b border-line">
+    <header class="flex items-center justify-between gap-4 flex-wrap pb-2.5 border-b border-line flex-none">
       <!-- Left: MonthToggle + Today jump -->
       <div class="flex items-center gap-2.5">
         <MonthToggle v-model="month" v-model:year="year" class="!w-auto min-w-[170px]" />
@@ -271,7 +273,10 @@ function goAdd(date?: string): void {
       </div>
 
       <!-- Days Grid Cells -->
-      <div class="cal-days-grid">
+      <div
+        class="cal-days-grid"
+        :style="{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }"
+      >
         <div
           v-for="cell in monthCells"
           :key="cell.date"
@@ -283,12 +288,12 @@ function goAdd(date?: string): void {
           @click="selectDay(cell.date)"
         >
           <!-- Cell Header: Day Number -->
-          <div class="flex items-center justify-between mb-1.5">
+          <div class="flex items-center justify-between mb-1 flex-none">
             <span
               class="text-xs font-semibold select-none"
               :class="[
                 cell.isToday
-                  ? 'w-6 h-6 rounded-full bg-ink text-white flex items-center justify-center font-bold text-[11px] shadow-2xs'
+                  ? 'w-5 h-5 rounded-full bg-ink text-white flex items-center justify-center font-bold text-[10px] shadow-2xs'
                   : cell.isCurrentMonth ? 'text-ink pl-0.5' : 'text-muted/40 pl-0.5'
               ]"
             >
@@ -297,12 +302,12 @@ function goAdd(date?: string): void {
           </div>
 
           <!-- List of posts inside this day cell -->
-          <div class="flex flex-col gap-1 overflow-hidden flex-1">
+          <div class="flex flex-col gap-1 overflow-hidden flex-1 min-h-0">
             <button
               v-for="p in cell.posts.slice(0, 3)"
               :key="p.id"
               type="button"
-              class="cal-chip"
+              class="cal-chip flex-none"
               :title="`${p.time || ''} · ${p.topic} (${p.status})`"
               @click.stop="openPost(p)"
             >
@@ -310,7 +315,7 @@ function goAdd(date?: string): void {
               <span v-if="p.time" class="cal-time">{{ p.time }}</span>
               <span class="cal-title">{{ p.topic || 'Untitled' }}</span>
             </button>
-            <div v-if="cell.posts.length > 3" class="text-[10px] text-muted font-medium pl-1">
+            <div v-if="cell.posts.length > 3" class="text-[10px] text-muted font-medium pl-1 truncate flex-none">
               +{{ cell.posts.length - 3 }} more
             </div>
           </div>
