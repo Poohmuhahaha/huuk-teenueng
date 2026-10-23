@@ -140,15 +140,18 @@ function onToggleActive(id: PlatformId, event: Event): void {
                 'bg-wash border-faint text-muted': statusOf(p.id) === 'disconnected',
               }"
             >
-              <span
-                class="w-1.5 h-1.5 rounded-full"
-                :class="{
-                  'bg-success': statusOf(p.id) === 'connected',
-                  'bg-warning': statusOf(p.id) === 'connecting',
-                  'bg-danger': statusOf(p.id) === 'error',
-                  'bg-muted': statusOf(p.id) === 'disconnected',
-                }"
-              />
+              <svg v-if="statusOf(p.id) === 'connected'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <svg v-else-if="statusOf(p.id) === 'connecting'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="animate-spin" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              <svg v-else-if="statusOf(p.id) === 'error'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span v-else class="w-1.5 h-1.5 rounded-full bg-muted" />
               <span>
                 {{
                   statusOf(p.id) === 'connected'
@@ -236,24 +239,33 @@ function onToggleActive(id: PlatformId, event: Event): void {
             </button>
             <button
               type="button"
-              class="btn text-xs py-1.5 px-3 text-danger border-faint hover:border-danger hover:text-danger"
+              class="btn text-xs py-1.5 px-3 text-danger border-faint hover:border-danger hover:text-danger inline-flex items-center gap-1.5"
               :class="{ 'btn-danger': confirmDisconnectId === p.id }"
               :disabled="!canManage || disconnect.isPending.value"
               :title="canManage ? 'Disconnect this account' : t('auth.noPerm')"
               @click="handleDisconnect(p.id)"
             >
-              {{ confirmDisconnectId === p.id ? 'Confirm?' : 'Disconnect' }}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="m5.16 11.75-1.72 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                <line x1="2" y1="2" x2="22" y2="22" />
+              </svg>
+              <span>{{ confirmDisconnectId === p.id ? 'Confirm?' : 'Disconnect' }}</span>
             </button>
           </template>
           <template v-else>
             <button
               type="button"
-              class="btn btn-primary text-xs py-2 w-full"
+              class="btn btn-primary text-xs py-2 w-full inline-flex items-center justify-center gap-1.5"
               :disabled="!canManage"
               :title="canManage ? '' : t('auth.noPerm')"
               @click="loginFor = p.id"
             >
-              Connect {{ p.name }}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              <span>Connect {{ p.name }}</span>
             </button>
           </template>
         </div>
@@ -263,8 +275,11 @@ function onToggleActive(id: PlatformId, event: Event): void {
     <!-- Security & Workspace Integration Info Box -->
     <div class="mt-6 p-4 rounded-xl border border-faint bg-wash flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
-        <span class="w-8 h-8 rounded-full bg-surface border border-faint flex items-center justify-center flex-none text-muted font-bold text-xs italic">
-          i
+        <span class="w-8 h-8 rounded-full bg-surface border border-faint flex items-center justify-center flex-none text-muted shadow-2xs">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
         </span>
         <div class="text-xs text-muted leading-relaxed">
           Connected channels are shared across authorized members of this workspace.

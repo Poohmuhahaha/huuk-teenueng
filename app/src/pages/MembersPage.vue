@@ -96,30 +96,57 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
     <p v-else-if="workspacesPending" class="text-muted p-4">{{ t('common.loading') }}</p>
 
     <!-- Non-owner Notice -->
-    <div v-else-if="!isOwner" class="p-6 rounded-xl border border-line bg-surface text-center">
+    <div v-else-if="!isOwner" class="p-6 rounded-xl border border-line bg-surface text-center flex flex-col items-center justify-center">
+      <div class="w-10 h-10 rounded-full bg-wash border border-faint flex items-center justify-center mb-2.5 text-muted">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      </div>
       <p class="text-muted text-sm font-medium mb-0">{{ t('members.onlyOwner') }}</p>
     </div>
 
     <template v-else>
       <!-- Add Member Row -->
       <form class="members-add flex items-center gap-2.5 mb-5" @submit.prevent="submitAdd">
-        <input
-          v-model="email"
-          class="field flex-1 text-sm rounded-xl border border-line bg-surface focus:border-ink transition-colors px-3.5 py-2.5"
-          type="text"
-          inputmode="email"
-          autocomplete="email"
-          maxlength="254"
-          :placeholder="t('members.emailPlaceholder')"
-          :aria-label="t('members.emailPlaceholder')"
-          :disabled="addMember.isPending.value"
-        />
+        <div class="relative flex-1">
+          <svg
+            class="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect width="20" height="16" x="2" y="4" rx="2" />
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+          </svg>
+          <input
+            v-model="email"
+            class="field w-full pl-10 text-sm rounded-xl border border-line bg-surface focus:border-ink transition-colors pr-3.5 py-2.5"
+            type="text"
+            inputmode="email"
+            autocomplete="email"
+            maxlength="254"
+            :placeholder="t('members.emailPlaceholder')"
+            :aria-label="t('members.emailPlaceholder')"
+            :disabled="addMember.isPending.value"
+          />
+        </div>
         <button
           type="submit"
-          class="btn btn-primary w-auto flex-none px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+          class="btn btn-primary w-auto flex-none px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center gap-1.5 justify-center cursor-pointer transition-all shadow-xs"
           :disabled="addMember.isPending.value || !email.trim()"
         >
-          {{ t('members.add') }}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>{{ t('members.add') }}</span>
         </button>
       </form>
 
@@ -134,7 +161,7 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
           <span>Member</span>
           <div class="flex items-center gap-12 sm:gap-16">
             <span class="w-20 text-center">Role</span>
-            <span class="w-16 text-right">Action</span>
+            <span class="w-20 text-right">Action</span>
           </div>
         </div>
 
@@ -159,19 +186,30 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
 
             <div class="flex items-center gap-12 sm:gap-16 shrink-0">
               <div class="w-20 flex justify-center">
-                <span v-if="isOwnerRow(m)" class="badge badge-success text-xs font-semibold py-0.5 px-2.5 rounded-full">{{ t('members.owner') }}</span>
+                <span v-if="isOwnerRow(m)" class="badge badge-success text-xs font-semibold py-0.5 px-2 rounded-full inline-flex items-center gap-1">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  <span>{{ t('members.owner') }}</span>
+                </span>
                 <span v-else-if="m.role" class="chip text-xs py-0.5 px-2.5 rounded-full font-medium">{{ m.role }}</span>
               </div>
 
-              <div class="w-16 flex justify-end">
+              <div class="w-20 flex justify-end">
                 <button
                   v-if="!isOwnerRow(m)"
                   type="button"
-                  class="btn member-remove w-auto text-xs py-1 px-2.5 rounded-md border border-faint text-muted hover:border-danger hover:text-danger hover:bg-danger-wash transition-colors cursor-pointer"
+                  class="btn member-remove w-auto text-xs py-1 px-2.5 rounded-md border border-faint text-muted hover:border-danger hover:text-danger hover:bg-danger-wash inline-flex items-center gap-1 transition-colors cursor-pointer"
                   :disabled="removeMember.isPending.value"
+                  :title="t('members.remove')"
+                  :aria-label="t('members.remove')"
                   @click="onRemove(m)"
                 >
-                  {{ t('members.remove') }}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  <span>{{ t('members.remove') }}</span>
                 </button>
               </div>
             </div>
