@@ -28,6 +28,11 @@ useWidePane(root, 'dash-scroll')
 
 // Hub tab (subnavbar) — sections come from HUB_TABS['/dashboard'].
 const { active: section } = useHubTab('/dashboard')
+const sectionLabel = computed(() => {
+  if (section.value === 'ads') return 'Meta Ads'
+  if (section.value === 'top') return 'Top Posts'
+  return 'Overview'
+})
 
 const postedPct = computed(() =>
   stats.value?.total ? Math.round((stats.value.posted / stats.value.total) * 100) : 0,
@@ -35,7 +40,7 @@ const postedPct = computed(() =>
 
 // Active Meta Ads campaigns at a glance + simple alerts (Phase 2 integration).
 const activeCampaigns = computed(() =>
-  (adsView.value?.campaigns ?? []).filter((c) => c.status === 'ACTIVE').slice(0, 3),
+  (adsView.value?.campaigns ?? []).filter((c) => c.status === 'ACTIVE'),
 )
 const adsCurrency = computed(() => adsView.value?.accounts[0]?.currency ?? '')
 function adsMoney(minor: number): string {
@@ -45,6 +50,33 @@ function adsMoney(minor: number): string {
 function adSpend(campaignId: string): number {
   return adsView.value?.insights.find((i) => i.campaignId === campaignId)?.spend ?? 0
 }
+function adInsight(campaignId: string) {
+  return adsView.value?.insights.find((i) => i.campaignId === campaignId)
+}
+function formatObjective(obj: string): string {
+  if (!obj) return ''
+  return obj.replace(/^OUTCOME_/, '').toLowerCase().replace(/_/g, ' ')
+}
+
+const adsTotals = computed(() => {
+  const insights = adsView.value?.insights ?? []
+  let totalSpend = 0
+  let totalImpressions = 0
+  let totalClicks = 0
+  for (const ins of insights) {
+    totalSpend += ins.spend
+    totalImpressions += ins.impressions
+    totalClicks += ins.clicks
+  }
+  const avgCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
+  return {
+    spend: totalSpend,
+    impressions: totalImpressions,
+    clicks: totalClicks,
+    ctr: avgCtr,
+    activeCount: activeCampaigns.value.length,
+  }
+})
 const adsAlerts = computed(() => {
   const rows: string[] = []
   const now = Date.now()
@@ -208,7 +240,7 @@ function goMaster(): void {
           <div class="flex items-center gap-2">
             <MonthToggle v-model="month" v-model:year="year" />
             <span class="dock-sep" aria-hidden="true" />
-            <span class="text-xs font-semibold text-muted tracking-wider uppercase">Overview</span>
+            <span class="text-xs font-semibold text-muted tracking-wider uppercase">{{ sectionLabel }}</span>
           </div>
           <div class="flex items-center gap-2 ml-auto">
             <RouterLink class="btn btn-icon w-auto" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
@@ -264,30 +296,129 @@ function goMaster(): void {
           </template>
 
           <template v-else-if="section === 'ads'">
-            <section class="ads-glance">
-              <div class="row">
-                <h2 style="margin: 0;">{{ t('ads.active') }}</h2>
-                <RouterLink class="btn ml-0" to="/ads">{{ t('ads.open') }}</RouterLink>
+            <section class="ads-glance flex flex-col gap-6 text-left">
+              <!-- Header with Action -->
+              <div class="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <div class="text-xs font-bold uppercase tracking-wider text-muted mb-0.5">Campaigns & Spend</div>
+                  <h2 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight m-0 font-display text-ink">{{ t('ads.active') }}</h2>
+                </div>
+                <RouterLink class="btn text-xs py-2 px-4 inline-flex items-center gap-2 font-bold hover:border-ink shadow-xs" to="/promote?tab=ads">
+                  <span>{{ t('ads.open') }}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </RouterLink>
               </div>
-              <template v-if="activeCampaigns.length || adsAlerts.length">
-                <ul v-if="adsAlerts.length" class="mt-2.5 pl-4.5 text-warning text-sm-minus">
-                  <li v-for="(a, i) in adsAlerts" :key="i">{{ a }}</li>
-                </ul>
-                <div v-if="activeCampaigns.length" class="grid gap-3 mt-3 sm:grid-cols-2">
+
+              <!-- Top KPI Summary Cards -->
+              <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="border border-line rounded-xl bg-surface p-3.5 shadow-xs flex flex-col justify-between">
+                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Total Ad Spend</div>
+                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ adsMoney(adsTotals.spend * 100) }}</div>
+                  <div class="text-2xs text-muted mt-1">Across active campaigns</div>
+                </div>
+
+                <div class="border border-line rounded-xl bg-surface p-3.5 shadow-xs flex flex-col justify-between">
+                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Active Campaigns</div>
+                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ adsTotals.activeCount }}</div>
+                  <div class="text-2xs text-success font-semibold mt-1 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-success"></span> Running now
+                  </div>
+                </div>
+
+                <div class="border border-line rounded-xl bg-surface p-3.5 shadow-xs flex flex-col justify-between">
+                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Total Impressions</div>
+                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ adsTotals.impressions.toLocaleString() }}</div>
+                  <div class="text-2xs text-muted mt-1">Paid audience reach</div>
+                </div>
+
+                <div class="border border-line rounded-xl bg-surface p-3.5 shadow-xs flex flex-col justify-between">
+                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Clicks & CTR</div>
+                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ adsTotals.clicks.toLocaleString() }}</div>
+                  <div class="text-2xs text-accent font-semibold mt-1">{{ adsTotals.ctr.toFixed(2) }}% avg CTR</div>
+                </div>
+              </div>
+
+              <!-- Alerts if any -->
+              <div v-if="adsAlerts.length" class="p-3.5 rounded-xl border border-warning/30 bg-warning-wash text-warning text-xs flex flex-col gap-1">
+                <div v-for="(a, i) in adsAlerts" :key="i" class="flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>{{ a }}</span>
+                </div>
+              </div>
+
+              <!-- Active Campaigns Section -->
+              <div class="flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase tracking-wider text-muted">Active Campaign Cards</span>
+                  <span class="text-xs text-muted font-medium">{{ activeCampaigns.length }} total</span>
+                </div>
+
+                <div v-if="activeCampaigns.length" class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                   <div v-for="c in activeCampaigns" :key="c.id"
-                    class="border border-line rounded-xl bg-surface p-3.5 shadow-xs flex flex-col gap-2">
-                    <div class="flex items-start justify-between gap-2">
-                      <strong class="text-[13px] font-bold text-ink truncate">{{ c.name }}</strong>
-                      <span class="badge badge-success flex-none">{{ c.status }}</span>
+                    class="border border-line rounded-xl bg-surface p-4 shadow-xs flex flex-col justify-between gap-3 hover:border-ink hover:shadow-sm transition-all">
+                    <div>
+                      <div class="flex items-start justify-between gap-2 mb-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <svg class="w-4 h-4 text-[#1877F2] flex-none" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                          </svg>
+                          <strong class="text-sm font-bold text-ink truncate" :title="c.name">{{ c.name }}</strong>
+                        </div>
+                        <span class="badge badge-success flex-none text-2xs">{{ c.status }}</span>
+                      </div>
+                      <div v-if="c.objective" class="inline-flex px-2 py-0.5 rounded text-2xs font-semibold bg-wash text-muted uppercase tracking-wider mb-1">
+                        {{ formatObjective(c.objective) }}
+                      </div>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] text-muted">
-                      <span>{{ t('ads.spend') }}</span>
-                      <span class="text-sm font-bold text-ink font-mono">{{ adsMoney(adSpend(c.id) * 100) }}</span>
+
+                    <div class="pt-3 border-t border-faint flex flex-col gap-1.5">
+                      <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted">{{ t('ads.spend') }}</span>
+                        <span class="font-bold text-ink font-mono">{{ adsMoney(adSpend(c.id) * 100) }}</span>
+                      </div>
+                      <div v-if="adInsight(c.id)" class="flex items-center justify-between text-2xs text-muted">
+                        <span>{{ adInsight(c.id)?.impressions.toLocaleString() }} views</span>
+                        <span class="font-semibold text-ink">{{ adInsight(c.id)?.clicks.toLocaleString() }} clicks ({{ adInsight(c.id)?.ctr }}%)</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </template>
-              <p v-else class="muted">No active campaigns.</p>
+
+                <div v-else class="p-8 border border-dashed border-line rounded-xl text-center text-muted">
+                  No active campaigns.
+                </div>
+              </div>
+
+              <!-- Performance Breakdown Table -->
+              <div v-if="adsView?.insights?.length" class="flex flex-col gap-2 mt-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-muted">Campaign Performance Breakdown</span>
+                <TableFrame>
+                  <thead>
+                    <tr>
+                      <th>Campaign</th>
+                      <th class="num">Spend</th>
+                      <th class="num">Impressions</th>
+                      <th class="num">Clicks</th>
+                      <th class="num">CTR</th>
+                      <th class="num">CPC</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="ins in adsView.insights" :key="ins.campaignId">
+                      <td class="font-semibold text-ink">
+                        {{ adsView.campaigns.find(c => c.id === ins.campaignId)?.name || ins.campaignId }}
+                      </td>
+                      <td class="num font-bold">{{ adsMoney(ins.spend * 100) }}</td>
+                      <td class="num text-muted">{{ ins.impressions.toLocaleString() }}</td>
+                      <td class="num text-muted">{{ ins.clicks.toLocaleString() }}</td>
+                      <td class="num text-accent font-semibold">{{ ins.ctr }}%</td>
+                      <td class="num text-muted">{{ adsMoney(ins.cpc * 100) }}</td>
+                    </tr>
+                  </tbody>
+                </TableFrame>
+              </div>
             </section>
           </template>
 
