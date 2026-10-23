@@ -77,16 +77,43 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
 </script>
 
 <template>
-  <div class="p-6 sm:p-8 max-w-2xl mx-auto w-full text-left">
-    <p v-if="isError" class="card text-muted">{{ loadError?.message }}</p>
-    <p v-else-if="workspacesPending" class="text-muted">{{ t('common.loading') }}</p>
-    <p v-else-if="!isOwner" class="text-muted mt-4.5">{{ t('members.onlyOwner') }}</p>
+  <div class="members-page max-w-3xl mx-auto px-4 sm:px-6 py-6 w-full text-left font-sans">
+    <!-- Header -->
+    <div class="flex items-center justify-between flex-wrap gap-4 mb-5">
+      <div>
+        <div class="flex items-center gap-2">
+          <div role="heading" aria-level="2" class="text-base sm:text-lg font-bold text-ink tracking-tight">
+            {{ t('members.title') }}
+          </div>
+          <InfoTip :text="t('members.hint')" />
+        </div>
+        <p class="text-xs text-muted mt-1 mb-0 font-sans">
+          {{ t('members.subtitle') }}
+        </p>
+      </div>
+
+      <div v-if="isOwner" class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-wash border border-faint text-muted shadow-2xs">
+          <span class="w-2 h-2 rounded-full bg-success" />
+          <span>{{ rows.length }} {{ rows.length === 1 ? 'member' : 'members' }}</span>
+        </span>
+      </div>
+    </div>
+
+    <p v-if="isError" class="card text-muted p-4 rounded-xl border border-faint bg-surface">{{ loadError?.message }}</p>
+    <p v-else-if="workspacesPending" class="text-muted p-4">{{ t('common.loading') }}</p>
+
+    <!-- Non-owner Notice -->
+    <div v-else-if="!isOwner" class="p-6 rounded-xl border border-line bg-surface text-center">
+      <p class="text-muted text-sm font-medium mb-0">{{ t('members.onlyOwner') }}</p>
+    </div>
 
     <template v-else>
-      <form class="members-add flex items-center gap-2 mt-2" @submit.prevent="submitAdd">
+      <!-- Add Member Row -->
+      <form class="members-add flex items-center gap-2.5 mb-5" @submit.prevent="submitAdd">
         <input
           v-model="email"
-          class="field flex-1"
+          class="field flex-1 text-sm rounded-xl border border-line bg-surface focus:border-ink transition-colors px-3.5 py-2.5"
           type="text"
           inputmode="email"
           autocomplete="email"
@@ -97,45 +124,70 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
         />
         <button
           type="submit"
-          class="btn btn-primary w-auto flex-none"
+          class="btn btn-primary w-auto flex-none px-5 py-2.5 rounded-xl text-sm font-semibold inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
           :disabled="addMember.isPending.value || !email.trim()"
         >
           {{ t('members.add') }}
         </button>
-        <InfoTip :text="t('members.hint')" />
       </form>
 
-      <p v-if="actionError" class="autherr text-xs text-danger" role="alert">{{ actionError }}</p>
-      <p v-else-if="notice" class="oknote text-xs text-success" role="status">{{ notice }}</p>
+      <p v-if="actionError" class="autherr text-xs text-danger mb-3" role="alert">{{ actionError }}</p>
+      <p v-else-if="notice" class="oknote text-xs text-success mb-3" role="status">{{ notice }}</p>
 
       <p v-if="isPending" class="text-muted">{{ t('common.loading') }}</p>
-      <template v-else>
-        <ul class="list-none mt-4 p-0 flex flex-col gap-2">
+
+      <!-- Members Table Frame -->
+      <div v-else class="tblwrap rounded-xl border border-line bg-surface overflow-hidden shadow-2xs">
+        <div class="px-4 py-3 bg-surface-2/60 border-b border-faint flex items-center justify-between text-2xs font-bold uppercase tracking-wider text-muted font-sans">
+          <span>Member</span>
+          <div class="flex items-center gap-8">
+            <span class="w-20 text-center">Role</span>
+            <span class="w-16 text-right">Action</span>
+          </div>
+        </div>
+
+        <ul class="list-none m-0 p-0 divide-y divide-faint">
           <li
             v-for="m in rows"
             :key="m.email"
-            class="panel member-row flex items-center gap-2.5 p-3 rounded-lg border border-faint bg-surface"
+            class="panel member-row flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-wash/50 transition-colors"
           >
-            <div class="flex flex-col min-w-0 mr-auto">
-              <strong class="text-sm font-semibold">{{ m.name || m.email }}</strong>
-              <span class="text-muted text-xs-mid">{{ m.email }}</span>
+            <div class="flex items-center gap-3 min-w-0 mr-auto">
+              <div class="w-8 h-8 rounded-full bg-wash border border-line flex items-center justify-center font-bold text-xs text-ink shrink-0 font-sans">
+                {{ (m.name || m.email).slice(0, 2).toUpperCase() }}
+              </div>
+              <div class="flex flex-col min-w-0 text-left font-sans">
+                <div class="flex items-center gap-2">
+                  <strong class="text-sm font-medium text-ink truncate">{{ m.name || m.email }}</strong>
+                  <span v-if="isYou(m)" class="chip dark text-2xs py-0.5 px-2 rounded-full font-medium">{{ t('members.you') }}</span>
+                </div>
+                <span class="text-muted text-xs truncate">{{ m.email }}</span>
+              </div>
             </div>
-            <span v-if="m.role" class="chip">{{ m.role }}</span>
-            <span v-if="isOwnerRow(m)" class="badge badge-success">{{ t('members.owner') }}</span>
-            <span v-if="isYou(m)" class="chip dark">{{ t('members.you') }}</span>
-            <button
-              v-if="!isOwnerRow(m)"
-              type="button"
-              class="btn member-remove w-auto flex-none ml-0"
-              :disabled="removeMember.isPending.value"
-              @click="onRemove(m)"
-            >
-              {{ t('members.remove') }}
-            </button>
+
+            <div class="flex items-center gap-8 shrink-0">
+              <div class="w-20 flex justify-center">
+                <span v-if="isOwnerRow(m)" class="badge badge-success text-xs font-semibold py-0.5 px-2.5 rounded-full">{{ t('members.owner') }}</span>
+                <span v-else-if="m.role" class="chip text-xs py-0.5 px-2.5 rounded-full font-medium">{{ m.role }}</span>
+              </div>
+
+              <div class="w-16 flex justify-end">
+                <button
+                  v-if="!isOwnerRow(m)"
+                  type="button"
+                  class="btn member-remove w-auto text-xs py-1 px-2.5 rounded-md border border-faint text-muted hover:border-danger hover:text-danger hover:bg-danger-wash transition-colors cursor-pointer"
+                  :disabled="removeMember.isPending.value"
+                  @click="onRemove(m)"
+                >
+                  {{ t('members.remove') }}
+                </button>
+              </div>
+            </div>
           </li>
         </ul>
-        <p v-if="!(members?.members.length)" class="text-muted mt-2">{{ t('members.empty') }}</p>
-      </template>
+      </div>
+
+      <p v-if="!(members?.members.length)" class="text-muted text-xs mt-3">{{ t('members.empty') }}</p>
     </template>
   </div>
 </template>
