@@ -2588,6 +2588,7 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
    ========================================================================= */
 .card-scroll.planner-scroll,
 .card-scroll.ideas-scroll,
+.card-scroll.tags-scroll,
 .card-scroll.camp-scroll,
 .card-scroll.perf-scroll {
   display: flex;
@@ -2598,6 +2599,7 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 }
 .card-scroll.planner-scroll > .hubpage,
 .card-scroll.ideas-scroll > .hubpage,
+.card-scroll.tags-scroll > .hubpage,
 .card-scroll.camp-scroll > .hubpage,
 .card-scroll.perf-scroll > .hubpage {
   display: flex;
