@@ -39,11 +39,25 @@ describe('SocialMediaBar (wireframe)', () => {
     await settle()
     await flushPromises()
     expect(w.text()).toContain('Social Media')
-    expect(w.findAll('input[type="checkbox"]')).toHaveLength(3)
+    expect(w.findAll('input[type="checkbox"]')).toHaveLength(12)
     const text = w.text()
-    for (const name of ['Meta', 'YouTube', 'TikTok']) expect(text).toContain(name)
-    // Instagram has no separate connection — the Meta login covers it.
-    expect(PLATFORMS.map((p) => p.id)).toEqual(['meta', 'youtube', 'tiktok'])
+    for (const name of ['Meta', 'YouTube', 'TikTok', 'LinkedIn', 'Threads', 'Pinterest', 'Bluesky', 'X', 'Google Business', 'Instagram', 'Substack', 'Mastodon']) {
+      expect(text).toContain(name)
+    }
+    expect(PLATFORMS.map((p) => p.id)).toEqual([
+      'linkedin',
+      'threads',
+      'pinterest',
+      'bluesky',
+      'youtube',
+      'x',
+      'google_business',
+      'instagram',
+      'substack',
+      'mastodon',
+      'tiktok',
+      'meta',
+    ])
   })
 
   it('checks by default and toggles platforms on/off', async () => {
@@ -51,15 +65,17 @@ describe('SocialMediaBar (wireframe)', () => {
     await settle()
     await flushPromises()
     const boxes = w.findAll('input[type="checkbox"]')
-    expect((boxes[0].element as HTMLInputElement).checked).toBe(true)
+    const metaIdx = PLATFORMS.findIndex((p) => p.id === 'meta')
+    const ytIdx = PLATFORMS.findIndex((p) => p.id === 'youtube')
+    expect((boxes[metaIdx].element as HTMLInputElement).checked).toBe(true)
 
-    await boxes[1].setValue(true) // YouTube
+    await boxes[ytIdx].setValue(true) // YouTube
     expect(activePlatforms.value).toContain('youtube')
-    expect(activePlatform.value).toBe('meta') // primary = first in registry order
+    expect(activePlatform.value).toBe('youtube') // primary = first in registry order (youtube before meta)
 
-    await boxes[0].setValue(false) // uncheck Meta
+    await boxes[metaIdx].setValue(false) // uncheck Meta
     expect(activePlatforms.value).not.toContain('meta')
-    expect(activePlatform.value).toBe('youtube') // primary = first remaining in registry order
+    expect(activePlatform.value).toBe('youtube')
   })
 
   it('never unchecks the last remaining platform', async () => {
@@ -67,8 +83,8 @@ describe('SocialMediaBar (wireframe)', () => {
     const w = mountBar()
     await settle()
     await flushPromises()
-    // platform order is meta, youtube, tiktok
-    const box = w.findAll('input[type="checkbox"]')[2]
+    const tiktokIdx = PLATFORMS.findIndex((p) => p.id === 'tiktok')
+    const box = w.findAll('input[type="checkbox"]')[tiktokIdx]
     await box.setValue(false)
     expect(activePlatforms.value).toEqual(['tiktok'])
     // the DOM checkbox must snap back too (controlled-input desync regression)
@@ -76,10 +92,10 @@ describe('SocialMediaBar (wireframe)', () => {
   })
 
   it('keeps registry order when re-checking a platform', () => {
-    activePlatforms.value = ['youtube']
-    togglePlatform('meta')
-    expect(activePlatforms.value).toEqual(['meta', 'youtube'])
-    expect(activePlatform.value).toBe('meta')
+    activePlatforms.value = ['meta']
+    togglePlatform('youtube')
+    expect(activePlatforms.value).toEqual(['youtube', 'meta'])
+    expect(activePlatform.value).toBe('youtube')
   })
 })
 

@@ -71,9 +71,18 @@ const connectedCount = computed(() =>
 )
 
 const DESCRIPTIONS: Record<PlatformId, string> = {
-  meta: 'Publish and schedule posts directly to Facebook Pages and connected Instagram accounts.',
-  youtube: 'Track channel views, subscribers, and analyze video reach and audience retention.',
-  tiktok: 'Schedule short-form videos and measure trends, engagement, and follower growth.',
+  linkedin: 'Publish company posts, articles, and monitor professional network reach.',
+  threads: 'Share updates, conversations, and media with Threads followers.',
+  pinterest: 'Publish pins, curate visual boards, and drive discovery traffic.',
+  bluesky: 'Connect open social networking on the AT Protocol ecosystem.',
+  youtube: 'Track channel views, subscribers, and analyze video reach and retention.',
+  x: 'Post updates, media threads, and track real-time audience engagement.',
+  google_business: 'Manage business location profiles, customer reviews, and updates.',
+  instagram: 'Publish reels, stories, photos, and analyze audience insights.',
+  substack: 'Distribute newsletters, podcasts, and notes to your subscriber audience.',
+  mastodon: 'Federated publishing across decentralized Fediverse communities.',
+  tiktok: 'Schedule short-form videos and measure trends, engagement, and growth.',
+  meta: 'Publish and schedule posts directly to Facebook Pages and linked Instagram accounts.',
 }
 
 async function handleDisconnect(id: PlatformId): Promise<void> {
@@ -103,7 +112,7 @@ function onToggleActive(id: PlatformId, event: Event): void {
     <!-- Header -->
     <header class="mb-6">
       <div class="flex items-center gap-2">
-        <div role="heading" aria-level="2" class="text-base sm:text-lg font-bold text-ink tracking-tight font-sans">
+        <div role="heading" aria-level="2" class="text-base sm:text-lg font-bold text-ink tracking-tight font-sans capitalize">
           {{ activeWs?.name || 'Workspace Channels' }}
         </div>
         <InfoTip text="Link social media accounts to publish content, schedule campaigns, and track live analytics." />
@@ -151,7 +160,9 @@ function onToggleActive(id: PlatformId, event: Event): void {
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
-              <span v-else class="w-1.5 h-1.5 rounded-full bg-muted" />
+              <svg v-else width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="8" stroke-dasharray="3 3" />
+              </svg>
               <span>
                 {{
                   statusOf(p.id) === 'connected'
@@ -177,7 +188,7 @@ function onToggleActive(id: PlatformId, event: Event): void {
                     :href="profileUrl(p.id, connectionOf(p.id)?.handle) as string"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="text-2xl sm:text-[26px] font-extrabold text-ink font-display tracking-tight leading-tight hover:underline inline-flex items-center gap-2"
+                    class="text-2xl sm:text-[26px] font-extrabold text-ink font-sans tracking-tight leading-tight hover:underline inline-flex items-center gap-2"
                     :title="`${pageNameOf(p.id)} — open profile`"
                   >
                     <span>{{ pageNameOf(p.id) }}</span>
@@ -187,7 +198,7 @@ function onToggleActive(id: PlatformId, event: Event): void {
                       <line x1="10" y1="14" x2="21" y2="3" />
                     </svg>
                   </a>
-                  <span v-else class="text-2xl sm:text-[26px] font-extrabold text-ink font-display tracking-tight leading-tight">{{ pageNameOf(p.id) }}</span>
+                  <span v-else class="text-2xl sm:text-[26px] font-extrabold text-ink font-sans tracking-tight leading-tight">{{ pageNameOf(p.id) }}</span>
                 </div>
 
                 <div class="flex items-center gap-2 text-xs text-muted flex-wrap mt-0.5">
@@ -239,8 +250,8 @@ function onToggleActive(id: PlatformId, event: Event): void {
             </button>
             <button
               type="button"
-              class="btn text-xs py-1.5 px-3 text-danger border-faint hover:border-danger hover:text-danger inline-flex items-center gap-1.5"
-              :class="{ 'btn-danger': confirmDisconnectId === p.id }"
+              class="btn btn-danger text-xs py-1.5 px-3 inline-flex items-center gap-1.5"
+              :class="{ 'font-bold ring-2 ring-danger': confirmDisconnectId === p.id }"
               :disabled="!canManage || disconnect.isPending.value"
               :title="canManage ? 'Disconnect this account' : t('auth.noPerm')"
               @click="handleDisconnect(p.id)"

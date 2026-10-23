@@ -2559,11 +2559,18 @@ pub async fn list_platforms(
 /// Accepted public-profile hosts per platform.
 fn profile_hosts(id: &str) -> &'static [&'static str] {
     match id {
-        // One Meta connection covers the Facebook Page and its linked
-        // Instagram account; the Page profile is the linkable handle.
-        "meta" => &["facebook.com", "www.facebook.com", "m.facebook.com"],
+        "linkedin" => &["linkedin.com", "www.linkedin.com"],
+        "threads" => &["threads.net", "www.threads.net"],
+        "pinterest" => &["pinterest.com", "www.pinterest.com"],
+        "bluesky" => &["bsky.app"],
         "youtube" => &["youtube.com", "www.youtube.com", "youtu.be"],
+        "x" | "twitter" => &["x.com", "twitter.com", "www.x.com", "www.twitter.com"],
+        "google_business" => &["business.google.com", "google.com", "www.google.com", "maps.google.com"],
+        "instagram" => &["instagram.com", "www.instagram.com"],
+        "substack" => &["substack.com"],
+        "mastodon" => &["mastodon.social"],
         "tiktok" => &["tiktok.com", "www.tiktok.com"],
+        "meta" | "facebook" => &["facebook.com", "www.facebook.com", "m.facebook.com"],
         _ => &[],
     }
 }

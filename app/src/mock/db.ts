@@ -397,8 +397,21 @@ export const workspaces: MockWorkspace[] = [
 ]
 
 // ---- platform connections (wireframe OAuth state) ----
-// One Meta login covers the Facebook Page and its linked Instagram account.
-export type PlatformId = 'meta' | 'youtube' | 'tiktok'
+// Platform connections (12 major social networks supported)
+export type PlatformId =
+  | 'linkedin'
+  | 'threads'
+  | 'pinterest'
+  | 'bluesky'
+  | 'youtube'
+  | 'x'
+  | 'google_business'
+  | 'instagram'
+  | 'substack'
+  | 'mastodon'
+  | 'tiktok'
+  | 'meta'
+
 export type ConnectStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
 
 export interface PlatformConnection {
@@ -419,6 +432,61 @@ export interface PlatformConnection {
 
 export const connections: PlatformConnection[] = [
   {
+    id: 'linkedin', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'Company pages and personal articles',
+  },
+  {
+    id: 'threads', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'Direct Threads posts and conversation replies',
+  },
+  {
+    id: 'pinterest', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'Boards and discovery pins',
+  },
+  {
+    id: 'bluesky', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'AT Protocol decentralized network',
+  },
+  {
+    id: 'youtube', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'Quota 10,000 units/day',
+  },
+  {
+    id: 'x', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'Real-time posts and media threads',
+  },
+  {
+    id: 'google_business', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'Business profile and reviews',
+  },
+  {
+    id: 'instagram', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'Reels, stories, and feed posts',
+  },
+  {
+    id: 'substack', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'Newsletters and publication notes',
+  },
+  {
+    id: 'mastodon', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'Fediverse federated publishing',
+  },
+  {
+    id: 'tiktok', status: 'disconnected', handle: '', externalId: '',
+    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
+    mediaCount: 0, note: 'Audited app required to publish',
+  },
+  {
     id: 'meta', status: 'connected',
     handle: 'https://www.facebook.com/profile.php?id=102400000000001',
     externalId: '102400000000001',
@@ -430,16 +498,6 @@ export const connections: PlatformConnection[] = [
     tokenType: 'long-lived', expiresAt: '2026-10-18', lastSync: '2026-03-01 06:00',
     mediaCount: 214, note: 'Facebook Page + linked Instagram · token refresh due day 45',
     hasToken: true,
-  },
-  {
-    id: 'youtube', status: 'disconnected', handle: '', externalId: '',
-    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
-    mediaCount: 0, note: 'Quota 10,000 units/day',
-  },
-  {
-    id: 'tiktok', status: 'disconnected', handle: '', externalId: '',
-    scopes: [], tokenType: '—', expiresAt: null, lastSync: null,
-    mediaCount: 0, note: 'Audited app required to publish',
   },
 ]
 

@@ -37,9 +37,18 @@ const oauthError = ref('')
 const handleInput = ref<HTMLInputElement | null>(null)
 
 const HANDLE_HINTS: Record<PlatformId, string> = {
-  meta: 'https://www.facebook.com/profile.php?id=… or https://facebook.com/yourpage',
+  linkedin: '@company or https://linkedin.com/company/…',
+  threads: '@username or https://threads.net/@username',
+  pinterest: '@username or https://pinterest.com/username',
+  bluesky: 'handle.bsky.social or https://bsky.app/profile/…',
   youtube: '@yourchannel or https://youtube.com/@yourchannel',
+  x: '@handle or https://x.com/handle',
+  google_business: 'https://business.google.com or Location ID',
+  instagram: '@username or https://instagram.com/username',
+  substack: 'publication or https://publication.substack.com',
+  mastodon: '@user@instance.social or profile URL',
   tiktok: '@yourbrand or https://tiktok.com/@yourbrand',
+  meta: 'https://www.facebook.com/profile.php?id=… or https://facebook.com/yourpage',
 }
 const handleHint = computed(() => (props.platform ? HANDLE_HINTS[props.platform] : ''))
 const profileHref = computed(() =>

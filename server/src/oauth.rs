@@ -702,11 +702,22 @@ pub fn mark_connected(
     workspace_id: &str,
     id: &str,
 ) -> Option<crate::model::PlatformConnection> {
-    let c = store
-        .workspace_mut(workspace_id)?
-        .connections
-        .iter_mut()
-        .find(|c| c.id == id)?;
+    let ws = store.workspace_mut(workspace_id)?;
+    if !ws.connections.iter().any(|c| c.id == id) {
+        ws.connections.push(crate::model::PlatformConnection {
+            id: id.into(),
+            status: "disconnected".into(),
+            handle: String::new(),
+            external_id: String::new(),
+            scopes: vec![],
+            token_type: "—".into(),
+            expires_at: None,
+            last_sync: None,
+            media_count: 0,
+            note: String::new(),
+        });
+    }
+    let c = ws.connections.iter_mut().find(|c| c.id == id)?;
     c.status = "connected".into();
     if c.handle.is_empty() {
         c.handle = if c.id == "meta" {
