@@ -56,9 +56,9 @@ function prefersReduced(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
-// Full-page toggle — only the container animates: its box grows from the deck
-// slot into the full page (and back) by animating left/width/height, so the
-// content reflows at its normal size and nothing inside is scaled.
+// Full-page toggle — GPU-composited container FLIP animation: transforms
+// the card box from the deck slot into the full page (and back) via transform
+// (scale + translate) to prevent layout reflows and stutter at 60-120fps.
 type FullAnim = ReturnType<typeof animate>
 let fullAnim: FullAnim | null = null
 let fullBusy = false
@@ -85,7 +85,7 @@ async function setFull(on: boolean, fromIndex?: number): Promise<void> {
   const first = card.getBoundingClientRect()
   const deckRect = el.getBoundingClientRect()
 
-  const pin = (rect: { top: number; left: number; width: number; height: number }): void => {
+  const pin = (rect: { top: number; left: number; width: number; height: number }, initialTransform?: string): void => {
     card.style.position = 'fixed'
     card.style.top = `${rect.top}px`
     card.style.left = `${rect.left}px`
@@ -93,71 +93,70 @@ async function setFull(on: boolean, fromIndex?: number): Promise<void> {
     card.style.height = `${rect.height}px`
     card.style.margin = '0'
     card.style.zIndex = '20'
-    card.style.willChange = 'left, width, height'
+    card.style.transformOrigin = 'top left'
+    card.style.willChange = 'transform, opacity'
+    if (initialTransform) card.style.transform = initialTransform
   }
   const unpin = (): void => {
-    for (const prop of ['position', 'top', 'left', 'width', 'height', 'margin', 'z-index', 'will-change']) {
+    for (const prop of ['position', 'top', 'left', 'width', 'height', 'margin', 'z-index', 'will-change', 'transform', 'transform-origin']) {
       card.style.removeProperty(prop)
     }
   }
 
-  // Pin the card as an overlay at its current rect before anything moves.
-  pin(first)
+  let startTransform = 'translate3d(0, 0, 0) scale(1, 1)'
+  let targetTransform = 'translate3d(0, 0, 0) scale(1, 1)'
 
-  let target: { left: number; width: number; height: number }
   if (on) {
-    // Flip first: detail columns and drawers key off this, so they switch
-    // layout while the card is still growing instead of popping in after.
     full.value = true
-    // Grow to the full-page card rect (edge to edge, full height).
-    target = {
+    const target = {
+      top: deckRect.top,
       left: deckRect.left,
       width: Math.max(1, deckRect.width),
       height: Math.max(1, deckRect.height),
     }
-    el.classList.add('fading') // other cards fade out while this one grows
+    const dx = first.left - target.left
+    const dy = first.top - target.top
+    const sx = Math.max(0.01, first.width / target.width)
+    const sy = Math.max(0.01, first.height / target.height)
+    startTransform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`
+    targetTransform = 'translate3d(0, 0, 0) scale(1, 1)'
+    pin(target, startTransform)
+    el.classList.add('fading')
   } else {
-    // Reset to the deck slot first, then shrink the full page back into it.
     full.value = false
     await nextTick()
     scrollToIndex(index.value, false)
     await raf()
-    // Measure the natural deck slot: unpin, read, re-pin (no paint in between).
-    unpin()
     const slot = card.getBoundingClientRect()
-    pin(first)
-    target = {
-      left: slot.left,
-      width: Math.max(1, slot.width),
-      height: Math.max(1, slot.height),
-    }
+    const dx = slot.left - first.left
+    const dy = slot.top - first.top
+    const sx = Math.max(0.01, slot.width / Math.max(1, first.width))
+    const sy = Math.max(0.01, slot.height / Math.max(1, first.height))
+    startTransform = 'translate3d(0, 0, 0) scale(1, 1)'
+    targetTransform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`
+    pin(first, startTransform)
   }
 
   await raf()
   const a = animate(
     card,
     {
-      left: [first.left, target.left],
-      width: [first.width, target.width],
-      height: [first.height, target.height],
+      transform: [startTransform, targetTransform],
     },
-    { duration: 0.56, ease: [0.22, 1, 0.36, 1] },
+    { duration: on ? 0.36 : 0.3, ease: [0.22, 1, 0.36, 1] },
   )
   fullAnim = a
   a.finished
     .then(async () => {
       if (fullAnim !== a) return
       fullAnim = null
-      if (on) {
-        full.value = true // collapse the rest (they are already faded out)
-        await nextTick()
-      }
       el.classList.remove('fading')
       unpin()
       fullBusy = false
     })
     .catch(() => {
       el.classList.remove('fading')
+      unpin()
       fullBusy = false
     })
 }
@@ -195,16 +194,21 @@ function nearestIndex(): number {
 let syncTimer = 0
 let syncToken = 0
 
-/** Marks a programmatic scroll as in-flight so `commit()` ignores it. */
+/** Marks a programmatic scroll as in-flight so `commit()` ignores it and
+ * temporarily disengages native scroll-snap to prevent collision/stutter. */
 function beginSync(ms: number): void {
   syncing = true
+  const el = track.value
+  if (el) el.style.scrollSnapType = 'none'
   const token = ++syncToken
   const done = (): void => {
-    if (token === syncToken) syncing = false
+    if (token === syncToken) {
+      syncing = false
+      if (el) el.style.scrollSnapType = ''
+    }
   }
   window.clearTimeout(syncTimer)
   syncTimer = window.setTimeout(done, ms)
-  const el = track.value
   if (el && 'onscrollend' in window) el.addEventListener('scrollend', done, { once: true })
 }
 
@@ -215,21 +219,14 @@ function scrollToIndex(i: number, smooth = true): void {
   const left = Math.max(0, target.offsetLeft - padOf(el))
   const instant = !smooth || prefersReduced()
   if (instant) {
-    // CSS `scroll-behavior: smooth` would animate this assignment; force it off
-    // for one frame so deep links, resizes and full-page transitions snap.
-    const previous = el.style.scrollBehavior
-    el.style.scrollBehavior = 'auto'
     el.scrollLeft = left
-    requestAnimationFrame(() => { el.style.scrollBehavior = previous })
-    beginSync(120)
     return
   }
   const distance = Math.abs(left - el.scrollLeft)
   if (typeof el.scrollTo === 'function') el.scrollTo({ left, behavior: 'smooth' })
   else el.scrollLeft = left
-  // Cover the whole smooth animation, scaled by distance, so an in-flight
-  // scroll never commits a half-way index (which made the UI jump).
-  beginSync(Math.round(Math.min(900, Math.max(300, 250 + distance * 0.35))))
+  // Cover the smooth animation without fighting native snap or overshooting.
+  beginSync(Math.round(Math.min(750, Math.max(260, 200 + distance * 0.3))))
 }
 
 async function goTo(i: number): Promise<void> {
@@ -378,7 +375,7 @@ function onWheel(e: WheelEvent): void {
   if (Math.abs(delta) < 4) return
   const now = Date.now()
   if (now < wheelAt) return
-  wheelAt = now + 420
+  wheelAt = now + 450
   goTo(index.value + (delta > 0 ? 1 : -1))
 }
 

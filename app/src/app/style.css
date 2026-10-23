@@ -995,7 +995,7 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
   position: relative; display: flex; gap: 20px;
   overflow-x: auto; overflow-y: hidden;
   margin: 0;
-  scroll-snap-type: x mandatory; scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
   scroll-padding-inline: 12.5vw;
   padding: 16px 0 20px;
   flex: 1 1 0%;
@@ -1074,14 +1074,14 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
   .slide:not(.active) .slide-dock {
     opacity: 0;
     pointer-events: none;
-    visibility: hidden;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
+    transform: translateY(6px);
+    transition: opacity 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1);
   }
   .slide.active .slide-dock {
     opacity: 1;
     pointer-events: auto;
-    visibility: visible;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
+    transform: translateY(0);
+    transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1), transform 0.25s cubic-bezier(0.2, 0, 0, 1);
   }
   .slide-dock .dock-bar .month-toggle,
   .slide-dock .dock-bar .month-toggle + .dock-sep,
