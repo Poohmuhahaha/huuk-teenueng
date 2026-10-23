@@ -98,7 +98,7 @@ function onToggleActive(id: PlatformId, event: Event): void {
 </script>
 
 <template>
-  <div class="connections-page">
+  <div class="connections-page max-w-4xl mx-auto px-4 sm:px-6 py-6 w-full text-left">
     <!-- Header -->
     <header class="mb-6">
       <div class="flex items-center justify-between flex-wrap gap-4">
