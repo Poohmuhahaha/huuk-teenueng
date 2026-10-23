@@ -8,7 +8,8 @@ import { navDate, yearOfDate } from '@/core/navdate'
 import { monthOfDate } from '@/core/deeplink'
 import { deckFull } from '@/core/deck'
 import { useWidePane } from '@/composables/useWidePane'
-import { monthName } from '@/core/i18n'
+import DockBar from '@/components/ui/DockBar.vue'
+import { monthName, t } from '@/core/i18n'
 import type { Post } from '@/mock/db'
 
 const router = useRouter()
@@ -203,7 +204,7 @@ function goAdd(date?: string): void {
 <template>
   <div ref="root" class="cal-container">
     <!-- Header with Action (matching Huuk design system in Dashboard) -->
-    <header class="flex items-center justify-between flex-wrap gap-4 pb-2 border-b border-line flex-none">
+    <header class="flex items-center justify-between flex-wrap gap-4 pb-1 flex-none">
       <div>
         <div class="text-xs font-bold uppercase tracking-wider text-muted mb-0.5">
           Content Schedule · {{ monthName(month) }} {{ year }}
@@ -213,7 +214,7 @@ function goAdd(date?: string): void {
         </h2>
       </div>
 
-      <!-- Right: View Mode Capsule (Month / Agenda) + New Post Button -->
+      <!-- Right: View Mode Capsule (Month / Agenda) -->
       <div class="flex items-center gap-3">
         <div class="inline-flex items-center gap-1 p-1 bg-wash border border-line rounded-full shadow-2xs">
           <button
@@ -233,18 +234,36 @@ function goAdd(date?: string): void {
             Agenda
           </button>
         </div>
-
-        <button
-          type="button"
-          class="btn btn-primary rounded-full px-4 py-2 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs hover:shadow-sm transition-all"
-          title="Add new post"
-          @click="() => goAdd()"
-        >
-          <span class="text-sm leading-none font-bold">+</span>
-          <span>New post</span>
-        </button>
       </div>
     </header>
+
+    <!-- Standard Huuk DockBar (teleports to slide-dock at bottom of deck) -->
+    <DockBar label="Calendar controls">
+      <div class="flex items-center justify-between w-full gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold text-muted tracking-wider uppercase font-mono">
+            {{ posts?.length ?? 0 }} Posts
+          </span>
+        </div>
+        <div class="flex items-center gap-2 ml-auto">
+          <RouterLink class="btn btn-icon w-auto" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
+            </svg>
+          </RouterLink>
+          <button
+            type="button"
+            class="btn btn-primary btn-icon w-auto"
+            :title="t('planner.addTopic')"
+            aria-label="New post"
+            @click="() => goAdd()"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    </DockBar>
 
     <div v-if="isPending" class="muted py-8 text-center" role="status">Loading calendar…</div>
     <div v-else-if="isError" class="card" role="alert">
