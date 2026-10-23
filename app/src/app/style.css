@@ -2587,6 +2587,7 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
    real width, so the layout aligns while the card expands.
    ========================================================================= */
 .card-scroll.planner-scroll,
+.card-scroll.ideas-scroll,
 .card-scroll.camp-scroll,
 .card-scroll.perf-scroll {
   display: flex;
@@ -2596,6 +2597,7 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   text-align: left;
 }
 .card-scroll.planner-scroll > .hubpage,
+.card-scroll.ideas-scroll > .hubpage,
 .card-scroll.camp-scroll > .hubpage,
 .card-scroll.perf-scroll > .hubpage {
   display: flex;

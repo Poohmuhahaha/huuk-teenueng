@@ -6,6 +6,14 @@ import { t } from '@/core/i18n'
 import { activeMonth, activeYear } from '@/core/navdate'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
+import DockBar from '@/components/ui/DockBar.vue'
+import Drawer from '@/components/overlays/Drawer.vue'
+import { deckFull } from '@/core/deck'
+import { useWidePane } from '@/composables/useWidePane'
+
+const root = ref<HTMLElement | null>(null)
+const { wide } = useWidePane(root, 'ideas-scroll')
+const isWide = computed(() => deckFull.value || wide.value)
 
 const { data: ideas, isPending, isError, error: loadError, refetch } = useIdeas()
 const isEmpty = computed(() => !ideas.value || ideas.value.length === 0)
@@ -17,26 +25,40 @@ const promote = usePromoteIdea(promoteMonth, promoteYear)
 const { can } = usePermission()
 const canWrite = computed(() => can('ideas.write'))
 
+const drawerOpen = ref(false)
 const topic = ref('')
-const format = ref('')
+const format = ref('Short-video')
 const idea = ref('')
 const link = ref('')
 const addError = ref('')
 const actionError = ref('')
 const notice = ref('')
 
+function openNew(): void {
+  topic.value = ''
+  format.value = 'Short-video'
+  idea.value = ''
+  link.value = ''
+  addError.value = ''
+  drawerOpen.value = true
+}
+
 async function add(): Promise<void> {
   if (!canWrite.value || addIdea.isPending.value || !topic.value.trim()) return
   addError.value = ''
   try {
     await addIdea.mutateAsync({
-      topic: topic.value.trim(), format: format.value.trim(),
-      idea: idea.value.trim(), link: link.value.trim(), done: false,
+      topic: topic.value.trim(),
+      format: format.value.trim() || 'Short-video',
+      idea: idea.value.trim(),
+      link: link.value.trim(),
+      done: false,
     })
     topic.value = ''
-    format.value = ''
+    format.value = 'Short-video'
     idea.value = ''
     link.value = ''
+    drawerOpen.value = false
   } catch (e) {
     addError.value = e instanceof Error ? e.message : String(e)
   }
@@ -68,46 +90,191 @@ async function onPromote(it: Idea): Promise<void> {
 </script>
 
 <template>
-  <p v-if="notice" class="muted" role="status">{{ notice }}</p>
-  <p v-if="actionError" class="autherr" role="alert">{{ actionError }}</p>
-  <div v-if="isPending" class="muted">Loading ideas…</div>
-  <div v-else-if="isError" class="card" role="alert">
-    <p class="muted">Could not load ideas: {{ loadError?.message }}</p>
-    <button type="button" class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
-  </div>
-  <div v-else-if="isEmpty" class="muted">No ideas captured yet.</div>
-  <TableFrame v-else>
-    <thead><tr><th>Topic</th><th>Format</th><th>Idea</th><th>Link</th><th>Done</th><th></th></tr></thead>
-    <tbody>
-      <tr v-for="it in ideas" :key="it.id" style="cursor: default;">
-        <td>{{ it.topic }}</td>
-        <td>{{ it.format }}</td>
-        <td>{{ it.idea }}</td>
-        <td class="muted">{{ it.link || '—' }}</td>
-        <td><input type="checkbox" :checked="it.done" :disabled="!canWrite || toggleIdea.isPending.value"
-          :aria-label="`Mark ${it.topic} done`" :title="canWrite ? '' : t('auth.noPerm')"
-          @change="onToggle(it, $event)" /></td>
-        <td><button class="btn" :disabled="!canWrite || promote.isPending.value"
-          :title="canWrite ? '' : t('auth.noPerm')" @click="onPromote(it)">Promote</button></td>
-      </tr>
-    </tbody>
-  </TableFrame>
-  <h2>Capture</h2>
-  <div class="grid3">
-    <div><label class="lbl" for="idea-topic">Topic</label><input id="idea-topic" class="field" v-model="topic"
-      :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')" /></div>
-    <div><label class="lbl" for="idea-format">Format</label><input id="idea-format" class="field" v-model="format"
-      :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')" /></div>
-    <div>
-      <label class="lbl">Promote to month</label>
-      <MonthToggle v-model="promoteMonth" v-model:year="promoteYear" :disabled="!canWrite" />
+  <div ref="root" class="ideas-page w-full flex-1 flex flex-col min-h-0 text-left">
+    <!-- Notice / Alert notifications -->
+    <div v-if="notice" class="mb-3 px-3.5 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-xs font-medium flex items-center justify-between" role="status">
+      <span>{{ notice }}</span>
+      <button type="button" class="text-xs opacity-60 hover:opacity-100 cursor-pointer" @click="notice = ''">✕</button>
     </div>
+    <div v-if="actionError" class="mb-3 px-3.5 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-700 text-xs font-medium flex items-center justify-between" role="alert">
+      <span>{{ actionError }}</span>
+      <button type="button" class="text-xs opacity-60 hover:opacity-100 cursor-pointer" @click="actionError = ''">✕</button>
+    </div>
+
+    <!-- Table content -->
+    <div class="flex-1 min-h-0 overflow-y-auto">
+      <div v-if="isPending" class="muted py-8 text-center">Loading ideas…</div>
+      <div v-else-if="isError" class="card py-8 text-center" role="alert">
+        <p class="muted mb-3">Could not load ideas: {{ loadError?.message }}</p>
+        <button type="button" class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
+      </div>
+      <div v-else-if="isEmpty" class="card py-12 text-center flex flex-col items-center justify-center gap-3">
+        <p class="muted">No ideas captured yet. Capture your first idea to get started!</p>
+        <button type="button" class="btn btn-primary" :disabled="!canWrite" @click="openNew">
+          + New Idea
+        </button>
+      </div>
+      <TableFrame v-else>
+        <thead>
+          <tr>
+            <th class="w-[30%]">Topic</th>
+            <th class="w-[15%]">Format</th>
+            <th class="w-[35%]">Idea</th>
+            <th class="w-[10%]">Link</th>
+            <th class="w-[48px] text-center">Done</th>
+            <th class="w-[100px] text-right"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="it in ideas" :key="it.id" class="hover:bg-wash/60 transition-colors">
+            <td>
+              <strong class="font-semibold text-ink text-sm">{{ it.topic }}</strong>
+            </td>
+            <td>
+              <span class="inline-flex px-2 py-0.5 rounded text-2xs font-semibold bg-wash text-muted border border-faint">
+                {{ it.format || 'General' }}
+              </span>
+            </td>
+            <td>
+              <span class="text-sm text-ink/80 line-clamp-2">{{ it.idea || '—' }}</span>
+            </td>
+            <td>
+              <a v-if="it.link && (it.link.startsWith('http://') || it.link.startsWith('https://'))"
+                :href="it.link" target="_blank" rel="noopener noreferrer"
+                class="text-xs text-ink underline truncate block max-w-[120px]" :title="it.link">
+                Link ↗
+              </a>
+              <span v-else class="muted text-xs">{{ it.link || '—' }}</span>
+            </td>
+            <td class="text-center">
+              <input
+                type="checkbox"
+                :checked="it.done"
+                :disabled="!canWrite || toggleIdea.isPending.value"
+                :aria-label="`Mark ${it.topic} done`"
+                :title="canWrite ? '' : t('auth.noPerm')"
+                class="cursor-pointer"
+                @change="onToggle(it, $event)"
+              />
+            </td>
+            <td class="text-right">
+              <button
+                type="button"
+                class="px-3 py-1 rounded-full text-xs font-semibold border border-line bg-surface hover:bg-ink hover:text-white hover:border-ink transition-all cursor-pointer shadow-2xs"
+                :disabled="!canWrite || promote.isPending.value"
+                :title="canWrite ? '' : t('auth.noPerm')"
+                @click="onPromote(it)"
+              >
+                Promote
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </TableFrame>
+    </div>
+
+    <!-- Standard Slide DockBar -->
+    <DockBar label="Ideas controls">
+      <div class="flex items-center justify-between w-full gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold text-muted tracking-wider uppercase font-mono">
+            {{ ideas?.length ?? 0 }} Ideas
+          </span>
+        </div>
+        <div class="flex items-center gap-2 ml-auto">
+          <button
+            type="button"
+            class="btn btn-primary btn-icon w-auto"
+            :disabled="!canWrite"
+            :title="canWrite ? 'Add new idea' : t('auth.noPerm')"
+            aria-label="Add new idea"
+            @click="openNew"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    </DockBar>
+
+    <!-- Slide-over Drawer for Capturing New Idea -->
+    <Drawer
+      v-model="drawerOpen"
+      class="editor-sheet"
+      :inline="false"
+      :side="isWide ? 'right' : 'bottom'"
+      :width="'460px'"
+      contained
+      title="Capture New Idea"
+    >
+      <div class="p-6 flex flex-col gap-4 text-left">
+        <div>
+          <label class="lbl block text-xs font-semibold mb-1" for="idea-topic">Topic *</label>
+          <input
+            id="idea-topic"
+            class="field w-full"
+            v-model="topic"
+            placeholder="e.g. Rainy Day Reads"
+            :disabled="!canWrite"
+            @keydown.enter="add"
+          />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="lbl block text-xs font-semibold mb-1" for="idea-format">Format</label>
+            <input
+              id="idea-format"
+              class="field w-full"
+              v-model="format"
+              placeholder="e.g. Short-video"
+              :disabled="!canWrite"
+            />
+          </div>
+          <div>
+            <label class="lbl block text-xs font-semibold mb-1">Promote to Month</label>
+            <MonthToggle v-model="promoteMonth" v-model:year="promoteYear" :disabled="!canWrite" />
+          </div>
+        </div>
+
+        <div>
+          <label class="lbl block text-xs font-semibold mb-1" for="idea-idea">Idea / Angle</label>
+          <textarea
+            id="idea-idea"
+            class="field w-full"
+            rows="3"
+            v-model="idea"
+            placeholder="Cozy reading vlog, lighting setup, 3 key takeaways..."
+            :disabled="!canWrite"
+          />
+        </div>
+
+        <div>
+          <label class="lbl block text-xs font-semibold mb-1" for="idea-link">Reference Link</label>
+          <input
+            id="idea-link"
+            class="field w-full"
+            v-model="link"
+            placeholder="https://instagram.com/p/... or reference URL"
+            :disabled="!canWrite"
+          />
+        </div>
+
+        <p v-if="addError" class="autherr text-xs text-rose-600" role="alert">{{ addError }}</p>
+
+        <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-line mt-2">
+          <button type="button" class="btn text-xs py-2 px-4 cursor-pointer" @click="drawerOpen = false">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary text-xs py-2 px-5 font-semibold cursor-pointer shadow-xs"
+            :disabled="!canWrite || addIdea.isPending.value || !topic.trim()"
+            @click="add"
+          >
+            {{ addIdea.isPending.value ? 'Saving…' : 'Save Idea' }}
+          </button>
+        </div>
+      </div>
+    </Drawer>
   </div>
-  <label class="lbl" for="idea-idea">Idea</label><input id="idea-idea" class="field" v-model="idea" :disabled="!canWrite"
-    :title="canWrite ? '' : t('auth.noPerm')" />
-  <label class="lbl" for="idea-link">Link</label><input id="idea-link" class="field" v-model="link" :disabled="!canWrite"
-    :title="canWrite ? '' : t('auth.noPerm')" />
-  <p v-if="addError" class="autherr" role="alert">{{ addError }}</p>
-  <div class="mt"><button class="btn btn-primary" :disabled="!canWrite || addIdea.isPending.value || !topic.trim()"
-    :title="canWrite ? '' : t('auth.noPerm')" @click="add">Add idea</button></div>
 </template>
