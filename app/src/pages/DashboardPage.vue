@@ -481,7 +481,7 @@ function goMaster(): void {
               <!-- #1 Spotlight Hero Card -->
               <div v-if="bestPost" class="border border-line rounded-xl bg-surface p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-start gap-4 min-w-0">
-                  <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 flex items-center justify-center font-extrabold text-xl font-mono flex-none">
+                  <div class="w-12 h-12 rounded-xl bg-amber-600 border border-amber-700/40 text-white shadow-sm flex items-center justify-center font-extrabold text-xl font-mono flex-none">
                     #1
                   </div>
                   <div class="flex flex-col gap-1 min-w-0">
@@ -538,8 +538,8 @@ function goMaster(): void {
                   <tbody>
                     <tr v-for="(t, idx) in stats?.top5 ?? []" :key="t.post.id">
                       <td class="text-center">
-                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-md font-mono text-xs font-bold"
-                          :class="idx === 0 ? 'bg-amber-500/15 text-amber-600 border border-amber-500/30' : idx === 1 ? 'bg-slate-400/15 text-slate-600 border border-slate-400/30' : idx === 2 ? 'bg-amber-700/15 text-amber-800 border border-amber-700/30' : 'bg-wash text-muted border border-faint'">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-md font-mono text-xs font-extrabold"
+                          :class="idx === 0 ? 'bg-amber-600 text-white shadow-2xs border border-amber-700/40' : idx === 1 ? 'bg-slate-600 text-white shadow-2xs border border-slate-700/40' : idx === 2 ? 'bg-amber-800 text-white shadow-2xs border border-amber-900/40' : 'bg-ink text-white shadow-2xs border border-ink'">
                           #{{ idx + 1 }}
                         </span>
                       </td>
