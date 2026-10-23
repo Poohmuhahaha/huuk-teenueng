@@ -24,7 +24,6 @@ const {
   trackedList,
   totalTrackedTags,
   totalPostsAnalyzed,
-  getDiscoveredTagsForGroup,
 } = useHashtagTracker(allPosts, liveData)
 
 // View switcher: 'categories' (Image 7 design) or 'tracked' (post discovery feed)
@@ -104,7 +103,6 @@ async function quickAssignToGroup(groupId: string, tag: string): Promise<void> {
           :groups="groups ?? []"
           :add="onAdd"
           :tag-stats="trackedMap"
-          :get-discovered-tags="getDiscoveredTagsForGroup"
         />
       </fieldset>
     </div>

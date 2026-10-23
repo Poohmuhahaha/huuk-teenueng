@@ -7,10 +7,8 @@ const props = defineProps<{
   groups: HashtagGroup[]
   /** Async add handler; the draft clears only when it resolves. */
   add?: (groupId: string, tag: string) => Promise<void>
-  /** Tracked stats per tag */
+  /** Tracked stats per tag (used for tooltips) */
   tagStats?: Map<string, TrackedTag>
-  /** Helper to find discovered tags from posts for a group */
-  getDiscoveredTags?: (groupTitle: string, existingTags: string[]) => TrackedTag[]
 }>()
 
 const drafts = ref<Record<string, string>>({})
@@ -37,18 +35,12 @@ function copySingleTag(gId: string, t: string): void {
   void copyText(`${gId}-${t}`, tag)
 }
 
-function getCount(tag: string): number {
-  if (!props.tagStats) return 0
-  const normalized = tag.trim().toLowerCase().replace(/^#/, '')
-  return props.tagStats.get(normalized)?.count ?? 0
-}
-
 function getTagTooltip(tag: string): string {
   const normalized = tag.trim().toLowerCase().replace(/^#/, '')
   const stat = props.tagStats?.get(normalized)
-  if (!stat || stat.count === 0) return `Click to copy #${tag} (0 posts)`
+  if (!stat || stat.count === 0) return `Click to copy #${tag}`
   const titles = stat.posts.map((p) => p.title).join(', ')
-  return `Click to copy #${tag} · Used in ${stat.count} ${stat.count === 1 ? 'post' : 'posts'} (${titles})`
+  return `Click to copy #${tag} · Tracked in ${stat.count} ${stat.count === 1 ? 'post' : 'posts'} (${titles})`
 }
 
 async function submit(groupId: string): Promise<void> {
@@ -65,40 +57,28 @@ async function submit(groupId: string): Promise<void> {
     busy.value = false
   }
 }
-
-async function addDiscoveredTag(groupId: string, tag: string): Promise<void> {
-  if (!props.add || busy.value) return
-  busy.value = true
-  try {
-    await props.add(groupId, tag)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
-  } finally {
-    busy.value = false
-  }
-}
 </script>
 
 <template>
   <div class="hashtag-stack flex flex-col gap-6 w-full max-w-4xl mx-auto py-2">
-    <!-- Category Cards matching reference Image 7 -->
+    <!-- Category Cards matching reference Image 7 exactly -->
     <div
       v-for="g in groups"
       :key="g.id"
       class="border border-line rounded-2xl bg-surface p-8 shadow-xs flex flex-col items-center justify-between transition-all hover:border-ink/20"
     >
-      <!-- Title: Centered -->
-      <h3 class="font-bold text-lg text-ink text-center m-0 tracking-tight">
+      <!-- Title: Centered, Title Case, clean sans-serif font matching Image 7 -->
+      <div class="!font-sans font-bold text-base text-ink text-center !normal-case tracking-tight select-none">
         {{ g.title }}
-      </h3>
+      </div>
 
-      <!-- Tag Pills: Centered with post usage counts -->
+      <!-- Tag Pills: Centered, clean rounded pills without clutter -->
       <div class="flex items-center justify-center flex-wrap gap-2.5 py-6 w-full min-h-[58px]">
         <button
           v-for="(t, i) in g.tags"
           :key="`${t}-${i}`"
           type="button"
-          class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer select-none group"
+          class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer select-none group"
           :class="[
             copiedKey === `${g.id}-${t}`
               ? '!bg-emerald-500 !text-white !border-emerald-500 shadow-xs'
@@ -108,62 +88,27 @@ async function addDiscoveredTag(groupId: string, tag: string): Promise<void> {
           @click="copySingleTag(g.id, t)"
         >
           <span>#{{ t }}</span>
-          <!-- Dynamic count tracked from posts -->
-          <span
-            v-if="getCount(t) > 0"
-            class="text-[10px] font-mono px-1.5 py-0.2 rounded-full transition-colors"
-            :class="copiedKey === `${g.id}-${t}` ? 'bg-white/20 text-white' : 'bg-wash text-muted group-hover:text-ink border border-faint'"
-          >
-            {{ getCount(t) }}
-          </span>
-          <span v-if="copiedKey === `${g.id}-${t}`" class="text-[10px] ml-0.5">✓</span>
+          <span v-if="copiedKey === `${g.id}-${t}`" class="text-[10px]">✓</span>
         </button>
-
-        <!-- Discovered tags dynamically tracked from fetched posts for this category -->
-        <template v-if="getDiscoveredTags">
-          <div
-            v-for="disc in getDiscoveredTags(g.title, g.tags)"
-            :key="disc.tag"
-            class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border border-dashed border-ink/30 bg-wash/50 text-ink/80 hover:border-ink transition-all"
-            :title="`Discovered from ${disc.count} post(s). Click '+' to save to ${g.title}.`"
-          >
-            <span
-              class="cursor-pointer hover:underline"
-              @click="copySingleTag(g.id, disc.tag)"
-            >
-              #{{ disc.tag }}
-            </span>
-            <span class="text-[10px] font-mono opacity-70">({{ disc.count }})</span>
-            <button
-              v-if="add"
-              type="button"
-              class="w-4 h-4 rounded-full bg-ink/10 hover:bg-ink hover:text-white flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer border-0 p-0 ml-0.5"
-              title="Save to this group"
-              @click.stop="addDiscoveredTag(g.id, disc.tag)"
-            >
-              +
-            </button>
-          </div>
-        </template>
 
         <span v-if="!g.tags.length" class="text-xs text-muted/60 italic py-1">
           No tags in this category yet.
         </span>
       </div>
 
-      <!-- Underline input + ADD button matching Image 7 -->
+      <!-- Underline input + ADD button matching Image 7 with single clean line -->
       <form
-        class="w-full flex items-center gap-4 pt-4 border-t border-transparent"
+        class="w-full flex items-center gap-4 pt-3"
         @submit.prevent="submit(g.id)"
       >
-        <div class="relative flex-1 flex items-center border-b border-ink/80 focus-within:border-ink transition-colors pb-1">
+        <div class="relative flex-1 flex items-center">
           <input
             :value="drafts[g.id] ?? ''"
             type="text"
             placeholder="new tag"
             :aria-label="`New tag for ${g.title}`"
             :disabled="!add || busy"
-            class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-0 leading-normal"
+            class="tag-input w-full bg-transparent p-0 text-sm text-ink placeholder:text-muted/60 focus:outline-none"
             @input="drafts[g.id] = ($event.target as HTMLInputElement).value"
           />
         </div>
@@ -180,3 +125,18 @@ async function addDiscoveredTag(groupId: string, tag: string): Promise<void> {
 
   <p v-if="error" class="autherr mt-3 text-center" role="alert">{{ error }}</p>
 </template>
+
+<style scoped>
+.tag-input {
+  border: 0 !important;
+  border-bottom: 1.5px solid var(--ink) !important;
+  border-radius: 0 !important;
+  padding: 8px 2px !important;
+  background: transparent !important;
+}
+.tag-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-bottom-color: var(--ink) !important;
+}
+</style>

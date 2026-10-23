@@ -91,7 +91,6 @@ describe('useHashtagTracker', () => {
     })
 
     const {
-      trackedMap,
       trackedList,
       totalTrackedTags,
       totalPostsAnalyzed,
