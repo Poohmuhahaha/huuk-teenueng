@@ -80,25 +80,16 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
 <template>
   <div class="members-page w-full px-6 sm:px-8 py-6 text-left font-sans flex flex-col flex-1">
     <!-- Header -->
-    <div class="flex items-center justify-between flex-wrap gap-4 mb-5">
-      <div>
-        <div class="flex items-center gap-2">
-          <div role="heading" aria-level="2" class="text-base sm:text-lg font-bold text-ink tracking-tight">
-            {{ t('members.title') }}
-          </div>
-          <InfoTip :text="t('members.hint')" />
+    <div class="mb-5">
+      <div class="flex items-center gap-2">
+        <div role="heading" aria-level="2" class="text-base sm:text-lg font-bold text-ink tracking-tight">
+          {{ t('members.title') }}
         </div>
-        <p class="text-xs text-muted mt-1 mb-0 font-sans">
-          {{ t('members.subtitle') }}
-        </p>
+        <InfoTip :text="t('members.hint')" />
       </div>
-
-      <div v-if="isOwner" class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-wash border border-faint text-muted shadow-2xs">
-          <span class="w-2 h-2 rounded-full bg-success" />
-          <span>{{ rows.length }} {{ rows.length === 1 ? 'member' : 'members' }}</span>
-        </span>
-      </div>
+      <p class="text-xs text-muted mt-1 mb-0 font-sans">
+        {{ t('members.subtitle') }}
+      </p>
     </div>
 
     <p v-if="isError" class="card text-muted p-4 rounded-xl border border-faint bg-surface">{{ loadError?.message }}</p>
@@ -193,8 +184,11 @@ async function onRemove(member: WorkspaceMember): Promise<void> {
       <DockBar label="Members controls">
         <div class="flex items-center justify-between w-full gap-3">
           <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-wash border border-faint text-muted shadow-2xs">
-              <span class="w-2 h-2 rounded-full bg-success" />
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-wash border border-faint text-muted shadow-2xs">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink shrink-0" aria-hidden="true">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
               <span>{{ rows.length }} {{ rows.length === 1 ? 'member' : 'members' }}</span>
             </span>
           </div>
