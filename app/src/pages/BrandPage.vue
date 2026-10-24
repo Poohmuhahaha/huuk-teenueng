@@ -698,6 +698,13 @@ async function addDo(): Promise<void> {
   }
 }
 
+async function removeDo(index: number): Promise<void> {
+  if (!canWrite.value || !brand.value || busy.value) return
+  const next = [...brand.value.dos]
+  next.splice(index, 1)
+  await saveBrand.mutateAsync({ dos: next })
+}
+
 async function addDont(): Promise<void> {
   const value = dontDraft.value.trim()
   if (!canWrite.value || !brand.value || !value || busy.value) return
@@ -708,10 +715,17 @@ async function addDont(): Promise<void> {
     // keep the draft so nothing typed is lost
   }
 }
+
+async function removeDont(index: number): Promise<void> {
+  if (!canWrite.value || !brand.value || busy.value) return
+  const next = [...brand.value.donts]
+  next.splice(index, 1)
+  await saveBrand.mutateAsync({ donts: next })
+}
 </script>
 
 <template>
-  <div class="brandpage" :class="{ 'has-custom-bg': hasCustomBg }" :style="customBgStyle">
+  <div class="brandpage" :class="{ 'has-custom-bg': hasCustomBg && (step === 0 || finished) }" :style="customBgStyle">
     <div v-if="onboarding" class="brand-note">
       <strong>{{ t('brand.onboardingTitle') }}</strong>
       <InfoTip :text="t('brand.onboarding')" />
@@ -736,41 +750,68 @@ async function addDont(): Promise<void> {
       <section v-show="step === 1 && !finished" class="brand-body brand-voice-step">
         <div class="brand-voice-layout">
           <div class="brand-voice-fields">
-            <div class="brand-field-group">
+            <div class="brand-field-card">
               <label class="lbl" for="brand-positioning">Positioning</label>
-              <input id="brand-positioning" class="field" :value="brand.positioning" :disabled="!canWrite || busy"
+              <input id="brand-positioning" class="field brand-input" :value="brand.positioning" :disabled="!canWrite || busy"
                 :title="canWrite ? '' : t('auth.noPerm')" @change="save('positioning', $event)" />
             </div>
-            <div class="brand-field-group">
+            <div class="brand-field-card">
               <label class="lbl" for="brand-slogan">Slogan (bio)</label>
-              <input id="brand-slogan" class="field" :value="brand.slogan" :disabled="!canWrite || busy"
+              <input id="brand-slogan" class="field brand-input" :value="brand.slogan" :disabled="!canWrite || busy"
                 :title="canWrite ? '' : t('auth.noPerm')" @change="save('slogan', $event)" />
             </div>
-            <div class="brand-field-group">
+            <div class="brand-field-card">
               <label class="lbl" for="brand-audience">Audience</label>
-              <input id="brand-audience" class="field" :value="brand.audience" :disabled="!canWrite || busy"
+              <input id="brand-audience" class="field brand-input" :value="brand.audience" :disabled="!canWrite || busy"
                 :title="canWrite ? '' : t('auth.noPerm')" @change="save('audience', $event)" />
             </div>
-            <div class="brand-field-group">
+            <div class="brand-field-card">
               <label class="lbl" for="brand-voice">Voice + tone</label>
-              <input id="brand-voice" class="field" :value="brand.voice" :disabled="!canWrite || busy"
+              <input id="brand-voice" class="field brand-input" :value="brand.voice" :disabled="!canWrite || busy"
                 :title="canWrite ? '' : t('auth.noPerm')" @change="save('voice', $event)" />
             </div>
           </div>
           <div class="brand-voice-panels">
-            <div class="panel">
-              <strong>Do</strong>
-              <ul style="padding-left: 18px; margin: 6px 0;"><li v-for="d in brand.dos" :key="d">{{ d }}</li></ul>
-              <div class="row"><input class="field" style="flex: 1;" v-model="doDraft" placeholder="add rule" :disabled="!canWrite || busy"
-                :title="canWrite ? '' : t('auth.noPerm')" @keyup.enter="addDo" /><button class="btn" :disabled="!canWrite || busy || !doDraft.trim()"
-                :title="canWrite ? '' : t('auth.noPerm')" @click="addDo">Add</button></div>
+            <!-- Do Card -->
+            <div class="brand-rule-card">
+              <div class="brand-rule-head">
+                <span class="rule-badge badge-do">DO</span>
+                <span class="text-xs text-muted font-mono">{{ brand.dos.length }} {{ brand.dos.length === 1 ? 'rule' : 'rules' }}</span>
+              </div>
+              <ul class="brand-rule-list">
+                <li v-for="(d, i) in brand.dos" :key="`${d}-${i}`" class="brand-rule-item">
+                  <span class="rule-text">{{ d }}</span>
+                  <button v-if="canWrite" type="button" class="rule-remove" title="Remove rule" @click="removeDo(i)">×</button>
+                </li>
+                <li v-if="!brand.dos.length" class="text-xs text-muted/60 italic py-2">No rules yet.</li>
+              </ul>
+              <div class="brand-rule-add">
+                <input class="rule-input" v-model="doDraft" placeholder="add rule..." :disabled="!canWrite || busy"
+                  :title="canWrite ? '' : t('auth.noPerm')" @keyup.enter="addDo" />
+                <button type="button" class="rule-btn" :disabled="!canWrite || busy || !doDraft.trim()"
+                  :title="canWrite ? '' : t('auth.noPerm')" @click="addDo">Add</button>
+              </div>
             </div>
-            <div class="panel">
-              <strong>Don't</strong>
-              <ul style="padding-left: 18px; margin: 6px 0;"><li v-for="d in brand.donts" :key="d">{{ d }}</li></ul>
-              <div class="row"><input class="field" style="flex: 1;" v-model="dontDraft" placeholder="add rule" :disabled="!canWrite || busy"
-                :title="canWrite ? '' : t('auth.noPerm')" @keyup.enter="addDont" /><button class="btn" :disabled="!canWrite || busy || !dontDraft.trim()"
-                :title="canWrite ? '' : t('auth.noPerm')" @click="addDont">Add</button></div>
+
+            <!-- Don't Card -->
+            <div class="brand-rule-card">
+              <div class="brand-rule-head">
+                <span class="rule-badge badge-dont">DON'T</span>
+                <span class="text-xs text-muted font-mono">{{ brand.donts.length }} {{ brand.donts.length === 1 ? 'rule' : 'rules' }}</span>
+              </div>
+              <ul class="brand-rule-list">
+                <li v-for="(d, i) in brand.donts" :key="`${d}-${i}`" class="brand-rule-item">
+                  <span class="rule-text">{{ d }}</span>
+                  <button v-if="canWrite" type="button" class="rule-remove" title="Remove rule" @click="removeDont(i)">×</button>
+                </li>
+                <li v-if="!brand.donts.length" class="text-xs text-muted/60 italic py-2">No rules yet.</li>
+              </ul>
+              <div class="brand-rule-add">
+                <input class="rule-input" v-model="dontDraft" placeholder="add rule..." :disabled="!canWrite || busy"
+                  :title="canWrite ? '' : t('auth.noPerm')" @keyup.enter="addDont" />
+                <button type="button" class="rule-btn" :disabled="!canWrite || busy || !dontDraft.trim()"
+                  :title="canWrite ? '' : t('auth.noPerm')" @click="addDont">Add</button>
+              </div>
             </div>
           </div>
         </div>
