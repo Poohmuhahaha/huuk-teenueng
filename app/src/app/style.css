@@ -2597,13 +2597,31 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   text-align: left;
 }
 
-/* Compact padding for Hashtags view to maximize viewport space and eliminate loose gaps */
-.card-scroll.tags-scroll {
+/* Zero padding and zero gap for Hashtags view to sit completely flush with the card frame */
+.card-scroll.tags-scroll,
+.card-scroll:has(.tags-page),
+.deck.full .card-scroll.tags-scroll,
+.deck.full .card-scroll:has(.tags-page) {
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  padding: 12px 16px 10px !important;
+  padding: 0 !important;
+  margin: 0 !important;
   text-align: left;
+  height: 100% !important;
+  box-sizing: border-box;
+}
+
+.card-scroll.tags-scroll > .hubpage,
+.card-scroll:has(.tags-page) > .hubpage {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
 }
 .card-scroll.planner-scroll > .hubpage,
 .card-scroll.ideas-scroll > .hubpage,

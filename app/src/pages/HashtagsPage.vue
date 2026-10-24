@@ -85,17 +85,17 @@ async function quickAssignToGroup(groupId: string, tag: string): Promise<void> {
 </script>
 
 <template>
-  <div ref="root" class="tags-page w-full flex-1 flex flex-col min-h-0 text-left">
+  <div ref="root" class="tags-page w-full h-full flex-1 flex flex-col min-h-0 text-left p-0 m-0">
     <div v-if="isPending" class="muted py-8 text-center">Loading hashtags…</div>
     <div v-else-if="isError" class="card py-8 text-center">
       <p class="muted mb-3">Could not load hashtag groups: {{ loadError?.message }}</p>
       <button class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
     </div>
 
-    <!-- VIEW 1: CATEGORIES 2x2 GRID (Matching Reference Image 7 without scrolling) -->
-    <div v-else-if="viewMode === 'categories'" class="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+    <!-- VIEW 1: CATEGORIES 4-QUADRANT MATRIX (Zero gap, zero outer padding, flush with slide-card) -->
+    <div v-else-if="viewMode === 'categories'" class="w-full h-full flex-1 flex flex-col min-h-0 p-0 m-0 overflow-hidden">
       <fieldset
-        class="border-0 p-0 m-0 min-w-0 w-full flex-1 flex flex-col min-h-0"
+        class="border-0 p-0 m-0 min-w-0 w-full h-full flex-1 flex flex-col min-h-0"
         :disabled="!canWrite"
         :title="canWrite ? '' : t('auth.noPerm')"
       >
