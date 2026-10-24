@@ -92,10 +92,10 @@ async function quickAssignToGroup(groupId: string, tag: string): Promise<void> {
       <button class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
     </div>
 
-    <!-- VIEW 1: CATEGORIES STACK (Matching Reference Image 7) -->
-    <div v-else-if="viewMode === 'categories'" class="w-full flex-1 overflow-y-auto px-1">
+    <!-- VIEW 1: CATEGORIES 2x2 GRID (Matching Reference Image 7 without scrolling) -->
+    <div v-else-if="viewMode === 'categories'" class="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
       <fieldset
-        class="border-0 p-0 m-0 min-w-0 w-full"
+        class="border-0 p-0 m-0 min-w-0 w-full flex-1 flex flex-col min-h-0"
         :disabled="!canWrite"
         :title="canWrite ? '' : t('auth.noPerm')"
       >

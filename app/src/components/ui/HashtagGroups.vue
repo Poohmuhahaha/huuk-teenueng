@@ -60,20 +60,20 @@ async function submit(groupId: string): Promise<void> {
 </script>
 
 <template>
-  <div class="hashtag-stack flex flex-col gap-6 w-full max-w-4xl mx-auto py-2">
-    <!-- Category Cards matching reference Image 7 exactly -->
+  <!-- Reorganized 2x2 Grid: fits all 4 categories simultaneously without scrolling -->
+  <div class="hashtag-grid grid grid-cols-1 md:grid-cols-2 gap-4 w-full flex-1 min-h-0 overflow-y-auto p-1">
     <div
       v-for="g in groups"
       :key="g.id"
-      class="border border-line rounded-2xl bg-surface p-8 shadow-xs flex flex-col items-center justify-between transition-all hover:border-ink/20"
+      class="border border-line rounded-2xl bg-surface p-6 shadow-xs flex flex-col justify-between transition-all hover:border-ink/20 min-h-[220px]"
     >
       <!-- Title: Centered, Title Case, clean sans-serif font matching Image 7 -->
-      <div class="!font-sans font-bold text-base text-ink text-center !normal-case tracking-tight select-none">
+      <div class="!font-sans font-bold text-base text-ink text-center !normal-case tracking-tight select-none flex-none">
         {{ g.title }}
       </div>
 
       <!-- Tag Pills: Centered, clean rounded pills without clutter -->
-      <div class="flex items-center justify-center flex-wrap gap-2.5 py-6 w-full min-h-[58px]">
+      <div class="flex items-center justify-center flex-wrap gap-2 py-4 w-full flex-1 content-center">
         <button
           v-for="(t, i) in g.tags"
           :key="`${t}-${i}`"
@@ -98,7 +98,7 @@ async function submit(groupId: string): Promise<void> {
 
       <!-- Underline input + ADD button matching Image 7 with single clean line -->
       <form
-        class="w-full flex items-center gap-4 pt-3"
+        class="w-full flex items-center gap-3 pt-3 flex-none"
         @submit.prevent="submit(g.id)"
       >
         <div class="relative flex-1 flex items-center">
@@ -114,7 +114,7 @@ async function submit(groupId: string): Promise<void> {
         </div>
         <button
           type="submit"
-          class="px-6 py-1 rounded-full border border-ink bg-transparent text-xs font-bold uppercase tracking-wider text-ink hover:bg-ink hover:text-white active:scale-95 transition-all cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
+          class="px-5 py-1 rounded-full border border-ink bg-surface text-xs font-bold uppercase tracking-wider text-ink hover:bg-ink hover:text-white active:scale-95 transition-all cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
           :disabled="!add || busy || !(drafts[g.id] ?? '').trim()"
         >
           {{ busy ? '…' : 'ADD' }}
@@ -123,7 +123,7 @@ async function submit(groupId: string): Promise<void> {
     </div>
   </div>
 
-  <p v-if="error" class="autherr mt-3 text-center" role="alert">{{ error }}</p>
+  <p v-if="error" class="autherr mt-2 text-center flex-none" role="alert">{{ error }}</p>
 </template>
 
 <style scoped>
