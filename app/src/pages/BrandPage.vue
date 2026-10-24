@@ -10,10 +10,22 @@ import InfoTip from '@/components/ui/InfoTip.vue'
 import DockBar from '@/components/ui/DockBar.vue'
 import type { Brand, FontAsset } from '@/mock/db'
 import {
-  base64ToBytes, boundsHint, checkImageBounds, fitWithin, imageDimensions,
+  base64ToBytes, checkImageBounds, fitWithin, imageDimensions,
   resizeToMaxSide, resizeUrlToMaxSide, IMAGE_MAX_SIDE,
 } from '@/core/images'
 import type { BrandImageKind } from '@/core/images'
+import api from '@/api/index'
+
+import BrandIdentityStep from '@/components/brand/BrandIdentityStep.vue'
+import BrandVoiceStep from '@/components/brand/BrandVoiceStep.vue'
+import BrandLogosStep from '@/components/brand/BrandLogosStep.vue'
+import BrandPaletteStep from '@/components/brand/BrandPaletteStep.vue'
+import BrandTypographyStep from '@/components/brand/BrandTypographyStep.vue'
+import BrandStyleStep from '@/components/brand/BrandStyleStep.vue'
+import BrandMoodboardStep from '@/components/brand/BrandMoodboardStep.vue'
+import BrandFinishedStep from '@/components/brand/BrandFinishedStep.vue'
+import BrandPdfView from '@/components/brand/BrandPdfView.vue'
+import BrandBgPopover from '@/components/brand/BrandBgPopover.vue'
 
 const { data: brand, isPending, isError, error: loadError, refetch } = useBrand()
 const saveBrand = useSaveBrand()
@@ -24,6 +36,7 @@ const onboarding = computed(() => route.query.onboarding === '1')
 const doDraft = ref('')
 const dontDraft = ref('')
 const paletteDraft = ref<string[]>(['', '', '', ''])
+
 // Palette slots with the role they play and where the color shows up.
 const PALETTE_SLOTS = ['1', '2', '3', '4'] as const
 const PALETTE_ROLES: Record<(typeof PALETTE_SLOTS)[number], string> = {
@@ -61,10 +74,6 @@ const finished = ref(false)
 function restartStep(): void {
   finished.value = false
   step.value = 0
-}
-
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
 // ---- Brand Card Background Customization (Desktop & Mobile Independent) ----
@@ -134,8 +143,8 @@ function onPickBgFile(event: Event): void {
   reader.readAsDataURL(file)
 }
 
-function applyBgUrl(): void {
-  const url = bgUrlDraft.value.trim()
+function applyBgUrl(urlVal?: string): void {
+  const url = (typeof urlVal === 'string' ? urlVal : bgUrlDraft.value).trim()
   if (!url) return
   if (bgTargetDevice.value === 'desktop') {
     customBgDesktop.value = url
@@ -423,8 +432,12 @@ const uploadingSlot = ref('')
 // Logo slots and the moodboard are image URLs stored in the brand kit; images
 // are uploaded to the server (or pasted as https URLs).
 const uploadImage = useUploadBrandImage()
-import api from '@/api/index'
-const LOGO_LABELS = ['brand.logoMain', 'brand.logoSecondary', 'brand.logoSocial']
+const LOGO_LABELS = {
+  0: 'brand.logoMain',
+  1: 'brand.logoSecondary',
+  2: 'brand.logoSocial',
+} as Record<number, string>
+
 const logoSlots = computed(() => {
   const rows = brand.value?.logos ?? []
   return [0, 1, 2].map((i) => ({ index: i, url: rows[i] ?? '' }))
@@ -439,9 +452,9 @@ async function saveLogos(logos: string[]): Promise<void> {
   }
 }
 
-async function saveMoodboard(moodboard: string[]): Promise<void> {
+async function saveMoodboard(moodboardList: string[]): Promise<void> {
   try {
-    await saveBrand.mutateAsync({ moodboard })
+    await saveBrand.mutateAsync({ moodboard: moodboardList })
   } catch (e) {
     imageError.value = e instanceof Error ? e.message : String(e)
   }
@@ -687,8 +700,8 @@ async function removeFont(asset: FontAsset): Promise<void> {
   }
 }
 
-async function addDo(): Promise<void> {
-  const value = doDraft.value.trim()
+async function addDo(val?: string): Promise<void> {
+  const value = (typeof val === 'string' ? val : doDraft.value).trim()
   if (!canWrite.value || !brand.value || !value || busy.value) return
   try {
     await saveBrand.mutateAsync({ dos: [...brand.value.dos, value] })
@@ -705,8 +718,8 @@ async function removeDo(index: number): Promise<void> {
   await saveBrand.mutateAsync({ dos: next })
 }
 
-async function addDont(): Promise<void> {
-  const value = dontDraft.value.trim()
+async function addDont(val?: string): Promise<void> {
+  const value = (typeof val === 'string' ? val : dontDraft.value).trim()
   if (!canWrite.value || !brand.value || !value || busy.value) return
   try {
     await saveBrand.mutateAsync({ donts: [...brand.value.donts, value] })
@@ -725,7 +738,7 @@ async function removeDont(index: number): Promise<void> {
 </script>
 
 <template>
-  <div class="brandpage" :class="{ 'has-custom-bg': hasCustomBg && (step === 0 || finished) }" :style="customBgStyle">
+  <div class="brandpage" :class="{ 'has-custom-bg': hasCustomBg && (step === 0 || step === 1 || finished) }" :style="customBgStyle">
     <div v-if="onboarding" class="brand-note">
       <strong>{{ t('brand.onboardingTitle') }}</strong>
       <InfoTip :text="t('brand.onboarding')" />
@@ -740,572 +753,133 @@ async function removeDont(index: number): Promise<void> {
       <p v-if="writeError" class="autherr" role="alert">{{ writeError }}</p>
 
       <!-- 0 · identity -->
-      <section v-show="step === 0 && !finished" class="brand-body brand-hero">
-        <p class="brand-prompt">{{ t('brand.stepIdentityHint') }}</p>
-        <input id="brand-channel" class="field" :value="brand.channel" :disabled="!canWrite || busy"
-          :title="canWrite ? '' : t('auth.noPerm')" :aria-label="t('brand.stepIdentityHint')" @change="save('channel', $event)" />
-      </section>
+      <BrandIdentityStep
+        v-show="step === 0 && !finished"
+        :brand="brand"
+        :can-write="canWrite"
+        :busy="busy"
+        @save="save"
+      />
 
       <!-- 1 · voice -->
-      <section v-show="step === 1 && !finished" class="brand-body brand-voice-step">
-        <div class="brand-voice-layout">
-          <div class="brand-voice-fields">
-            <div class="brand-field-card">
-              <label class="lbl" for="brand-positioning">Positioning</label>
-              <input id="brand-positioning" class="field brand-input" :value="brand.positioning" :disabled="!canWrite || busy"
-                :title="canWrite ? '' : t('auth.noPerm')" @change="save('positioning', $event)" />
-            </div>
-            <div class="brand-field-card">
-              <label class="lbl" for="brand-slogan">Slogan (bio)</label>
-              <input id="brand-slogan" class="field brand-input" :value="brand.slogan" :disabled="!canWrite || busy"
-                :title="canWrite ? '' : t('auth.noPerm')" @change="save('slogan', $event)" />
-            </div>
-            <div class="brand-field-card">
-              <label class="lbl" for="brand-audience">Audience</label>
-              <input id="brand-audience" class="field brand-input" :value="brand.audience" :disabled="!canWrite || busy"
-                :title="canWrite ? '' : t('auth.noPerm')" @change="save('audience', $event)" />
-            </div>
-            <div class="brand-field-card">
-              <label class="lbl" for="brand-voice">Voice + tone</label>
-              <input id="brand-voice" class="field brand-input" :value="brand.voice" :disabled="!canWrite || busy"
-                :title="canWrite ? '' : t('auth.noPerm')" @change="save('voice', $event)" />
-            </div>
-          </div>
-          <div class="brand-voice-panels">
-            <!-- Do Card -->
-            <div class="brand-rule-card">
-              <div class="brand-rule-head">
-                <span class="rule-badge badge-do">DO</span>
-                <span class="text-xs text-muted font-mono">{{ brand.dos.length }} {{ brand.dos.length === 1 ? 'rule' : 'rules' }}</span>
-              </div>
-              <ul class="brand-rule-list">
-                <li v-for="(d, i) in brand.dos" :key="`${d}-${i}`" class="brand-rule-item">
-                  <span class="rule-text">{{ d }}</span>
-                  <button v-if="canWrite" type="button" class="rule-remove" title="Remove rule" @click="removeDo(i)">×</button>
-                </li>
-                <li v-if="!brand.dos.length" class="text-xs text-muted/60 italic py-2">No rules yet.</li>
-              </ul>
-              <div class="brand-rule-add">
-                <input class="rule-input" v-model="doDraft" placeholder="add rule..." :disabled="!canWrite || busy"
-                  :title="canWrite ? '' : t('auth.noPerm')" @keyup.enter="addDo" />
-                <button type="button" class="rule-btn" :disabled="!canWrite || busy || !doDraft.trim()"
-                  :title="canWrite ? '' : t('auth.noPerm')" @click="addDo">Add</button>
-              </div>
-            </div>
+      <BrandVoiceStep
+        v-show="step === 1 && !finished"
+        :brand="brand"
+        :can-write="canWrite"
+        :busy="busy"
+        :has-custom-bg="hasCustomBg"
+        @save="save"
+        @add-do="addDo"
+        @remove-do="removeDo"
+        @add-dont="addDont"
+        @remove-dont="removeDont"
+      />
 
-            <!-- Don't Card -->
-            <div class="brand-rule-card">
-              <div class="brand-rule-head">
-                <span class="rule-badge badge-dont">DON'T</span>
-                <span class="text-xs text-muted font-mono">{{ brand.donts.length }} {{ brand.donts.length === 1 ? 'rule' : 'rules' }}</span>
-              </div>
-              <ul class="brand-rule-list">
-                <li v-for="(d, i) in brand.donts" :key="`${d}-${i}`" class="brand-rule-item">
-                  <span class="rule-text">{{ d }}</span>
-                  <button v-if="canWrite" type="button" class="rule-remove" title="Remove rule" @click="removeDont(i)">×</button>
-                </li>
-                <li v-if="!brand.donts.length" class="text-xs text-muted/60 italic py-2">No rules yet.</li>
-              </ul>
-              <div class="brand-rule-add">
-                <input class="rule-input" v-model="dontDraft" placeholder="add rule..." :disabled="!canWrite || busy"
-                  :title="canWrite ? '' : t('auth.noPerm')" @keyup.enter="addDont" />
-                <button type="button" class="rule-btn" :disabled="!canWrite || busy || !dontDraft.trim()"
-                  :title="canWrite ? '' : t('auth.noPerm')" @click="addDont">Add</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- 2 · logos -->
+      <BrandLogosStep
+        v-show="step === 2 && !finished"
+        :logo-slots="logoSlots"
+        :can-write="canWrite"
+        :busy="busy"
+        :uploading-slot="uploadingSlot"
+        :oversized="oversized"
+        :logo-labels="LOGO_LABELS"
+        @note-rendered-size="noteRenderedSize"
+        @clear-logo="clearLogo"
+        @pick-logo="pickLogo"
+        @set-logo-url="setLogoUrl"
+        @fix-stored-image="fixStoredImage"
+      />
 
-      <!-- 1 · logos -->
-      <section v-show="step === 2 && !finished" class="brand-body">
-        <div class="grid3">
-          <div v-for="slot in logoSlots" :key="slot.index" class="logo-slot">
-            <div class="logo-preview">
-              <img v-if="slot.url" :src="slot.url" :alt="t(LOGO_LABELS[slot.index])"
-                @load="noteRenderedSize(slot.url, $event)" />
-              <span v-else class="muted">{{ t(LOGO_LABELS[slot.index]) }}</span>
-              <button v-if="slot.url" type="button" class="logo-remove" :disabled="!canWrite"
-                :title="t('brand.imageRemove')" :aria-label="t('brand.imageRemove')" @click="clearLogo(slot.index)">
-                ×
-              </button>
-            </div>
-            <div class="row">
-              <label class="btn" :class="{ disabled: !canWrite || uploadingSlot === `logo-${slot.index}` }">
-                {{ uploadingSlot === `logo-${slot.index}` ? t('brand.imageUploading') : t('brand.imageUpload') }}
-                <input type="file" accept=".png,.jpg,.jpeg,.webp,.gif" hidden
-                  :disabled="!canWrite || uploadingSlot === `logo-${slot.index}`"
-                  @change="pickLogo(slot.index, $event)" />
-              </label>
-              <input class="field" style="flex: 1;" :value="slot.url" :disabled="!canWrite || busy"
-                :placeholder="t('brand.imageUrl')" @change="setLogoUrl(slot.index, $event)" />
-            </div>
-            <span class="muted img-bounds">{{ boundsHint('logo') }}</span>
-            <button v-if="oversized[slot.url]" type="button" class="btn oversize-fix"
-              :disabled="!canWrite || uploadingSlot === `fix-${slot.url}`" @click="fixStoredImage('logo', slot.url)">
-              {{ uploadingSlot === `fix-${slot.url}` ? t('brand.imageFixing') : t('brand.imageFix') }}
-            </button>
-          </div>
-        </div>
-      </section>
+      <!-- 3 · palette -->
+      <BrandPaletteStep
+        v-show="step === 3 && !finished"
+        :palette-draft="paletteDraft"
+        :can-write="canWrite"
+        :busy="busy"
+        :copied-slot="copiedSlot"
+        :readable-on="readableOn"
+        :palette-slots="PALETTE_SLOTS"
+        :palette-roles="PALETTE_ROLES"
+        :palette-usage="PALETTE_USAGE"
+        @update-slot="(i, val) => { paletteDraft[i] = val }"
+        @save-palette="savePalette"
+        @copy-hex="copyHex"
+      />
 
-      <!-- 2 · palette -->
-      <section v-show="step === 3 && !finished" class="brand-body">
-        <div class="panel">
-          <div class="palette-strip">
-            <span class="strip-label muted">{{ t('brand.palettePreview') }}</span>
-            <span class="strip-btn" :style="{ background: paletteDraft[0] || 'var(--accent)' }">
-              {{ t('brand.paletteSample') }}
-            </span>
-            <span class="strip-link" :style="{ color: paletteDraft[0] || 'var(--accent)' }">
-              {{ t('brand.paletteLink') }}
-            </span>
-            <span class="strip-bars" :aria-label="t('brand.paletteBars')">
-              <span v-for="i in 4" :key="i" class="strip-bar"
-                :style="{ background: paletteDraft[i - 1] || 'var(--wash)', height: `${10 + i * 3}px` }" />
-            </span>
-          </div>
-          <div class="palette-grid">
-            <div v-for="slot in PALETTE_SLOTS" :key="slot" class="palette-card"
-              :class="{ 'is-primary': slot === '1' }">
-              <label class="palette-tile-label" :title="t('brand.palettePick')">
-                <input type="color" :value="paletteDraft[Number(slot) - 1] || '#0a0a0a'"
-                  :disabled="!canWrite || busy" :aria-label="`Color ${slot}`"
-                  @input="paletteDraft[Number(slot) - 1] = ($event.target as HTMLInputElement).value"
-                  @change="savePalette" />
-                <span class="palette-tile"
-                  :style="{ background: paletteDraft[Number(slot) - 1] || 'var(--wash)' }">
-                  <span class="palette-tile-role">{{ t(PALETTE_ROLES[slot]) }}</span>
-                  <span v-if="slot === '1'" class="palette-tile-star" aria-hidden="true">★</span>
-                  <span class="palette-tile-sample"
-                    :style="{ color: readableOn(paletteDraft[Number(slot) - 1] || '#0a0a0a') }">Aa</span>
-                </span>
-              </label>
-              <div class="palette-meta">
-                <p class="palette-caption">{{ t(PALETTE_USAGE[slot]) }}</p>
-                <div class="palette-stats">
-                  <label class="palette-field">
-                    <input class="field palette-hex" v-model="paletteDraft[Number(slot) - 1]"
-                      :disabled="!canWrite || busy" placeholder="#0a0a0a" :aria-label="`Color hex ${slot}`"
-                      @change="savePalette" />
-                  </label>
-                  <button type="button" class="palette-copy" :disabled="!paletteDraft[Number(slot) - 1]"
-                    @click="copyHex(slot)">
-                    {{ copiedSlot === slot ? t('brand.paletteCopied') : t('brand.paletteCopy') }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- 4 · typography -->
+      <BrandTypographyStep
+        v-show="step === 4 && !finished"
+        :brand="brand"
+        :can-write="canWrite"
+        :imported-fonts="importedFonts"
+        :suggested-fonts="suggestedFonts"
+        :uploading="uploading"
+        :font-error="fontError"
+        @select-font="selectFont"
+        @remove-font="removeFont"
+        @import-fonts="importFonts"
+      />
 
-      <!-- 3 · typography -->
-      <section v-show="step === 4 && !finished" class="brand-body">
-        <div class="panel">
-          <div class="font-preview" :style="{ fontFamily: `'${brand.fonts[0] || 'Inter'}', var(--font)` }">
-            <span class="font-preview-sample">Aa Bb 123 · สวัสดี</span>
-            <span class="muted">{{ t('brand.fontPreview') }}</span>
-          </div>
-          <div class="font-grid">
-            <div v-for="f in importedFonts" :key="f.name" class="font-choice"
-              :class="{ active: brand.fonts[0] === f.family }">
-              <button type="button" class="font-pick" :disabled="!canWrite" @click="selectFont(f.family)">
-                <span class="font-sample" :style="{ fontFamily: `'${f.family}', var(--font)` }">Aa Bb 123</span>
-                <span class="font-name">{{ f.family }}</span>
-                <span v-if="brand.fonts[0] === f.family" class="font-check" aria-hidden="true">✓</span>
-              </button>
-              <button type="button" class="font-remove" :disabled="!canWrite" :title="t('brand.fontDelete')"
-                :aria-label="`${t('brand.fontDelete')} ${f.family}`" @click="removeFont(f)">×</button>
-            </div>
-            <button v-for="s in suggestedFonts" :key="s" type="button" class="font-choice font-pick"
-              :class="{ active: brand.fonts[0] === s }" :style="{ fontFamily: `'${s}', var(--font)` }"
-              :disabled="!canWrite" @click="selectFont(s)">
-              <span class="font-sample">Aa Bb 123</span>
-              <span class="font-name">{{ s }}</span>
-              <span v-if="brand.fonts[0] === s" class="font-check" aria-hidden="true">✓</span>
-            </button>
-            <label class="font-choice font-import" :class="{ disabled: !canWrite || uploading }"
-              :title="t('brand.fontHint')">
-              <span class="font-import-plus" aria-hidden="true">+</span>
-              <span class="font-name">{{ uploading ? t('brand.uploading') : t('brand.fontImport') }}</span>
-              <input type="file" accept=".woff2,.woff,.ttf,.otf" multiple hidden
-                :disabled="!canWrite || uploading" @change="importFonts" />
-            </label>
-          </div>
-          <p v-if="fontError" class="autherr" role="alert">{{ fontError }}</p>
-          <p class="muted panel-note">{{ t('brand.applied') }}</p>
-        </div>
-      </section>
+      <!-- 5 · style -->
+      <BrandStyleStep
+        v-show="step === 5 && !finished"
+        :style-draft="styleDraft"
+        :can-write="canWrite"
+        :busy="busy"
+        :style-busy="styleBusy"
+        :style-notice="styleNotice"
+        :style-err="styleErr"
+        @save-style="saveStyle"
+        @set-shadow="(opt) => { styleDraft.shadow = opt; saveStyle() }"
+        @copy-style-css="copyStyleCss"
+        @download-brand-json="downloadBrandJson"
+        @import-brand-json="importBrandJson"
+      />
 
-      <!-- 4 · style -->
-      <section v-show="step === 5 && !finished" class="brand-body">
-        <div class="panel style-panel">
-          <div class="style-row">
-            <span class="style-label">{{ t('brand.styleRadius') }}</span>
-            <input class="field style-range" type="range" min="0" max="24" step="1" v-model.number="styleDraft.radius"
-              :disabled="!canWrite || busy" :aria-label="t('brand.styleRadius')" @change="saveStyle" />
-            <span class="style-value">
-              <input class="field style-num" type="number" min="0" max="24" step="1" v-model.number="styleDraft.radius"
-                :disabled="!canWrite || busy" :aria-label="t('brand.styleRadius')" @change="saveStyle" />
-              <span class="muted">px</span>
-            </span>
-          </div>
-          <div class="style-row">
-            <span class="style-label">{{ t('brand.styleFill') }}</span>
-            <input class="field style-range" type="range" min="5" max="100" step="1" v-model.number="styleDraft.fillOpacity"
-              :disabled="!canWrite || busy" :aria-label="t('brand.styleFill')" @change="saveStyle" />
-            <span class="style-value">
-              <input class="field style-num" type="number" min="5" max="100" step="1" v-model.number="styleDraft.fillOpacity"
-                :disabled="!canWrite || busy" :aria-label="t('brand.styleFill')" @change="saveStyle" />
-              <span class="muted">%</span>
-            </span>
-          </div>
-          <div class="style-row">
-            <span class="style-label">{{ t('brand.styleStroke') }}</span>
-            <input class="field style-range" type="range" min="0" max="3" step="1" v-model.number="styleDraft.strokeWidth"
-              :disabled="!canWrite || busy" :aria-label="t('brand.styleStroke')" @change="saveStyle" />
-            <span class="style-value">
-              <input class="field style-num" type="number" min="0" max="3" step="1" v-model.number="styleDraft.strokeWidth"
-                :disabled="!canWrite || busy" :aria-label="t('brand.styleStroke')" @change="saveStyle" />
-              <span class="muted">px</span>
-            </span>
-          </div>
-          <div class="style-row">
-            <span class="style-label">{{ t('brand.styleShadow') }}</span>
-            <div class="style-segmented" role="group" :aria-label="t('brand.styleShadow')">
-              <button v-for="option in ['none', 'soft', 'strong']" :key="option" type="button"
-                :class="{ on: styleDraft.shadow === option }" :disabled="!canWrite || busy"
-                @click="styleDraft.shadow = option; saveStyle()">{{ t('brand.styleShadow' + capitalize(option)) }}</button>
-            </div>
-          </div>
-          <div class="style-sample">
-            <span class="btn btn-primary" :class="{ ghost: true }">{{ t('brand.paletteSample') }}</span>
-            <span class="pv-link" :style="{ color: 'var(--accent)' }">{{ t('brand.paletteLink') }}</span>
-            <span class="strip-bars">
-              <span v-for="i in 4" :key="i" class="strip-bar" :style="{ height: `${8 + i * 3}px` }" />
-            </span>
-          </div>
-          <div class="style-row style-export">
-            <span class="style-label">{{ t('brand.styleExport') }}</span>
-            <div class="row" style="gap: 8px;">
-              <button class="btn" :disabled="styleBusy" @click="copyStyleCss">{{ t('brand.styleCopyCss') }}</button>
-              <button class="btn" :disabled="styleBusy" @click="downloadBrandJson">{{ t('brand.styleDownloadJson') }}</button>
-              <label class="btn" :class="{ disabled: !canWrite || styleBusy }"
-                :title="canWrite ? '' : t('auth.noPerm')">
-                {{ t('brand.styleUploadJson') }}
-                <input type="file" accept=".json,application/json" hidden
-                  :disabled="!canWrite || styleBusy" @change="importBrandJson" />
-              </label>
-              <span v-if="styleNotice" class="oknote" role="status">{{ styleNotice }}</span>
-              <span v-if="styleErr" class="autherr" role="alert">{{ styleErr }}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 5 · moodboard -->
-      <section v-show="step === 6 && !finished" class="brand-body">
-        <div class="moodboard">
-          <div v-for="(url, i) in moodboard" :key="`${url}-${i}`" class="mood-item">
-            <img :src="url" :alt="`${t('brand.moodboard')} ${i + 1}`" @load="noteRenderedSize(url, $event)" />
-            <button v-if="oversized[url]" type="button" class="btn oversize-fix mood-fix"
-              :disabled="!canWrite || uploadingSlot === `fix-${url}`" @click="fixStoredImage('moodboard', url)">
-              {{ uploadingSlot === `fix-${url}` ? t('brand.imageFixing') : t('brand.imageFix') }}
-            </button>
-            <button type="button" class="logo-remove" :disabled="!canWrite" :title="t('brand.imageRemove')"
-              :aria-label="t('brand.imageRemove')" @click="removeMoodboard(i)">×</button>
-          </div>
-          <label v-if="moodboard.length < 12" class="mood-add" :class="{ disabled: !canWrite }">
-            <span>{{ uploadingSlot === 'moodboard' ? t('brand.imageUploading') : t('brand.moodboardAdd') }}</span>
-            <input type="file" accept=".png,.jpg,.jpeg,.webp,.gif" multiple hidden
-              :disabled="!canWrite || uploadingSlot === 'moodboard'" @change="addMoodboard" />
-          </label>
-        </div>
-        <div class="row mt">
-          <input class="field mood-url" style="flex: 1;" v-model="moodboardDraft" :disabled="!canWrite"
-            :placeholder="t('brand.imageUrl')" @keyup.enter="addMoodboardUrl" />
-          <button class="btn mood-add-btn" :disabled="!canWrite || !moodboardDraft.trim()" @click="addMoodboardUrl">
-            {{ t('brand.imageAdd') }}
-          </button>
-        </div>
-        <p class="muted img-bounds">{{ boundsHint('moodboard') }}</p>
-        <p v-if="imageNotice" class="oknote" role="status">{{ imageNotice }}</p>
-        <p v-if="imageError" class="autherr" role="alert">{{ imageError }}</p>
-      </section>
+      <!-- 6 · moodboard -->
+      <BrandMoodboardStep
+        v-show="step === 6 && !finished"
+        :moodboard="moodboard"
+        :can-write="canWrite"
+        :uploading-slot="uploadingSlot"
+        :oversized="oversized"
+        :moodboard-draft="moodboardDraft"
+        :image-notice="imageNotice"
+        :image-error="imageError"
+        @update:moodboard-draft="(val) => { moodboardDraft = val }"
+        @note-rendered-size="noteRenderedSize"
+        @remove-moodboard="removeMoodboard"
+        @add-moodboard="addMoodboard"
+        @add-moodboard-url="addMoodboardUrl"
+        @fix-stored-image="fixStoredImage"
+      />
 
       <!-- Finished State -->
-      <section v-show="finished" class="brand-body brand-finished-hero">
-        <div class="brand-finished-card">
-          <span class="brand-finished-badge">Brand Guidelines Complete</span>
-          <div class="brand-finished-name">{{ brand.channel || 'Studio Channel' }}</div>
-          <p class="brand-finished-desc">All 7 chapters configured and ready for presentation.</p>
-          <div class="brand-finished-actions">
-            <button type="button" class="btn btn-primary btn-finished-export" @click="exportPdf">
-              Export PDF
-            </button>
-            <button type="button" class="btn btn-finished-review" @click="restartStep">
-              Review Chapters
-            </button>
-          </div>
-        </div>
-      </section>
+      <BrandFinishedStep
+        v-show="finished"
+        :brand="brand"
+        @export-pdf="exportPdf"
+        @restart-step="restartStep"
+      />
 
       <!-- PRINTABLE BRAND GUIDELINE BOOK: 7 Chapters of the 16:9 Brand Card -->
-      <div id="brand-guideline-pdf" class="brand-pdf-deck" :style="customBgStyle" aria-hidden="true">
-        <!-- PAGE 1: 1. BRAND IDENTITY -->
-        <section class="pdf-slide pdf-slide-hero" :style="{ backgroundImage: `url('${activeBrandBg}')` }">
-          <div class="pdf-cover-shade"></div>
-          <div class="pdf-cover-container">
-            <header class="pdf-slide-header">
-              <span class="pdf-slide-title">1. Brand Identity</span>
-              <span class="pdf-header-channel">{{ brand.channel }}</span>
-            </header>
-
-            <div class="pdf-hero-content">
-              <div class="pdf-hero-title">{{ brand.channel || 'Studio Channel' }}</div>
-              <p v-if="brand.positioning" class="pdf-hero-pos">{{ brand.positioning }}</p>
-            </div>
-
-            <footer class="pdf-slide-footer">
-              <span>{{ brand.channel }}</span>
-              <span>1 / 7</span>
-            </footer>
-          </div>
-        </section>
-
-        <!-- PAGE 2: 2. BRAND VOICE -->
-        <section class="pdf-slide pdf-slide-dark">
-          <header class="pdf-slide-header">
-            <span class="pdf-slide-title">2. Brand Voice</span>
-            <span class="pdf-header-channel">{{ brand.channel }}</span>
-          </header>
-
-          <div class="pdf-slide-body">
-            <div class="pdf-voice-meta">
-              <div class="pdf-voice-field" v-if="brand.positioning">
-                <span class="pdf-field-lbl">Positioning</span>
-                <p class="pdf-field-val">{{ brand.positioning }}</p>
-              </div>
-              <div class="pdf-voice-field" v-if="brand.audience">
-                <span class="pdf-field-lbl">Audience</span>
-                <p class="pdf-field-val">{{ brand.audience }}</p>
-              </div>
-              <div class="pdf-voice-field" v-if="brand.voice">
-                <span class="pdf-field-lbl">Voice &amp; Tone</span>
-                <p class="pdf-field-val">{{ brand.voice }}</p>
-              </div>
-            </div>
-
-            <div class="pdf-voice-grid">
-              <div class="pdf-voice-card pdf-card-do">
-                <div class="pdf-card-title">Do</div>
-                <ul class="pdf-clean-list">
-                  <li v-for="d in brand.dos" :key="d">{{ d }}</li>
-                  <li v-if="!brand.dos.length" class="muted">Show the actual craft and process</li>
-                </ul>
-              </div>
-              <div class="pdf-voice-card pdf-card-dont">
-                <div class="pdf-card-title">Don't</div>
-                <ul class="pdf-clean-list pdf-list-dont">
-                  <li v-for="d in brand.donts" :key="d">{{ d }}</li>
-                  <li v-if="!brand.donts.length" class="muted">Clickbait and artificial urgency</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <footer class="pdf-slide-footer">
-            <span>{{ brand.channel }}</span>
-            <span>2 / 7</span>
-          </footer>
-        </section>
-
-        <!-- PAGE 3: 3. LOGOS -->
-        <section class="pdf-slide pdf-slide-dark">
-          <header class="pdf-slide-header">
-            <span class="pdf-slide-title">3. Logos</span>
-            <span class="pdf-header-channel">{{ brand.channel }}</span>
-          </header>
-
-          <div class="pdf-slide-body">
-            <div class="pdf-logos-grid">
-              <div v-for="slot in logoSlots" :key="slot.index" class="pdf-logo-card">
-                <div class="pdf-logo-display" :class="{ 'on-photo': slot.index === 2 }" :style="slot.index === 2 ? { backgroundImage: `url('${activeBrandBg}')` } : {}">
-                  <img v-if="slot.url" :src="slot.url" :alt="t(LOGO_LABELS[slot.index])" class="pdf-logo-img" />
-                  <div v-else class="pdf-logo-placeholder">
-                    <span class="pdf-logo-fallback">{{ brandInitials(brand.channel) }}</span>
-                  </div>
-                </div>
-                <div class="pdf-logo-info">
-                  <strong>{{ t(LOGO_LABELS[slot.index]) }}</strong>
-                  <span class="muted">{{ slot.index === 0 ? 'Primary logo' : slot.index === 1 ? 'Secondary lockup' : 'Social & icon stamp' }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <footer class="pdf-slide-footer">
-            <span>{{ brand.channel }}</span>
-            <span>3 / 7</span>
-          </footer>
-        </section>
-
-        <!-- PAGE 4: 4. PALETTE -->
-        <section class="pdf-slide pdf-slide-dark">
-          <header class="pdf-slide-header">
-            <span class="pdf-slide-title">4. Palette</span>
-            <span class="pdf-header-channel">{{ brand.channel }}</span>
-          </header>
-
-          <div class="pdf-slide-body">
-            <div class="pdf-palette-strip">
-              <div v-for="slot in PALETTE_SLOTS" :key="`strip-${slot}`" class="pdf-palette-strip-seg"
-                :style="{ background: paletteDraft[Number(slot) - 1] || '#111111', flex: slot === '1' ? '5' : slot === '2' ? '3' : slot === '3' ? '1.5' : '1' }">
-                <span :style="{ color: readableOn(paletteDraft[Number(slot) - 1] || '#111111') }">
-                  {{ t(PALETTE_ROLES[slot]) }}
-                </span>
-              </div>
-            </div>
-
-            <div class="pdf-palette-grid">
-              <div v-for="slot in PALETTE_SLOTS" :key="slot" class="pdf-palette-card">
-                <div class="pdf-palette-swatch" :style="{ background: paletteDraft[Number(slot) - 1] || '#111111' }">
-                  <span class="pdf-palette-sample" :style="{ color: readableOn(paletteDraft[Number(slot) - 1] || '#111111') }">Aa</span>
-                </div>
-                <div class="pdf-palette-details">
-                  <strong>{{ t(PALETTE_ROLES[slot]) }}</strong>
-                  <span class="pdf-hex-code">{{ paletteDraft[Number(slot) - 1] || '#111111' }}</span>
-                  <span class="pdf-rgb-code">{{ hexToRgb(paletteDraft[Number(slot) - 1] || '#111111') }}</span>
-                  <p class="muted">{{ t(PALETTE_USAGE[slot]) }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <footer class="pdf-slide-footer">
-            <span>{{ brand.channel }}</span>
-            <span>4 / 7</span>
-          </footer>
-        </section>
-
-        <!-- PAGE 5: 5. TYPOGRAPHY -->
-        <section class="pdf-slide pdf-slide-dark">
-          <header class="pdf-slide-header">
-            <span class="pdf-slide-title">5. Typography</span>
-            <span class="pdf-header-channel">{{ brand.channel }}</span>
-          </header>
-
-          <div class="pdf-slide-body" :style="{ fontFamily: `'${brand.fonts[0] || 'Noto Sans Thai'}', sans-serif` }">
-            <div class="pdf-type-lead">
-              <div class="pdf-font-name">{{ brand.fonts[0] || 'Noto Sans Thai' }}</div>
-              <span class="muted">Primary Typeface</span>
-            </div>
-
-            <div class="pdf-type-specimen-box">
-              <div class="pdf-type-big-aa">Aa</div>
-              <div class="pdf-type-charset">
-                <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ · abcdefghijklmnopqrstuvwxyz</div>
-                <div>กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ 0123456789</div>
-              </div>
-            </div>
-
-            <div class="pdf-type-preview-row">
-              <div class="pdf-type-scale-item">
-                <span class="pdf-scale-label">Display</span>
-                <div class="pdf-scale-display">{{ brand.channel || 'Studio Channel' }}</div>
-              </div>
-              <div class="pdf-type-scale-item">
-                <span class="pdf-scale-label">Body Text</span>
-                <p class="pdf-scale-body">เนื้อหาที่จริงใจ ไม่เร่งรีบ ให้ความสำคัญกับกระบวนการและคุณค่าที่แท้จริง</p>
-              </div>
-            </div>
-          </div>
-
-          <footer class="pdf-slide-footer">
-            <span>{{ brand.channel }}</span>
-            <span>5 / 7</span>
-          </footer>
-        </section>
-
-        <!-- PAGE 6: 6. STYLE -->
-        <section class="pdf-slide pdf-slide-dark">
-          <header class="pdf-slide-header">
-            <span class="pdf-slide-title">6. Style</span>
-            <span class="pdf-header-channel">{{ brand.channel }}</span>
-          </header>
-
-          <div class="pdf-slide-body">
-            <div class="pdf-style-tokens-grid">
-              <div class="pdf-style-token-card">
-                <div class="pdf-token-text">
-                  <span class="pdf-token-lbl">Corner Radius</span>
-                  <strong>{{ styleDraft.radius }}px</strong>
-                  <p class="muted">Softened corners for cards, buttons, and media.</p>
-                </div>
-                <div class="pdf-token-preview">
-                  <div class="pdf-preview-box" :style="{ borderRadius: `${styleDraft.radius}px` }"></div>
-                </div>
-              </div>
-
-              <div class="pdf-style-token-card">
-                <div class="pdf-token-text">
-                  <span class="pdf-token-lbl">Surface Shadow</span>
-                  <strong>{{ capitalize(styleDraft.shadow) }}</strong>
-                  <p class="muted">Ambient elevation for overlays and dropdowns.</p>
-                </div>
-                <div class="pdf-token-preview">
-                  <div class="pdf-preview-shadow" :class="`shadow-${styleDraft.shadow}`"></div>
-                </div>
-              </div>
-
-              <div class="pdf-style-token-card">
-                <div class="pdf-token-text">
-                  <span class="pdf-token-lbl">Fill Opacity</span>
-                  <strong>{{ styleDraft.fillOpacity }}%</strong>
-                  <p class="muted">Surface density for solid layers.</p>
-                </div>
-                <div class="pdf-token-preview">
-                  <div class="pdf-preview-fill" :style="{ opacity: styleDraft.fillOpacity / 100 }"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <footer class="pdf-slide-footer">
-            <span>{{ brand.channel }}</span>
-            <span>6 / 7</span>
-          </footer>
-        </section>
-
-        <!-- PAGE 7: 7. MOODBOARD -->
-        <section class="pdf-slide pdf-slide-dark">
-          <header class="pdf-slide-header">
-            <span class="pdf-slide-title">7. Moodboard</span>
-            <span class="pdf-header-channel">{{ brand.channel }}</span>
-          </header>
-
-          <div class="pdf-slide-body">
-            <!-- If moodboard has items, show them -->
-            <div v-if="moodboard.length > 0" class="pdf-mood-grid">
-              <div v-for="(url, i) in moodboard" :key="`${url}-${i}`" class="pdf-mood-item" :style="{ backgroundImage: `url('${url}')` }"></div>
-            </div>
-            <!-- If no extra moodboard items, show the brand photo hero cleanly -->
-            <div v-else class="pdf-mood-hero-single" :style="{ backgroundImage: `url('${activeBrandBg}')` }">
-              <div class="pdf-mood-single-shade"></div>
-              <div class="pdf-mood-single-caption">
-                <strong>Visual References</strong>
-                <span class="muted">Brand photography and atmosphere anchor</span>
-              </div>
-            </div>
-          </div>
-
-          <footer class="pdf-slide-footer">
-            <span>{{ brand.channel }}</span>
-            <span>7 / 7</span>
-          </footer>
-        </section>
-      </div>
+      <BrandPdfView
+        :brand="brand"
+        :active-brand-bg="activeBrandBg"
+        :custom-bg-style="customBgStyle"
+        :logo-slots="logoSlots"
+        :palette-draft="paletteDraft"
+        :style-draft="styleDraft"
+        :moodboard="moodboard"
+        :logo-labels="LOGO_LABELS"
+        :palette-slots="PALETTE_SLOTS"
+        :palette-roles="PALETTE_ROLES"
+        :palette-usage="PALETTE_USAGE"
+        :readable-on="readableOn"
+        :hex-to-rgb="hexToRgb"
+        :brand-initials="brandInitials"
+      />
 
       <DockBar label="Brand steps">
         <div class="brand-dock-row">
@@ -1343,106 +917,24 @@ async function removeDont(index: number): Promise<void> {
                   <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
                 </svg>
                 <span class="tool-label">Background</span>
-                <svg class="caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <span v-if="hasCustomBg" class="custom-badge" title="Custom background active">●</span>
+                <svg class="chevron-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="m6 9 6 6 6-6" />
                 </svg>
               </button>
 
-              <!-- Edit image modal / popover (matching uploaded screenshot) -->
-              <div v-if="bgMenuOpen" class="brand-bg-popover edit-image-modal" @click.stop>
-                <div class="bg-popover-head">
-                  <strong class="edit-image-title">Edit image</strong>
-                  <button type="button" class="btn-close w-auto" aria-label="Close" @click="bgMenuOpen = false">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M18 6 6 18M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <!-- Device Target Toggle (Desktop vs Mobile) -->
-                <div class="bg-device-toggle">
-                  <button
-                    type="button"
-                    class="bg-device-btn"
-                    :class="{ active: bgTargetDevice === 'desktop' }"
-                    @click="bgTargetDevice = 'desktop'"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect width="20" height="14" x="2" y="3" rx="2" />
-                      <line x1="8" x2="16" y1="21" y2="21" />
-                      <line x1="12" x2="12" y1="17" y2="21" />
-                    </svg>
-                    <span>Desktop (16:9)</span>
-                    <span v-if="customBgDesktop" class="device-dot">●</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="bg-device-btn"
-                    :class="{ active: bgTargetDevice === 'mobile' }"
-                    @click="bgTargetDevice = 'mobile'"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
-                      <line x1="12" x2="12.01" y1="18" y2="18" />
-                    </svg>
-                    <span>Mobile (9:16)</span>
-                    <span v-if="customBgMobile" class="device-dot">●</span>
-                  </button>
-                </div>
-
-                <!-- Preview Area styled like uploaded image -->
-                <div class="edit-image-preview-wrap">
-                  <!-- Desktop preview -->
-                  <div
-                    v-if="bgTargetDevice === 'desktop'"
-                    class="edit-preview-desktop"
-                    :style="customBgDesktop ? { backgroundImage: `url(${customBgDesktop})` } : {}"
-                  >
-                    <div class="edit-preview-badge">16 : 9</div>
-                    <div v-if="!customBgDesktop" class="edit-preview-empty">Default background active</div>
-                  </div>
-                  <!-- Mobile preview -->
-                  <div
-                    v-else
-                    class="edit-preview-mobile"
-                    :style="customBgMobile ? { backgroundImage: `url(${customBgMobile})` } : {}"
-                  >
-                    <div class="edit-preview-badge">9 : 16</div>
-                    <div v-if="!customBgMobile" class="edit-preview-empty">Default mobile background</div>
-                  </div>
-                </div>
-
-                <div class="bg-popover-body">
-                  <div class="row" style="gap: 8px;">
-                    <label class="btn btn-sm btn-upload w-auto">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" x2="12" y1="3" y2="15" />
-                      </svg>
-                      <span>Upload {{ bgTargetDevice === 'desktop' ? 'Desktop' : 'Mobile' }} Image</span>
-                      <input type="file" accept="image/*" hidden @change="onPickBgFile" />
-                    </label>
-                    <button
-                      v-if="currentActiveBg"
-                      type="button"
-                      class="btn btn-sm btn-remove-bg w-auto"
-                      @click="clearBg"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <div class="bg-url-row">
-                    <input
-                      class="field field-sm"
-                      v-model="bgUrlDraft"
-                      :placeholder="`or paste ${bgTargetDevice} image URL`"
-                      @keyup.enter="applyBgUrl"
-                    />
-                    <button type="button" class="btn btn-sm w-auto" :disabled="!bgUrlDraft.trim()" @click="applyBgUrl">Apply</button>
-                  </div>
-                </div>
-              </div>
+              <BrandBgPopover
+                :is-open="bgMenuOpen"
+                :bg-target-device="bgTargetDevice"
+                :custom-bg-desktop="customBgDesktop"
+                :custom-bg-mobile="customBgMobile"
+                :current-active-bg="currentActiveBg"
+                @close="bgMenuOpen = false"
+                @set-target-device="(d) => { bgTargetDevice = d }"
+                @pick-bg-file="onPickBgFile"
+                @clear-bg="clearBg"
+                @apply-bg-url="applyBgUrl"
+              />
             </div>
 
             <!-- Export to PDF button -->

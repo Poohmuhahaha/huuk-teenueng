@@ -94,17 +94,12 @@ async function quickAssignToGroup(groupId: string, tag: string): Promise<void> {
 
     <!-- VIEW 1: CATEGORIES 4-QUADRANT MATRIX (Zero gap, zero outer padding, flush with slide-card) -->
     <div v-else-if="viewMode === 'categories'" class="w-full h-full flex-1 flex flex-col min-h-0 p-0 m-0 overflow-hidden">
-      <fieldset
-        class="border-0 p-0 m-0 min-w-0 w-full h-full flex-1 flex flex-col min-h-0"
+      <HashtagGroups
+        :groups="groups ?? []"
+        :add="onAdd"
+        :tag-stats="trackedMap"
         :disabled="!canWrite"
-        :title="canWrite ? '' : t('auth.noPerm')"
-      >
-        <HashtagGroups
-          :groups="groups ?? []"
-          :add="onAdd"
-          :tag-stats="trackedMap"
-        />
-      </fieldset>
+      />
     </div>
 
     <!-- VIEW 2: TRACKED FROM POSTS FEED -->

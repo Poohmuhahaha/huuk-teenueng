@@ -9,6 +9,7 @@ const props = defineProps<{
   add?: (groupId: string, tag: string) => Promise<void>
   /** Tracked stats per tag (used for tooltips) */
   tagStats?: Map<string, TrackedTag>
+  disabled?: boolean
 }>()
 
 const drafts = ref<Record<string, string>>({})
@@ -65,7 +66,7 @@ async function submit(groupId: string): Promise<void> {
     <div
       v-for="(g, idx) in groups"
       :key="g.id"
-      class="bg-surface p-6 sm:p-8 flex flex-col justify-between transition-colors min-h-0 border-line"
+      class="hashtag-quadrant bg-surface p-6 sm:p-8 flex flex-col justify-between transition-colors min-h-0 border-line"
       :class="[
         idx === 0 ? 'border-b md:border-r md:border-b' : '',
         idx === 1 ? 'border-b md:border-b' : '',
@@ -113,7 +114,7 @@ async function submit(groupId: string): Promise<void> {
             type="text"
             placeholder="new tag"
             :aria-label="`New tag for ${g.title}`"
-            :disabled="!add || busy"
+            :disabled="disabled || !add || busy"
             class="tag-input w-full bg-transparent p-0 text-sm text-ink placeholder:text-muted/60 focus:outline-none"
             @input="drafts[g.id] = ($event.target as HTMLInputElement).value"
           />
@@ -121,7 +122,7 @@ async function submit(groupId: string): Promise<void> {
         <button
           type="submit"
           class="px-5 py-1 rounded-full border border-ink bg-surface text-xs font-bold uppercase tracking-wider text-ink hover:bg-ink hover:text-white active:scale-95 transition-all cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
-          :disabled="!add || busy || !(drafts[g.id] ?? '').trim()"
+          :disabled="disabled || !add || busy || !(drafts[g.id] ?? '').trim()"
         >
           {{ busy ? '…' : 'ADD' }}
         </button>
@@ -133,6 +134,33 @@ async function submit(groupId: string): Promise<void> {
 </template>
 
 <style scoped>
+.hashtag-matrix {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  flex: 1 1 100% !important;
+  gap: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 767px) {
+  .hashtag-matrix {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+.hashtag-quadrant {
+  height: 100% !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+}
+
 .tag-input {
   border: 0 !important;
   border-bottom: 1.5px solid var(--ink) !important;

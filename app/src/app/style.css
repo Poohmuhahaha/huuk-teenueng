@@ -2609,19 +2609,46 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   margin: 0 !important;
   text-align: left;
   height: 100% !important;
-  box-sizing: border-box;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .card-scroll.tags-scroll > .hubpage,
 .card-scroll:has(.tags-page) > .hubpage {
   display: flex !important;
   flex-direction: column !important;
-  flex: 1 1 auto !important;
+  flex: 1 1 100% !important;
   min-height: 0 !important;
   height: 100% !important;
+  max-height: 100% !important;
   margin: 0 !important;
+  margin-bottom: 0 !important;
   padding: 0 !important;
   max-width: none !important;
+}
+
+.card-scroll.tags-scroll > .hubpage > *,
+.card-scroll:has(.tags-page) > .hubpage > *,
+.card-scroll.tags-scroll .tags-page,
+.card-scroll:has(.tags-page) .tags-page,
+.tags-page > div {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure slide-card hosting tags-page stretches to 100% without bottom dead space */
+.slide:has(.tags-page) .slide-card,
+.slide.active .slide-card:has(.tags-page) {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
 }
 .card-scroll.planner-scroll > .hubpage,
 .card-scroll.ideas-scroll > .hubpage,
@@ -3959,6 +3986,178 @@ header.topbar .in-topbar .tabselect-item.active {
 .brand-rule-add .rule-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+/* Glassmorphism theme for Brand Voice on custom background */
+.brandpage.has-custom-bg .brand-voice-step,
+.brand-voice-step.has-glass-bg {
+  background: rgba(0, 0, 0, 0.38) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  min-height: 100%;
+  height: 100%;
+  padding: 32px 48px !important;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.brandpage.has-custom-bg .brand-voice-step .brand-voice-layout,
+.brand-voice-step.has-glass-bg .brand-voice-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 28px;
+  align-items: stretch;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Left fields in glassmorphism theme */
+.brand-voice-step.has-glass-bg .brand-field-group,
+.brandpage.has-custom-bg .brand-voice-step .brand-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.brand-voice-step.has-glass-bg .field-lbl,
+.brandpage.has-custom-bg .brand-voice-step .field-lbl {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  margin-bottom: 2px !important;
+}
+
+.brand-voice-step.has-glass-bg .pill-input,
+.brandpage.has-custom-bg .brand-voice-step .pill-input {
+  width: 100% !important;
+  padding: 10px 18px !important;
+  font-size: 13.5px !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  outline: none !important;
+  transition: all 0.2s ease;
+}
+
+.brand-voice-step.has-glass-bg .pill-input:focus,
+.brandpage.has-custom-bg .brand-voice-step .pill-input:focus {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45) !important;
+}
+
+/* Right DO & DON'T Cards in glassmorphism theme */
+.brand-voice-step.has-glass-bg .brand-rule-card,
+.brandpage.has-custom-bg .brand-voice-step .brand-rule-card {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 20px !important;
+  padding: 22px 24px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18) !important;
+  color: #ffffff !important;
+  min-height: 260px;
+}
+
+.brand-voice-step.has-glass-bg .brand-rule-head,
+.brandpage.has-custom-bg .brand-voice-step .brand-rule-head {
+  border-bottom: none !important;
+  padding-bottom: 8px !important;
+}
+
+.brand-voice-step.has-glass-bg .rule-title,
+.brandpage.has-custom-bg .brand-voice-step .rule-title {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  color: #ffffff !important;
+}
+
+.brand-voice-step.has-glass-bg .brand-rule-list,
+.brandpage.has-custom-bg .brand-voice-step .brand-rule-list {
+  padding: 8px 0 !important;
+}
+
+.brand-voice-step.has-glass-bg .brand-rule-item,
+.brandpage.has-custom-bg .brand-voice-step .brand-rule-item {
+  color: rgba(255, 255, 255, 0.95) !important;
+  font-size: 13.5px !important;
+  padding: 4px 0 !important;
+}
+
+.brand-voice-step.has-glass-bg .brand-rule-item::before,
+.brandpage.has-custom-bg .brand-voice-step .brand-rule-item::before {
+  display: none !important;
+}
+
+.brand-voice-step.has-glass-bg .empty-rules,
+.brandpage.has-custom-bg .brand-voice-step .empty-rules {
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-size: 12.5px !important;
+  font-style: italic;
+  padding: 6px 0;
+}
+
+.brand-voice-step.has-glass-bg .brand-rule-add,
+.brandpage.has-custom-bg .brand-voice-step .brand-rule-add {
+  border-top: none !important;
+  padding-top: 14px !important;
+  display: flex !important;
+  gap: 10px !important;
+}
+
+.brand-voice-step.has-glass-bg .pill-rule-input,
+.brandpage.has-custom-bg .brand-voice-step .pill-rule-input {
+  flex: 1 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 9999px !important;
+  padding: 7px 16px !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  outline: none !important;
+}
+
+.brand-voice-step.has-glass-bg .pill-rule-input::placeholder,
+.brandpage.has-custom-bg .brand-voice-step .pill-rule-input::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.brand-voice-step.has-glass-bg .pill-rule-btn,
+.brandpage.has-custom-bg .brand-voice-step .pill-rule-btn {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 9999px !important;
+  padding: 7px 16px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.brand-voice-step.has-glass-bg .pill-rule-btn:hover:not(:disabled),
+.brandpage.has-custom-bg .brand-voice-step .pill-rule-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
 }
 
 /* Step 2: Logos - compact 3-column slots */
