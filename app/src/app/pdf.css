@@ -1,0 +1,615 @@
+@media print {
+  @page {
+    size: 297mm 167.06mm; /* Exact 16:9 ratio (matching A4 width 297mm x 167.06mm) */
+    margin: 0;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Reset all ancestors so overflow:hidden never clips pagination */
+  #app,
+  .app,
+  .shellgrid,
+  .deck-container,
+  .deck,
+  .slide,
+  .slide-card,
+  .card-scroll,
+  .hubpage,
+  .brandpage {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    float: none !important;
+  }
+
+  /* Hide app navigation and interactive UI elements */
+  .app-header,
+  .topbar,
+  .subnavbar,
+  .expand-btn,
+  .nav-tabs,
+  .nav-toggle-group,
+  .deck-nav,
+  .slide-dock,
+  .dock,
+  .dock-bar,
+  .brand-book-nav,
+  .brand-note,
+  .brandpage > :not(#brand-guideline-pdf),
+  .slide:not(.active),
+  .autherr,
+  .oknote {
+    display: none !important;
+  }
+
+  #brand-guideline-pdf {
+    display: block !important;
+    position: static !important;
+    width: 297mm !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .pdf-slide {
+    width: 297mm !important;
+    height: 167.06mm !important;
+    min-height: 167.06mm !important;
+    max-height: 167.06mm !important;
+    box-sizing: border-box !important;
+    padding: 12mm 18mm !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    background-color: #080a0f !important;
+    color: #ffffff !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Noto Sans Thai", sans-serif !important;
+    overflow: hidden !important;
+    position: relative !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .pdf-slide:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Completely borderless / stroke-free presentation per user mandate */
+  #brand-guideline-pdf * {
+    border-color: transparent !important;
+    outline: none !important;
+  }
+
+  /* ---- SLIDE HEADER (Clean Minimalist Editorial - No Strokes) ---- */
+  .pdf-slide-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    border: none !important;
+    padding-bottom: 3mm !important;
+    margin-bottom: 5mm !important;
+  }
+
+  .pdf-slide-title {
+    font-size: 8.5pt !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-header-channel {
+    font-size: 7.5pt !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: #71717a !important;
+  }
+
+  /* ---- SLIDE FOOTER (No Strokes) ---- */
+  .pdf-slide-footer {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 7pt !important;
+    letter-spacing: 0.05em !important;
+    color: #71717a !important;
+    border: none !important;
+    padding-top: 3.5mm !important;
+  }
+
+  .pdf-slide-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    margin-bottom: 3mm !important;
+  }
+
+  /* =========================================================================
+     PAGE 1: 1. BRAND IDENTITY HERO (No Strokes, Bottom-Left Text, Smooth Fade)
+     ========================================================================= */
+  .pdf-slide.pdf-slide-hero {
+    position: relative !important;
+    background-color: #080a0f !important;
+    background-size: cover !important;
+    background-position: center !important;
+    color: #ffffff !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+  }
+
+  .pdf-cover-shade {
+    position: absolute !important;
+    inset: 0 !important;
+    background: linear-gradient(180deg, rgba(8, 10, 15, 0.25) 0%, rgba(8, 10, 15, 0.05) 30%, rgba(8, 10, 15, 0.75) 70%, rgba(8, 10, 15, 0.96) 100%) !important;
+    pointer-events: none !important;
+    z-index: 1 !important;
+  }
+
+  .pdf-cover-container {
+    position: relative !important;
+    z-index: 2 !important;
+    width: 100% !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+    padding: 12mm 16mm 10mm 16mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+
+  .pdf-hero-content {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    margin-top: auto !important;
+    margin-bottom: 4mm !important;
+    text-align: left !important;
+    border: none !important;
+  }
+
+  .pdf-hero-title {
+    display: block !important;
+    font-size: 52pt !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.03em !important;
+    color: #ffffff !important;
+    line-height: 1.05 !important;
+    margin: 0 0 6px 0 !important;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .pdf-hero-pos {
+    font-size: 13pt !important;
+    color: #cbd5e1 !important;
+    margin: 0 !important;
+    font-weight: 400 !important;
+    letter-spacing: -0.01em !important;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  /* =========================================================================
+     PAGE 2: 2. BRAND VOICE (No Strokes)
+     ========================================================================= */
+  .pdf-voice-meta {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8mm !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-radius: 8px !important;
+    padding: 14px 18px !important;
+    margin-bottom: 8mm !important;
+  }
+
+  .pdf-voice-field {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+
+  .pdf-field-lbl {
+    font-size: 7pt !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    color: #94a3b8 !important;
+  }
+
+  .pdf-field-val {
+    font-size: 10pt !important;
+    color: #ffffff !important;
+    margin: 0 !important;
+    line-height: 1.35 !important;
+  }
+
+  .pdf-voice-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8mm !important;
+  }
+
+  .pdf-voice-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 8px !important;
+    padding: 16px 20px !important;
+  }
+
+  .pdf-card-title {
+    font-size: 9.5pt !important;
+    font-weight: 700 !important;
+    margin-bottom: 8px !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-card-do .pdf-card-title {
+    color: #34d399 !important;
+  }
+
+  .pdf-card-dont .pdf-card-title {
+    color: #f87171 !important;
+  }
+
+  /* =========================================================================
+     PAGE 3: 3. LOGOS (No Strokes)
+     ========================================================================= */
+  .pdf-logos-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8mm !important;
+  }
+
+  .pdf-logo-card {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .pdf-logo-display {
+    height: 140px !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+
+  .pdf-logo-display.on-photo {
+    background-size: cover !important;
+    background-position: center !important;
+    position: relative !important;
+  }
+
+  .pdf-logo-img {
+    max-height: 85px !important;
+    max-width: 80% !important;
+    object-fit: contain !important;
+  }
+
+  .pdf-logo-placeholder {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .pdf-logo-fallback {
+    font-size: 26pt !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .pdf-logo-info {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .pdf-logo-info strong {
+    font-size: 9pt !important;
+    color: #ffffff !important;
+  }
+
+  /* =========================================================================
+     PAGE 4: 4. PALETTE (No Strokes)
+     ========================================================================= */
+  .pdf-palette-strip {
+    height: 32px !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    margin-bottom: 8mm !important;
+  }
+
+  .pdf-palette-strip-seg {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 7.5pt !important;
+    font-weight: 700 !important;
+  }
+
+  .pdf-palette-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6mm !important;
+  }
+
+  .pdf-palette-card {
+    display: flex !important;
+    flex-direction: column !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+  }
+
+  .pdf-palette-swatch {
+    height: 100px !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    padding: 8px !important;
+    box-sizing: border-box !important;
+    margin-bottom: 6px !important;
+  }
+
+  .pdf-palette-sample {
+    font-size: 14pt !important;
+    font-weight: 700 !important;
+  }
+
+  .pdf-palette-details {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    padding: 0 4px !important;
+  }
+
+  .pdf-palette-details strong {
+    font-size: 8.5pt !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-hex-code {
+    font-family: ui-monospace, monospace !important;
+    font-size: 8pt !important;
+    font-weight: 700 !important;
+    color: #e2e8f0 !important;
+  }
+
+  .pdf-rgb-code {
+    font-family: ui-monospace, monospace !important;
+    font-size: 7pt !important;
+    color: #94a3b8 !important;
+  }
+
+  /* =========================================================================
+     PAGE 5: 5. TYPOGRAPHY (No Strokes)
+     ========================================================================= */
+  .pdf-type-lead {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    margin-bottom: 6px !important;
+  }
+
+  .pdf-font-name {
+    font-size: 22pt !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-type-specimen-box {
+    display: flex !important;
+    gap: 8mm !important;
+    align-items: center !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 8px !important;
+    padding: 14px 20px !important;
+    margin-bottom: 8mm !important;
+  }
+
+  .pdf-type-big-aa {
+    font-size: 54pt !important;
+    font-weight: 300 !important;
+    color: #ffffff !important;
+    line-height: 1 !important;
+  }
+
+  .pdf-type-charset {
+    font-size: 8pt !important;
+    color: #cbd5e1 !important;
+    line-height: 1.6 !important;
+  }
+
+  .pdf-type-preview-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1.5fr !important;
+    gap: 8mm !important;
+  }
+
+  .pdf-type-scale-item {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+
+  .pdf-scale-label {
+    font-size: 7pt !important;
+    font-weight: 700 !important;
+    color: #94a3b8 !important;
+    text-transform: uppercase !important;
+  }
+
+  .pdf-scale-display {
+    font-size: 18pt !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-scale-body {
+    font-size: 9.5pt !important;
+    color: #cbd5e1 !important;
+    line-height: 1.5 !important;
+    margin: 0 !important;
+  }
+
+  /* =========================================================================
+     PAGE 6: 6. STYLE (No Strokes)
+     ========================================================================= */
+  .pdf-style-tokens-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8mm !important;
+  }
+
+  .pdf-style-token-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+  }
+
+  .pdf-token-text {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+
+  .pdf-token-lbl {
+    font-size: 7pt !important;
+    font-weight: 700 !important;
+    color: #94a3b8 !important;
+    text-transform: uppercase !important;
+  }
+
+  .pdf-token-text strong {
+    font-size: 14pt !important;
+    color: #ffffff !important;
+  }
+
+  .pdf-token-preview {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 70px !important;
+    background: rgba(0, 0, 0, 0.25) !important;
+    border-radius: 6px !important;
+  }
+
+  .pdf-preview-box {
+    width: 48px !important;
+    height: 48px !important;
+    background: rgba(255, 255, 255, 0.25) !important;
+  }
+
+  .pdf-preview-shadow {
+    width: 48px !important;
+    height: 48px !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+  }
+
+  .pdf-preview-shadow.shadow-soft {
+    box-shadow: 0 6px 14px rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .pdf-preview-shadow.shadow-strong {
+    box-shadow: 0 10px 24px rgba(255, 255, 255, 0.35) !important;
+  }
+
+  .pdf-preview-fill {
+    width: 48px !important;
+    height: 48px !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+  }
+
+  /* =========================================================================
+     PAGE 7: 7. MOODBOARD (No Strokes)
+     ========================================================================= */
+  .pdf-mood-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6mm !important;
+    height: 100% !important;
+  }
+
+  .pdf-mood-item {
+    background-size: cover !important;
+    background-position: center !important;
+    border-radius: 8px !important;
+    min-height: 120px !important;
+  }
+
+  .pdf-mood-hero-single {
+    background-size: cover !important;
+    background-position: center !important;
+    border-radius: 10px !important;
+    height: 100% !important;
+    position: relative !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    padding: 24px !important;
+    box-sizing: border-box !important;
+  }
+
+  .pdf-mood-single-shade {
+    position: absolute !important;
+    inset: 0 !important;
+    background: linear-gradient(180deg, transparent 40%, rgba(8, 10, 15, 0.85) 100%) !important;
+  }
+
+  .pdf-mood-single-caption {
+    position: relative !important;
+    z-index: 2 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .pdf-mood-single-caption strong {
+    font-size: 16pt !important;
+    color: #ffffff !important;
+  }
+}
