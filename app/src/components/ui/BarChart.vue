@@ -24,12 +24,14 @@ const props = withDefaults(
     currency?: string
     card?: boolean
     rows?: number
+    fillYear?: boolean
   }>(),
   {
     variant: 'bars',
     currency: '',
     card: true,
     rows: 8,
+    fillYear: undefined,
   },
 )
 
@@ -45,6 +47,47 @@ function itemColor(i: number, custom?: string): string {
 }
 
 const gradientId = `wave-grad-${Math.random().toString(36).slice(2, 7)}`
+
+const detectedYear = computed(() => {
+  for (const it of props.items) {
+    const m = /^(\d{4})-\d{2}$/.exec(it.label)
+    if (m) return m[1]
+  }
+  return String(new Date().getFullYear())
+})
+
+const isDateSeries = computed(() => {
+  return props.items.length > 0 && props.items.every((it) => /^\d{4}-\d{2}$/.test(it.label))
+})
+
+const normalizedItems = computed(() => {
+  const shouldFill = props.fillYear ?? (props.variant === 'towers' && isDateSeries.value)
+  if (!shouldFill || !isDateSeries.value) {
+    return props.items
+  }
+
+  const y = detectedYear.value
+  const map = new Map<string, BarItem>()
+  for (const it of props.items) {
+    map.set(it.label, it)
+  }
+
+  const result: BarItem[] = []
+  for (let m = 1; m <= 12; m++) {
+    const mm = String(m).padStart(2, '0')
+    const key = `${y}-${mm}`
+    const existing = map.get(key)
+    if (existing) {
+      result.push(existing)
+    } else {
+      result.push({
+        label: key,
+        value: 0,
+      })
+    }
+  }
+  return result
+})
 
 const totalValue = computed(() => props.items.reduce((acc, it) => acc + num(it.value), 0))
 const maxVal = computed(() => {
@@ -74,11 +117,13 @@ const towersData = computed(() => {
   const max = maxVal.value || 1
   const sum = totalValue.value || 1
   const rowCount = numRows.value
+  const items = normalizedItems.value
 
-  return props.items.map((it, colIdx) => {
+  return items.map((it, colIdx) => {
     const val = num(it.value)
-    const pct = totalValue.value > 0 ? Math.round((val / sum) * 100) : 0
-    const activeLevel = val > 0 ? Math.max(1, Math.min(rowCount, Math.round((val / max) * rowCount))) : 0
+    const hasData = val > 0
+    const pct = totalValue.value > 0 && hasData ? Math.round((val / sum) * 100) : 0
+    const activeLevel = hasData ? Math.max(1, Math.min(rowCount, Math.round((val / max) * rowCount))) : 0
 
     const dateMatch = /^(\d{4})-(\d{2})$/.exec(it.label)
     let primaryLabel = it.label
@@ -93,6 +138,7 @@ const towersData = computed(() => {
     return {
       ...it,
       value: val,
+      hasData,
       pct,
       activeLevel,
       primaryLabel,
@@ -194,7 +240,7 @@ function formatTowerValue(v: number): string {
 
 function getTowerSquareOpacity(row: number, activeLevel: number): number {
   if (row === activeLevel) return 1.0
-  return Math.max(0.5, 1.0 - (activeLevel - row) * 0.08)
+  return Math.max(0.45, 1.0 - (activeLevel - row) * 0.08)
 }
 
 const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)}`).join(', '))
@@ -207,6 +253,63 @@ const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)
     :aria-label="summary"
   >
     <div v-if="!items.length" class="text-muted text-sm py-8 text-center">No data yet.</div>
+
+    <!-- Variant: Towers (12-Month Equalizer Timeline or Category Towers) -->
+    <template v-else-if="variant === 'towers'">
+      <div
+        class="w-full grid gap-1 sm:gap-1.5 items-end pt-1 pb-1"
+        :class="towersData.length === 12 ? 'grid-cols-12' : 'flex justify-center gap-4 sm:gap-6'"
+      >
+        <div
+          v-for="(col, ci) in towersData"
+          :key="col.label"
+          class="flex flex-col items-center justify-end min-w-0 group/col cursor-default relative"
+          :title="col.hasData ? `${col.label}: ${currency}${col.value.toLocaleString('en-US')} (${col.pct}% of total)` : `${col.label}: No transactions`"
+        >
+          <!-- Top Metric Callout: Value & % Share (hidden when inactive to reduce noise) -->
+          <div class="h-9 flex flex-col items-center justify-end mb-1.5 transition-transform duration-200 group-hover/col:-translate-y-0.5">
+            <template v-if="col.hasData">
+              <span class="text-[8.5px] sm:text-[9.5px] font-semibold text-muted bg-wash border border-line/60 px-1 py-0.2 rounded-full mb-0.5 transition-colors group-hover/col:bg-black group-hover/col:text-white leading-tight">
+                {{ col.pct }}%
+              </span>
+              <span class="text-[9.5px] sm:text-[11px] font-bold font-mono text-ink tracking-tight whitespace-nowrap">
+                {{ formatTowerValue(col.value) }}
+              </span>
+            </template>
+            <template v-else>
+              <span class="text-[10px] text-muted/30 font-mono opacity-0 group-hover/col:opacity-100 transition-opacity">
+                —
+              </span>
+            </template>
+          </div>
+
+          <!-- Vertical Stack of 1:1 Squares -->
+          <div class="w-full flex flex-col-reverse gap-[2px] sm:gap-[2.5px] items-center my-1 select-none">
+            <div
+              v-for="r in numRows"
+              :key="r"
+              class="w-full max-w-[18px] sm:max-w-[24px] aspect-square rounded-[1.5px] sm:rounded-[2px] transition-all duration-200"
+              :class="r <= col.activeLevel ? 'bg-ink tower-square-active group-hover/col:scale-110 group-hover/col:brightness-125' : 'bg-ink/[0.045] tower-square-ghost group-hover/col:bg-ink/[0.1]'"
+              :style="{
+                animationDelay: `${ci * 25 + (r - 1) * 15}ms`,
+                opacity: r <= col.activeLevel ? getTowerSquareOpacity(r, col.activeLevel) : undefined,
+                backgroundColor: r <= col.activeLevel && col.color && col.color !== '#0a0a0a' ? col.color : undefined,
+              }"
+            />
+          </div>
+
+          <!-- Bottom Label: Month Name -->
+          <div class="w-full border-t border-line/40 pt-1 mt-1 flex flex-col items-center text-center min-w-0 max-w-full">
+            <span
+              class="text-[9.5px] sm:text-[11px] font-bold truncate max-w-full transition-colors"
+              :class="col.hasData ? 'text-ink group-hover/col:text-brand-600' : 'text-muted/60 group-hover/col:text-ink'"
+            >
+              {{ col.primaryLabel }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- Variant: Area (Edge-to-Edge Smooth Spline Wave with Gradient Fade) -->
     <template v-else-if="variant === 'area'">
@@ -283,53 +386,6 @@ const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)
               />
             </g>
           </svg>
-        </div>
-      </div>
-    </template>
-
-    <!-- Variant: Towers (Vertical 1:1 Square Blocks Matrix) -->
-    <template v-else-if="variant === 'towers'">
-      <div class="w-full flex items-end justify-center gap-5 sm:gap-8 pt-1 pb-1">
-        <div
-          v-for="(col, ci) in towersData"
-          :key="col.label"
-          class="flex-none w-12 sm:w-14 flex flex-col items-center justify-end group/col cursor-default"
-          :title="`${col.label}: ${currency}${col.value.toLocaleString('en-US')} (${col.pct}% of total)`"
-        >
-          <!-- Top Metrics: Share Pill & Formatted Value -->
-          <div class="flex flex-col items-center mb-2 transition-transform duration-200 group-hover/col:-translate-y-0.5">
-            <span class="text-[9.5px] font-semibold text-muted bg-wash border border-line/60 px-1.5 py-0.5 rounded-full mb-1 transition-colors group-hover/col:bg-black group-hover/col:text-white">
-              {{ col.pct }}%
-            </span>
-            <span class="text-[11px] sm:text-[12px] font-bold font-mono text-ink tracking-tight whitespace-nowrap">
-              {{ formatTowerValue(col.value) }}
-            </span>
-          </div>
-
-          <!-- Vertical Stack of 1:1 Squares -->
-          <div class="flex flex-col-reverse gap-[2.5px] sm:gap-[3px] items-center my-1 select-none">
-            <div
-              v-for="r in numRows"
-              :key="r"
-              class="w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] aspect-square rounded-[2px] sm:rounded-[2.5px] transition-all duration-200"
-              :class="r <= col.activeLevel ? 'bg-ink tower-square-active group-hover/col:scale-110 group-hover/col:brightness-125' : 'bg-ink/[0.06] tower-square-ghost'"
-              :style="{
-                animationDelay: `${ci * 45 + (r - 1) * 20}ms`,
-                opacity: r <= col.activeLevel ? getTowerSquareOpacity(r, col.activeLevel) : undefined,
-                backgroundColor: r <= col.activeLevel && col.color && col.color !== '#0a0a0a' ? col.color : undefined,
-              }"
-            />
-          </div>
-
-          <!-- Bottom Label: Month / Category Name with subtle baseline separator -->
-          <div class="w-full border-t border-line/40 pt-1.5 mt-1 flex flex-col items-center text-center min-w-0 max-w-full">
-            <span class="text-[11px] sm:text-xs font-bold text-ink truncate max-w-full group-hover/col:text-brand-600 transition-colors">
-              {{ col.primaryLabel }}
-            </span>
-            <span v-if="col.secondaryLabel" class="text-[9.5px] font-medium text-muted font-mono leading-none mt-0.5">
-              {{ col.secondaryLabel }}
-            </span>
-          </div>
         </div>
       </div>
     </template>

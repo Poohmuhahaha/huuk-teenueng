@@ -128,17 +128,22 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
           </TableFrame>
         </div>
 
-        <div class="mb-6 card-fade p-4 sm:p-5 flex flex-col justify-between overflow-hidden">
+        <div class="mb-6 card-fade p-4 sm:p-5 flex flex-col justify-between">
           <div>
-            <div class="flex items-center justify-between gap-2 mb-1.5">
-              <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Views by month</h2>
-              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
-                {{ growth.length }} mos
-              </span>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Views by month</h2>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
+                  {{ growth.length }} active mos
+                </span>
+              </div>
+              <span class="text-xs font-semibold text-muted font-mono">2026</span>
             </div>
-            <p class="text-sm font-bold font-mono text-ink">{{ totalGrowthViews.toLocaleString('en-US') }} views</p>
+            <p class="tabular text-[22px] sm:text-[24px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono mb-2">
+              {{ totalGrowthViews.toLocaleString('en-US') }} views
+            </p>
           </div>
-          <BarChart :items="growth" variant="area" :card="false" />
+          <BarChart :items="growth" variant="towers" :card="false" />
         </div>
 
         <div class="mb-6">

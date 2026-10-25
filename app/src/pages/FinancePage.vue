@@ -88,30 +88,40 @@ async function add(): Promise<void> {
     <BudgetCards :income="income" :expense="expense" :balance="balance" :currency="CURRENCY" :sparks="financeSparks" />
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="card-fade p-4 sm:p-5 flex flex-col justify-between overflow-hidden">
+      <div class="card-fade p-4 sm:p-5 flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between gap-2 mb-1.5">
-            <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Income by month</h2>
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
-              {{ monthlyIn.length }} mos
-            </span>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Income by month</h2>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
+                {{ monthlyIn.length }} active mos
+              </span>
+            </div>
+            <span class="text-xs font-semibold text-muted font-mono">2026</span>
           </div>
-          <p class="text-sm font-bold font-mono text-ink">฿{{ totalMonthlyIn.toLocaleString('en-US') }}</p>
+          <p class="tabular text-[22px] sm:text-[24px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono mb-2">
+            ฿{{ totalMonthlyIn.toLocaleString('en-US') }}
+          </p>
         </div>
-        <BarChart :items="monthlyIn" variant="area" currency="฿" :card="false" />
+        <BarChart :items="monthlyIn" variant="towers" currency="฿" :card="false" />
       </div>
 
-      <div class="card-fade p-4 sm:p-5 flex flex-col justify-between overflow-hidden">
+      <div class="card-fade p-4 sm:p-5 flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between gap-2 mb-1.5">
-            <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Expense by month</h2>
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
-              {{ monthlyOut.length }} mos
-            </span>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Expense by month</h2>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
+                {{ monthlyOut.length }} active mos
+              </span>
+            </div>
+            <span class="text-xs font-semibold text-muted font-mono">2026</span>
           </div>
-          <p class="text-sm font-bold font-mono text-ink">฿{{ totalMonthlyOut.toLocaleString('en-US') }}</p>
+          <p class="tabular text-[22px] sm:text-[24px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono mb-2">
+            ฿{{ totalMonthlyOut.toLocaleString('en-US') }}
+          </p>
         </div>
-        <BarChart :items="monthlyOut" variant="area" currency="฿" :card="false" />
+        <BarChart :items="monthlyOut" variant="towers" currency="฿" :card="false" />
       </div>
     </div>
 

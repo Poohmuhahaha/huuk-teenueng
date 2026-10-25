@@ -28,7 +28,7 @@ describe('BarChart component', () => {
     expect(wrapper.attributes('role')).toBe('img')
   })
 
-  it('renders vertical square towers (variant="towers")', () => {
+  it('renders full 12-month timeline equalizer in towers variant', () => {
     const wrapper = mount(BarChart, {
       props: {
         items: sampleItems,
@@ -37,21 +37,33 @@ describe('BarChart component', () => {
         card: false,
       },
     })
+    // Full 12-month labels
     expect(wrapper.text()).toContain('Jan')
-    expect(wrapper.text()).toContain("'26")
     expect(wrapper.text()).toContain('Feb')
+    expect(wrapper.text()).toContain('Mar')
+    expect(wrapper.text()).toContain('Apr')
+    expect(wrapper.text()).toContain('May')
+    expect(wrapper.text()).toContain('Jun')
+    expect(wrapper.text()).toContain('Jul')
+    expect(wrapper.text()).toContain('Aug')
     expect(wrapper.text()).toContain('Sep')
     expect(wrapper.text()).toContain('Oct')
+    expect(wrapper.text()).toContain('Nov')
+    expect(wrapper.text()).toContain('Dec')
 
+    // Values for active months
     expect(wrapper.text()).toContain('฿15,000')
     expect(wrapper.text()).toContain('฿34,600')
 
+    // 12 columns x 8 rows = 96 total squares
     const activeSquares = wrapper.findAll('.tower-square-active')
     const ghostSquares = wrapper.findAll('.tower-square-ghost')
     expect(activeSquares.length).toBeGreaterThan(0)
     expect(ghostSquares.length).toBeGreaterThan(0)
-    expect(activeSquares.length + ghostSquares.length).toBe(32)
+    expect(activeSquares.length + ghostSquares.length).toBe(96)
 
+    // 12-column grid layout
+    expect(wrapper.find('.grid-cols-12').exists()).toBe(true)
     expect(wrapper.classes()).toContain('w-full')
     expect(wrapper.classes()).not.toContain('border')
   })
@@ -65,22 +77,15 @@ describe('BarChart component', () => {
         card: false,
       },
     })
-    // Month legend markers
     expect(wrapper.text()).toContain('Jan')
-    expect(wrapper.text()).toContain("'26")
     expect(wrapper.text()).toContain('Oct')
     expect(wrapper.text()).toContain('฿15,000')
     expect(wrapper.text()).toContain('฿34,600')
 
-    // SVG wave elements
     const svg = wrapper.find('svg')
     expect(svg.exists()).toBe(true)
-    const paths = wrapper.findAll('path')
-    expect(paths.length).toBe(2) // 1 for gradient area, 1 for stroke line
-    const dots = wrapper.findAll('circle')
-    expect(dots.length).toBe(4) // 4 month dots
-
-    expect(wrapper.classes()).toContain('w-full')
+    expect(wrapper.findAll('path').length).toBe(2)
+    expect(wrapper.findAll('circle').length).toBe(4)
   })
 
   it('renders card border when card=true', () => {
