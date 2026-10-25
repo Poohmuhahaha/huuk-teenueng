@@ -7,6 +7,7 @@ import { useLive, usePlatforms, useSyncPlatform, usePermission, useAds } from '@
 import { beginOAuth } from '@/core/oauth'
 import { t } from '@/core/i18n'
 import TableFrame from '@/components/tables/TableFrame.vue'
+import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 
 const props = withDefaults(
   defineProps<{ variant?: 'cards' | 'grid' | 'table'; limit?: number }>(),
@@ -196,9 +197,25 @@ async function onReconnect(): Promise<void> {
         <div class="relative aspect-square grid place-items-center bg-wash overflow-hidden">
           <img v-if="p.thumbnailUrl || p.mediaUrl" :src="p.thumbnailUrl || p.mediaUrl"
             :alt="p.caption" loading="lazy" class="w-full h-full object-cover" />
-          <span v-else class="text-[40px] font-bold text-muted">{{ (p.caption || platformLabel(p.platform)).slice(0, 1).toUpperCase() }}</span>
-          <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[11px] bg-black/60 text-white rounded-full">{{ platformLabel(p.platform) }} · {{ p.kind }}</span>
-          <span v-if="boostedBy(p.id)" class="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-[11px] bg-accent text-white rounded-full">{{ t('live.boosted') }}</span>
+          <div v-else class="w-full h-full flex flex-col justify-between p-3.5 bg-gradient-to-br from-neutral-900 via-stone-900 to-black text-white relative overflow-hidden select-none">
+            <div class="flex items-center justify-between z-10">
+              <PlatformLogo :id="p.platform" :size="16" :tile="true" />
+              <span v-if="p.videoLength" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/60 text-white/90 backdrop-blur-sm border border-white/10">{{ mmss(p.videoLength) }}</span>
+            </div>
+            <div class="flex flex-col items-center justify-center my-auto text-center z-10 px-1">
+              <div class="w-9 h-9 rounded-full bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white mb-2 shadow-sm">
+                <span v-if="p.kind === 'video' || p.kind === 'reel'" class="text-xs translate-x-0.5">▶</span>
+                <span v-else class="text-xs">📸</span>
+              </div>
+              <p class="text-xs font-medium text-white/90 line-clamp-2 leading-snug">{{ p.caption || p.attachmentTitle || 'Live post' }}</p>
+            </div>
+            <div class="text-[10px] text-white/60 font-mono text-center z-10">{{ dateOf(p.createdAt) }}</div>
+            <div class="absolute -right-4 -bottom-4 opacity-10 pointer-events-none scale-125">
+              <PlatformLogo :id="p.platform" :size="80" :color="false" />
+            </div>
+          </div>
+          <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[11px] bg-black/60 text-white rounded-full z-20">{{ platformLabel(p.platform) }} · {{ p.kind }}</span>
+          <span v-if="boostedBy(p.id)" class="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-[11px] bg-accent text-white rounded-full z-20">{{ t('live.boosted') }}</span>
         </div>
         <div class="flex flex-col gap-1.5 p-2.5">
           <p class="m-0 text-[13px] line-clamp-2">{{ p.caption || p.attachmentTitle || '—' }}</p>
