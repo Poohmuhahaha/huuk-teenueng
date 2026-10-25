@@ -2859,8 +2859,8 @@ textarea.field, textarea {
   overflow: hidden;
 }
 
-/* Dashboard — zero top/bottom padding and margin so content scrolls smoothly edge-to-edge
-   without clipping or disjointed gaps inside the card. */
+/* Dashboard — matches Finance pattern (natural card-scroll overflow, comfortable breathing room
+   at top and bottom, seamless single-container scroll). */
 .card-scroll.dash-scroll,
 .card-scroll:has(.dash-page),
 .deck.full .card-scroll.dash-scroll,
@@ -2868,16 +2868,12 @@ textarea.field, textarea {
 .slide-card:has(.dash-page) .card-scroll {
   display: flex !important;
   flex-direction: column !important;
-  overflow: hidden !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  padding-left: 32px !important;
-  padding-right: 32px !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  padding: 32px 32px 28px !important;
+  margin: 0 !important;
   text-align: left;
   height: 100% !important;
-  max-height: 100% !important;
   box-sizing: border-box !important;
 }
 
@@ -2887,8 +2883,7 @@ textarea.field, textarea {
   .deck.full .card-scroll.dash-scroll,
   .deck.full .card-scroll:has(.dash-page),
   .slide-card:has(.dash-page) .card-scroll {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+    padding: 20px 16px 24px !important;
   }
 }
 
@@ -2897,15 +2892,10 @@ textarea.field, textarea {
 .slide-card:has(.dash-page) .dash-page {
   display: flex !important;
   flex-direction: column !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  flex: 1 0 auto !important;
   width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .card-scroll.dash-scroll .dash-page > h1 {
@@ -2915,33 +2905,28 @@ textarea.field, textarea {
 .card-scroll.dash-scroll .dash-grid,
 .card-scroll:has(.dash-page) .dash-grid,
 .slide-card:has(.dash-page) .dash-grid {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  gap: 0 !important;
+  flex: 1 0 auto !important;
   width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
 }
 
 .card-scroll.dash-scroll .dash-main,
 .card-scroll:has(.dash-page) .dash-main,
 .slide-card:has(.dash-page) .dash-main {
-  flex: 1 1 auto !important;
-  overflow-y: auto !important;
-  min-height: 0 !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  overscroll-behavior: contain;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 0 auto !important;
   width: 100% !important;
+  overflow: visible !important;
+  min-height: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 
