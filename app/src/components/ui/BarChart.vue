@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import PlatformLogo from './PlatformLogo.vue'
+import CountUpNumber from './CountUpNumber.vue'
 
 export interface BarItem {
   label: string
@@ -244,11 +245,18 @@ function getTowerSquareOpacity(row: number, activeLevel: number): number {
 }
 
 const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)}`).join(', '))
+
+const mounted = ref(typeof process !== 'undefined' && process.env?.NODE_ENV === 'test')
+onMounted(() => {
+  requestAnimationFrame(() => {
+    mounted.value = true
+  })
+})
 </script>
 
 <template>
   <div
-    :class="card ? 'border border-line rounded-xl bg-surface p-4 shadow-xs transition-all' : 'w-full transition-all'"
+    :class="card ? 'border border-line rounded-xl bg-surface card-fade p-4 sm:p-5 shadow-xs transition-all' : 'w-full transition-all'"
     role="img"
     :aria-label="summary"
   >
@@ -394,13 +402,13 @@ const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)
     <template v-else>
       <div class="space-y-3">
         <!-- Segmented Distribution Track (when there are multiple items) -->
-        <div v-if="itemsWithShare.length > 1" class="space-y-1">
+        <div v-if="itemsWithShare.length > 1" class="space-y-1 mb-2">
           <div class="w-full h-2.5 bg-wash rounded-full overflow-hidden flex gap-[2px] p-[2px] border border-line">
             <div
               v-for="it in itemsWithShare"
               :key="it.label"
-              class="h-full rounded-full transition-all duration-300"
-              :style="{ width: `${it.pct}%`, background: it.color }"
+              class="h-full rounded-full transition-all duration-700 ease-out"
+              :style="{ width: mounted ? `${it.pct}%` : '0%', background: it.color }"
               :title="`${it.label}: ${it.value} (${it.pct}%)`"
             />
           </div>
@@ -423,9 +431,11 @@ const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)
                 <span class="text-[13px] font-bold text-ink truncate">{{ it.label }}</span>
               </div>
               <div class="flex items-center gap-2 flex-none">
-                <span class="text-sm font-bold text-ink font-mono">{{ it.value.toLocaleString('en-US') }}</span>
+                <span class="text-sm font-bold text-ink font-mono">
+                  <CountUpNumber :value="it.value.toLocaleString('en-US')" />
+                </span>
                 <span class="text-[11px] font-semibold text-muted bg-wash border border-line px-1.5 py-0.5 rounded-full">
-                  {{ it.pct }}%
+                  <CountUpNumber :value="`${it.pct}%`" />
                 </span>
               </div>
             </div>
@@ -433,8 +443,8 @@ const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)
             <!-- Progress fill bar: posted progress when known, share otherwise -->
             <div class="w-full h-2 bg-wash rounded-full overflow-hidden border border-line/40 mb-2">
               <div
-                class="h-full rounded-full transition-all duration-500"
-                :style="{ width: `${it.progress}%`, background: it.color }"
+                class="h-full rounded-full transition-all duration-700 ease-out"
+                :style="{ width: mounted ? `${it.progress}%` : '0%', background: it.color }"
               />
             </div>
 
@@ -446,7 +456,7 @@ const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)
                 class="font-semibold flex-none ml-2"
                 :class="it.progress > 0 ? 'text-ink' : 'text-muted'"
               >
-                {{ it.progress }}% posted
+                <CountUpNumber :value="`${it.progress}% posted`" />
               </span>
             </div>
           </div>

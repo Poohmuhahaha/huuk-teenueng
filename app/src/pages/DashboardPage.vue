@@ -11,6 +11,7 @@ import MonthToggle from '@/components/ui/MonthToggle.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
 import DockBar from '@/components/ui/DockBar.vue'
 import KpiCard from '@/components/ui/KpiCard.vue'
+import CountUpNumber from '@/components/ui/CountUpNumber.vue'
 import BarChart from '@/components/ui/BarChart.vue'
 import LineChart from '@/components/ui/LineChart.vue'
 import StatusChip from '@/components/ui/StatusChip.vue'
@@ -344,31 +345,30 @@ function goMaster(): void {
 
               <!-- Top KPI Summary Cards -->
               <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div class="border border-line rounded-xl bg-surface p-3.5 shadow-xs flex flex-col justify-between">
-                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Total Ad Spend</div>
-                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ adsMoney(adsTotals.spend * 100) }}</div>
-                  <div class="text-2xs text-muted mt-1">Across active campaigns</div>
-                </div>
-
-                <div class="border border-line rounded-xl bg-surface p-3.5 shadow-xs flex flex-col justify-between">
-                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Active Campaigns</div>
-                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ adsTotals.activeCount }}</div>
-                  <div class="text-2xs text-success font-semibold mt-1 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-success"></span> Running now
-                  </div>
-                </div>
-
-                <div class="border border-line rounded-xl bg-surface p-3.5 shadow-xs flex flex-col justify-between">
-                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Total Impressions</div>
-                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ adsTotals.impressions.toLocaleString() }}</div>
-                  <div class="text-2xs text-muted mt-1">Paid audience reach</div>
-                </div>
-
-                <div class="border border-line rounded-xl bg-surface p-3.5 shadow-xs flex flex-col justify-between">
-                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Clicks & CTR</div>
-                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ adsTotals.clicks.toLocaleString() }}</div>
-                  <div class="text-2xs text-accent font-semibold mt-1">{{ adsTotals.ctr.toFixed(2) }}% avg CTR</div>
-                </div>
+                <KpiCard
+                  label="Total Ad Spend"
+                  :value="adsMoney(adsTotals.spend * 100)"
+                  hint="Across active campaigns"
+                  to="/promote?tab=ads"
+                />
+                <KpiCard
+                  label="Active Campaigns"
+                  :value="adsTotals.activeCount"
+                  hint="Running now"
+                  to="/promote?tab=ads"
+                />
+                <KpiCard
+                  label="Total Impressions"
+                  :value="adsTotals.impressions.toLocaleString('en-US')"
+                  hint="Paid audience reach"
+                  to="/promote?tab=ads"
+                />
+                <KpiCard
+                  label="Clicks & CTR"
+                  :value="adsTotals.clicks.toLocaleString('en-US')"
+                  :hint="`${adsTotals.ctr.toFixed(2)}% avg CTR`"
+                  to="/promote?tab=ads"
+                />
               </div>
 
               <!-- Alerts if any -->
@@ -388,7 +388,7 @@ function goMaster(): void {
 
                 <div v-if="activeCampaigns.length" class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                   <div v-for="c in activeCampaigns" :key="c.id"
-                    class="border border-line rounded-xl bg-surface p-4 shadow-xs flex flex-col justify-between gap-3 hover:border-ink hover:shadow-sm transition-all">
+                    class="card-fade rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between gap-3 hover:border-ink hover:shadow-sm transition-all">
                     <div>
                       <div class="flex items-start justify-between gap-2 mb-2">
                         <div class="flex items-center gap-2 min-w-0">
@@ -407,11 +407,13 @@ function goMaster(): void {
                     <div class="pt-3 border-t border-faint flex flex-col gap-1.5">
                       <div class="flex items-center justify-between text-xs">
                         <span class="text-muted">{{ t('ads.spend') }}</span>
-                        <span class="font-bold text-ink font-mono">{{ adsMoney(adSpend(c.id) * 100) }}</span>
+                        <span class="font-bold text-ink font-mono">
+                          <CountUpNumber :value="adsMoney(adSpend(c.id) * 100)" />
+                        </span>
                       </div>
                       <div v-if="adInsight(c.id)" class="flex items-center justify-between text-2xs text-muted">
-                        <span>{{ adInsight(c.id)?.impressions.toLocaleString() }} views</span>
-                        <span class="font-semibold text-ink">{{ adInsight(c.id)?.clicks.toLocaleString() }} clicks ({{ adInsight(c.id)?.ctr }}%)</span>
+                        <span><CountUpNumber :value="`${adInsight(c.id)?.impressions.toLocaleString()} views`" /></span>
+                        <span class="font-semibold text-ink"><CountUpNumber :value="`${adInsight(c.id)?.clicks.toLocaleString()} clicks`" /> ({{ adInsight(c.id)?.ctr }}%)</span>
                       </div>
                     </div>
                   </div>
@@ -441,11 +443,19 @@ function goMaster(): void {
                       <td class="font-semibold text-ink">
                         {{ adsView.campaigns.find(c => c.id === ins.campaignId)?.name || ins.campaignId }}
                       </td>
-                      <td class="num font-bold">{{ adsMoney(ins.spend * 100) }}</td>
-                      <td class="num text-muted">{{ ins.impressions.toLocaleString() }}</td>
-                      <td class="num text-muted">{{ ins.clicks.toLocaleString() }}</td>
+                      <td class="num font-bold">
+                        <CountUpNumber :value="adsMoney(ins.spend * 100)" />
+                      </td>
+                      <td class="num text-muted">
+                        <CountUpNumber :value="ins.impressions.toLocaleString()" />
+                      </td>
+                      <td class="num text-muted">
+                        <CountUpNumber :value="ins.clicks.toLocaleString()" />
+                      </td>
                       <td class="num text-accent font-semibold">{{ ins.ctr }}%</td>
-                      <td class="num text-muted">{{ adsMoney(ins.cpc * 100) }}</td>
+                      <td class="num text-muted">
+                        <CountUpNumber :value="adsMoney(ins.cpc * 100)" />
+                      </td>
                     </tr>
                   </tbody>
                 </TableFrame>
@@ -471,30 +481,29 @@ function goMaster(): void {
 
               <!-- Top KPI Summary Cards -->
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div class="border border-line rounded-xl bg-surface p-4 shadow-xs flex flex-col justify-between">
-                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Top 5 Total Views</div>
-                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ top5TotalViews.toLocaleString() }}</div>
-                  <div class="text-2xs text-muted mt-1">Combined views of top 5 posts</div>
-                </div>
-
-                <div class="border border-line rounded-xl bg-surface p-4 shadow-xs flex flex-col justify-between">
-                  <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Top 5 Total Likes</div>
-                  <div class="text-xl sm:text-2xl font-extrabold font-mono text-ink mt-1.5">{{ top5TotalLikes.toLocaleString() }}</div>
-                  <div class="text-2xs text-accent font-semibold mt-1">Direct audience engagement</div>
-                </div>
-
-                <div class="border border-line rounded-xl bg-surface p-4 shadow-xs flex flex-col justify-between">
+                <KpiCard
+                  label="Top 5 Total Views"
+                  :value="top5TotalViews.toLocaleString('en-US')"
+                  hint="Combined views of top 5 posts"
+                />
+                <KpiCard
+                  label="Top 5 Total Likes"
+                  :value="top5TotalLikes.toLocaleString('en-US')"
+                  hint="Direct audience engagement"
+                />
+                <div class="card-fade rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
                   <div class="text-2xs font-extrabold uppercase tracking-wider text-muted">Top Performer</div>
                   <div class="text-base font-bold text-ink truncate mt-1.5" :title="bestPost?.post.topic">{{ bestPost?.post.topic ?? '-' }}</div>
                   <div class="text-2xs text-success font-semibold mt-1 flex items-center gap-1.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
-                    {{ bestPost?.views.toLocaleString() }} views
+                    <CountUpNumber v-if="bestPost" :value="`${bestPost.views.toLocaleString()} views`" />
+                    <span v-else>-</span>
                   </div>
                 </div>
               </div>
 
               <!-- #1 Spotlight Hero Card -->
-              <div v-if="bestPost" class="border border-line rounded-xl bg-surface p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div v-if="bestPost" class="card-fade rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-start gap-4 min-w-0">
                   <div class="w-12 h-12 rounded-xl bg-amber-600 border border-amber-700/40 text-white shadow-sm flex items-center justify-center font-extrabold text-xl font-mono flex-none">
                     #1
@@ -524,11 +533,15 @@ function goMaster(): void {
                 <div class="flex items-center gap-6 border-t md:border-t-0 md:border-l border-faint pt-3 md:pt-0 md:pl-6 flex-none">
                   <div class="flex flex-col">
                     <span class="text-2xs uppercase font-bold text-muted">Total Views</span>
-                    <span class="text-2xl font-extrabold font-mono text-ink">{{ bestPost.views.toLocaleString() }}</span>
+                    <span class="text-2xl font-extrabold font-mono text-ink">
+                      <CountUpNumber :value="bestPost.views.toLocaleString()" />
+                    </span>
                   </div>
                   <div class="flex flex-col">
                     <span class="text-2xs uppercase font-bold text-muted">Likes</span>
-                    <span class="text-2xl font-extrabold font-mono text-accent">{{ postLikes(bestPost.post.id).toLocaleString() }}</span>
+                    <span class="text-2xl font-extrabold font-mono text-accent">
+                      <CountUpNumber :value="postLikes(bestPost.post.id).toLocaleString()" />
+                    </span>
                   </div>
                   <button type="button" class="btn text-xs py-1.5 px-3.5 font-semibold" @click="askEdit">
                     Edit
@@ -575,10 +588,10 @@ function goMaster(): void {
                         <StatusChip :status="t.post.status" />
                       </td>
                       <td class="num font-bold font-mono text-ink text-sm">
-                        {{ t.views.toLocaleString('en-US') }}
+                        <CountUpNumber :value="t.views.toLocaleString('en-US')" />
                       </td>
                       <td class="num font-mono text-muted text-sm">
-                        {{ postLikes(t.post.id).toLocaleString('en-US') }}
+                        <CountUpNumber :value="postLikes(t.post.id).toLocaleString('en-US')" />
                       </td>
                       <td class="text-right">
                         <button type="button" class="btn text-xs py-1 px-3 w-auto inline-flex items-center justify-center font-semibold hover:border-ink" @click="askEdit">
