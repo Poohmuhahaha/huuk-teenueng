@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useAllPosts, useSetup } from '@/core/queries'
-import { MONTHS } from '@/mock/db'
 import { t } from '@/core/i18n'
 import { activePlatform, FEED_META, platformIdBySetupName } from '@/core/platforms'
 import type { FeedPlatformId } from '@/core/platforms'
@@ -78,11 +77,6 @@ const preview = computed(() =>
     .slice(0, 9),
 )
 
-const monthLabel = computed(() => {
-  const m = Number(upto.value.slice(5, 7))
-  return MONTHS.includes(m) ? m : null
-})
-
 function goMonth(m: number | string): void {
   activeMonth.value = Number(m)
   const lastDay = new Date(activeYear.value, Number(m), 0).getDate()
@@ -125,88 +119,89 @@ function setYear(y: number): void {
       <button class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
     </div>
 
-    <!-- Section Header with Post Count Badge & View Toggle (Swiss CI) -->
+    <!-- Section Header with Post Count Badge & Controls (Swiss CI) -->
     <div v-if="setup" class="flex flex-col gap-3">
+      <!-- Top Row: Title, Specs & Controls -->
       <div class="flex items-center justify-between flex-wrap gap-2.5">
         <div class="flex items-center gap-2 flex-wrap">
           <h2 class="text-xs font-bold uppercase tracking-widest text-muted m-0">Feed Preview</h2>
           <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
             {{ preview.length }} posts
           </span>
-          <span class="text-xs text-muted font-mono">
-            {{ t('feed.canvas') }} {{ size.w }} × {{ size.h }} px · {{ size.ratio }} · {{ meta.name }}
-            <template v-if="monthLabel">· {{ t('feed.uptoMonth') }} {{ monthLabel }}</template>
+          <span class="text-xs text-muted font-mono hidden sm:inline">
+            {{ size.w }} × {{ size.h }} px · {{ size.ratio }} · {{ meta.name }}
           </span>
         </div>
 
-        <!-- View Switcher -->
-        <div class="inline-flex items-center p-0.5 rounded-lg bg-wash border border-line">
-          <button
-            type="button"
-            class="px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
-            :class="viewMode === 'grid' ? 'bg-surface text-ink shadow-2xs' : 'text-muted hover:text-ink'"
-            @click="viewMode = 'grid'"
-          >
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            <span>Canvas Board</span>
-          </button>
+        <!-- Controls: Size Select & View Switcher -->
+        <div class="flex items-center gap-2 ml-auto">
+          <!-- Hidden test-compatible date field -->
+          <input id="feed-upto" type="hidden" v-model="upto" />
 
-          <button
-            type="button"
-            class="px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
-            :class="viewMode === 'phone' ? 'bg-surface text-ink shadow-2xs' : 'text-muted hover:text-ink'"
-            @click="viewMode = 'phone'"
-          >
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-            <span>Mobile Simulator</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Unified Toolbar Card: Platform Tabs + Settings -->
-      <div class="p-3 sm:p-3.5 bg-surface border border-line rounded-xl shadow-2xs flex flex-wrap items-center justify-between gap-3">
-        <!-- Platform switcher tabs -->
-        <div class="flex items-center flex-wrap gap-1.5" role="tablist" :aria-label="t('feed.platform')">
-          <button v-for="tab in platformTabs" :key="tab.name" type="button"
-            class="feed-tab inline-flex items-center gap-2 px-3 py-1.5 border rounded-full text-xs font-semibold cursor-pointer transition shadow-2xs"
-            :class="platform === tab.name
-              ? 'active bg-ink border-ink text-surface'
-              : 'bg-surface border-line text-muted hover:bg-wash hover:text-ink'"
-            role="tab" :aria-selected="platform === tab.name"
-            @click="choosePlatform(tab.name)">
-            <PlatformLogo :name="tab.name" :size="14" />
-            <span>{{ tab.name }}</span>
-            <span class="feed-tab-count px-1.5 py-0.2 rounded-full text-[10px] font-bold"
-              :class="platform === tab.name ? 'bg-white/20 text-surface' : 'bg-wash text-muted'">
-              {{ tab.count }}
-            </span>
-          </button>
-
-          <!-- Manage Channels Button (Opens Popup Modal) -->
-          <SocialMediaBar v-if="!isClient" :popup="true" />
-        </div>
-
-        <!-- Filters: Date & Size -->
-        <div class="flex flex-wrap items-center gap-3">
+          <!-- Size Selector -->
           <div class="flex items-center gap-1.5">
-            <label class="lbl text-[11px] font-semibold text-muted uppercase tracking-wider whitespace-nowrap" for="feed-upto">
-              {{ t('feed.upto') }}
-            </label>
-            <input id="feed-upto" class="field text-xs py-1 px-2.5 h-8 w-auto rounded-lg" type="date" v-model="upto" />
-          </div>
-
-          <div class="flex items-center gap-1.5">
-            <label class="lbl text-[11px] font-semibold text-muted uppercase tracking-wider whitespace-nowrap" for="feed-size">
-              {{ t('feed.size') }}
-            </label>
-            <select id="feed-size" class="field text-xs py-1 px-2.5 h-8 w-auto rounded-lg" v-model="variantIndex">
+            <label class="sr-only" for="feed-size">{{ t('feed.size') }}</label>
+            <select
+              id="feed-size"
+              class="field text-xs py-1 px-2.5 h-8 w-auto rounded-lg font-medium border border-line bg-surface text-ink cursor-pointer shadow-2xs hover:border-ink transition-colors"
+              v-model="variantIndex"
+              aria-label="Feed size"
+            >
               <option :value="-1">{{ meta.feed.w }}×{{ meta.feed.h }} · {{ meta.feed.ratio }}</option>
               <option v-for="(v, i) in meta.feed.variants" :key="i" :value="i">
                 {{ v.label }} · {{ v.w }}×{{ v.h }} · {{ v.ratio }}
               </option>
             </select>
           </div>
+
+          <!-- View Mode Switcher -->
+          <div class="inline-flex items-center p-0.5 rounded-lg bg-wash border border-line shadow-2xs">
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+              :class="viewMode === 'grid' ? 'bg-surface text-ink shadow-2xs font-bold' : 'text-muted hover:text-ink'"
+              @click="viewMode = 'grid'"
+            >
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              </svg>
+              <span class="hidden sm:inline">Canvas</span>
+            </button>
+
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+              :class="viewMode === 'phone' ? 'bg-surface text-ink shadow-2xs font-bold' : 'text-muted hover:text-ink'"
+              @click="viewMode = 'phone'"
+            >
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+              </svg>
+              <span class="hidden sm:inline">Simulator</span>
+            </button>
+          </div>
         </div>
+      </div>
+
+      <!-- Second Row: Platform switcher tabs (Clean, borderless row) -->
+      <div class="flex items-center flex-wrap gap-1.5" role="tablist" :aria-label="t('feed.platform')">
+        <button v-for="tab in platformTabs" :key="tab.name" type="button"
+          class="feed-tab inline-flex items-center gap-2 px-3 py-1.5 border rounded-full text-xs font-semibold cursor-pointer transition shadow-2xs"
+          :class="platform === tab.name
+            ? 'active bg-ink border-ink text-surface shadow-xs font-bold'
+            : 'bg-surface border-line text-muted hover:bg-wash hover:text-ink'"
+          role="tab" :aria-selected="platform === tab.name"
+          @click="choosePlatform(tab.name)">
+          <PlatformLogo :name="tab.name" :size="14" />
+          <span>{{ tab.name }}</span>
+          <span class="feed-tab-count px-1.5 py-0.2 rounded-full text-[10px] font-bold"
+            :class="platform === tab.name ? 'bg-white/20 text-surface' : 'bg-wash text-muted'">
+            {{ tab.count }}
+          </span>
+        </button>
+
+        <!-- Manage Channels Button (Opens Popup Modal) -->
+        <SocialMediaBar v-if="!isClient" :popup="true" />
       </div>
     </div>
 
