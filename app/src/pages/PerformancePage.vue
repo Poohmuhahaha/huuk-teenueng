@@ -47,6 +47,17 @@ const byPost = computed(() => {
   })
 })
 
+const postPageIndex = ref(0)
+const postPageSize = ref(8)
+const totalByPost = computed(() => byPost.value.length)
+const totalByPostPages = computed(() => Math.max(1, Math.ceil(totalByPost.value / postPageSize.value)))
+const rangePostStart = computed(() => totalByPost.value === 0 ? 0 : postPageIndex.value * postPageSize.value + 1)
+const rangePostEnd = computed(() => Math.min(totalByPost.value, (postPageIndex.value + 1) * postPageSize.value))
+const visibleByPost = computed(() => {
+  const all = byPost.value
+  return all.slice(postPageIndex.value * postPageSize.value, (postPageIndex.value + 1) * postPageSize.value)
+})
+
 const goalRows = computed(() => {
   const mets = metrics.value ?? []
   return platformGoals.map((g) => {
@@ -152,7 +163,7 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
           <TableFrame v-else>
             <thead><tr><th>Topic</th><th>Posted</th><th>+7 days</th><th class="num">Likes</th><th class="num">Views</th></tr></thead>
             <tbody>
-              <tr v-for="r in byPost" :key="r.post.id" style="cursor: default;">
+              <tr v-for="r in visibleByPost" :key="r.post.id" style="cursor: default;">
                 <td class="font-semibold text-ink">{{ r.post.topic }}</td>
                 <td class="text-muted text-xs font-mono">{{ r.post.date ?? '—' }}</td>
                 <td class="text-muted text-xs font-mono">{{ r.post.date ? plus7(r.post.date) : '—' }}</td>
@@ -161,6 +172,37 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
               </tr>
             </tbody>
           </TableFrame>
+
+          <!-- Pagination bar -->
+          <div
+            v-if="totalByPost > 0"
+            class="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 mt-2 bg-surface rounded-xl border border-line/60 text-xs text-muted"
+          >
+            <span>Showing <strong class="font-semibold text-ink">{{ rangePostStart }}–{{ rangePostEnd }}</strong> of <strong class="font-semibold text-ink">{{ totalByPost }}</strong> posts</span>
+            <div v-if="totalByPostPages > 1" class="flex items-center gap-1.5 ml-auto">
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+                :disabled="postPageIndex === 0"
+                aria-label="Previous page"
+                @click="postPageIndex--"
+              >
+                ‹ Prev
+              </button>
+              <span class="font-mono text-xs px-1 text-ink">
+                {{ postPageIndex + 1 }} / {{ totalByPostPages }}
+              </span>
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+                :disabled="postPageIndex >= totalByPostPages - 1"
+                aria-label="Next page"
+                @click="postPageIndex++"
+              >
+                Next ›
+              </button>
+            </div>
+          </div>
         </div>
         <LiveSection variant="table" />
       </div>

@@ -157,6 +157,13 @@ const adsAlerts = computed(() => {
   return rows.slice(0, 4)
 })
 
+const showAllInsights = ref(false)
+const visibleInsights = computed(() => {
+  const insights = adsView.value?.insights ?? []
+  if (showAllInsights.value || insights.length <= 5) return insights
+  return insights.slice(0, 5)
+})
+
 const pillarBars = computed(() => {
   if (!stats.value) return []
   const rows = postsQ.data.value ?? []
@@ -504,7 +511,17 @@ function goMaster(): void {
 
               <!-- Performance Breakdown Table -->
               <div v-if="adsView?.insights?.length" class="flex flex-col gap-2 mt-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-muted">Campaign Performance Breakdown</span>
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase tracking-wider text-muted">Campaign Performance Breakdown</span>
+                  <button
+                    v-if="(adsView?.insights?.length ?? 0) > 5"
+                    type="button"
+                    class="text-xs font-semibold text-accent hover:underline cursor-pointer bg-transparent border-0 p-0"
+                    @click="showAllInsights = !showAllInsights"
+                  >
+                    {{ showAllInsights ? 'Show top 5' : `View all (${adsView.insights.length})` }}
+                  </button>
+                </div>
                 <TableFrame>
                   <thead>
                     <tr>
@@ -517,7 +534,7 @@ function goMaster(): void {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="ins in adsView.insights" :key="ins.campaignId">
+                    <tr v-for="ins in visibleInsights" :key="ins.campaignId">
                       <td class="font-semibold text-ink">
                         {{ adsView.campaigns.find(c => c.id === ins.campaignId)?.name || ins.campaignId }}
                       </td>

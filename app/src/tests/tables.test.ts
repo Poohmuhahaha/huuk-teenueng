@@ -50,6 +50,23 @@ describe('MasterTable (TanStack Table v9)', () => {
     await w.find('thead input[type="checkbox"]').setValue(true)
     expect(w.text()).toContain('3 selected')
   })
+
+  it('limits rows according to pageSize and supports pagination', async () => {
+    const manyPosts = [
+      post({ id: 'p1', topic: 'P1' }),
+      post({ id: 'p2', topic: 'P2' }),
+      post({ id: 'p3', topic: 'P3' }),
+      post({ id: 'p4', topic: 'P4' }),
+    ]
+    const w = mount(MasterTable, { props: { rows: manyPosts, pageSize: 2 } })
+    expect(w.findAll('tbody tr')).toHaveLength(2)
+    expect(w.text()).toContain('Showing 1–2 of 4')
+    const nextBtn = w.find('button[aria-label="Next page"]')
+    expect(nextBtn.exists()).toBe(true)
+    await nextBtn.trigger('click')
+    expect(w.findAll('tbody tr')).toHaveLength(2)
+    expect(w.text()).toContain('Showing 3–4 of 4')
+  })
 })
 
 describe('TxnTable (TanStack Table v9)', () => {
@@ -66,5 +83,21 @@ describe('TxnTable (TanStack Table v9)', () => {
     expect(w.findAll('tbody tr')[0].text()).toContain('15,000')
     await amountTh.trigger('click')
     expect(w.findAll('tbody tr')[0].text()).toContain('3,200')
+  })
+
+  it('limits rows according to pageSize and paginates', async () => {
+    const manyTxns: Txn[] = [
+      { id: 'm1', date: '2026-02-01', amount: 100, kind: 'IN', category: 'A', sub: '' },
+      { id: 'm2', date: '2026-02-02', amount: 200, kind: 'IN', category: 'B', sub: '' },
+      { id: 'm3', date: '2026-02-03', amount: 300, kind: 'OUT', category: 'C', sub: '' },
+    ]
+    const w = mount(TxnTable, { props: { rows: manyTxns, currency: '฿', pageSize: 2 } })
+    // On desktop, TableFrame tbody tr should have 2 rows
+    expect(w.find('.hidden.md\\:block tbody').findAll('tr')).toHaveLength(2)
+    expect(w.text()).toContain('Showing 1–2 of 3')
+    const nextBtn = w.find('button[aria-label="Next page"]')
+    await nextBtn.trigger('click')
+    expect(w.find('.hidden.md\\:block tbody').findAll('tr')).toHaveLength(1)
+    expect(w.text()).toContain('Showing 3–3 of 3')
   })
 })

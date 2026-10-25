@@ -73,6 +73,16 @@ const campaigns = computed(() => {
   if (!activeAccount.value) return rows
   return rows.filter((c) => c.accountId === activeAccount.value?.id)
 })
+const pageIndex = ref(0)
+const pageSize = ref(8)
+const totalCampaigns = computed(() => campaigns.value.length)
+const totalCampaignPages = computed(() => Math.max(1, Math.ceil(totalCampaigns.value / pageSize.value)))
+const rangeStart = computed(() => totalCampaigns.value === 0 ? 0 : pageIndex.value * pageSize.value + 1)
+const rangeEnd = computed(() => Math.min(totalCampaigns.value, (pageIndex.value + 1) * pageSize.value))
+const visibleCampaigns = computed(() => {
+  const all = campaigns.value
+  return all.slice(pageIndex.value * pageSize.value, (pageIndex.value + 1) * pageSize.value)
+})
 const insightOf = (campaignId: string) =>
   view.value?.insights.find((i) => i.campaignId === campaignId) ?? null
 const adsetsOf = (campaignId: string) =>
@@ -345,7 +355,7 @@ const audit = computed(() => view.value?.audit ?? [])
             </tr>
           </thead>
           <tbody>
-            <template v-for="c in campaigns" :key="c.id">
+            <template v-for="c in visibleCampaigns" :key="c.id">
               <tr :class="{ selected: openId === c.id }" @click="toggle(c.id)">
                 <td>
                   <button class="ads-link p-0 border-0 bg-transparent font-inherit font-semibold text-inherit cursor-pointer text-left hover:text-accent transition" @click.stop="toggle(c.id)">{{ c.name }}</button>
@@ -367,6 +377,37 @@ const audit = computed(() => view.value?.audit ?? [])
             </template>
           </tbody>
         </TableFrame>
+
+        <!-- Pagination bar -->
+        <div
+          v-if="totalCampaigns > 0"
+          class="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 mt-2 bg-surface rounded-xl border border-line/60 text-xs text-muted"
+        >
+          <span>Showing <strong class="font-semibold text-ink">{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong class="font-semibold text-ink">{{ totalCampaigns }}</strong> campaigns</span>
+          <div v-if="totalCampaignPages > 1" class="flex items-center gap-1.5 ml-auto">
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+              :disabled="pageIndex === 0"
+              aria-label="Previous page"
+              @click="pageIndex--"
+            >
+              ‹ Prev
+            </button>
+            <span class="font-mono text-xs px-1 text-ink">
+              {{ pageIndex + 1 }} / {{ totalCampaignPages }}
+            </span>
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+              :disabled="pageIndex >= totalCampaignPages - 1"
+              aria-label="Next page"
+              @click="pageIndex++"
+            >
+              Next ›
+            </button>
+          </div>
+        </div>
 
         <!-- Ad Campaign Detail Sheet (Bottom Sheet on mobile, Right Drawer on desktop) -->
         <Drawer

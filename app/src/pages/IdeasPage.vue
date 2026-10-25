@@ -17,6 +17,17 @@ const isWide = computed(() => deckFull.value || wide.value)
 
 const { data: ideas, isPending, isError, error: loadError, refetch } = useIdeas()
 const isEmpty = computed(() => !ideas.value || ideas.value.length === 0)
+
+const pageIndex = ref(0)
+const pageSize = ref(10)
+const totalIdeas = computed(() => ideas.value?.length ?? 0)
+const totalPages = computed(() => Math.max(1, Math.ceil(totalIdeas.value / pageSize.value)))
+const rangeStart = computed(() => totalIdeas.value === 0 ? 0 : pageIndex.value * pageSize.value + 1)
+const rangeEnd = computed(() => Math.min(totalIdeas.value, (pageIndex.value + 1) * pageSize.value))
+const visibleIdeas = computed(() => {
+  const all = ideas.value ?? []
+  return all.slice(pageIndex.value * pageSize.value, (pageIndex.value + 1) * pageSize.value)
+})
 const addIdea = useAddIdea()
 const toggleIdea = useToggleIdea()
 const promoteMonth = activeMonth
@@ -126,7 +137,7 @@ async function onPromote(it: Idea): Promise<void> {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="it in ideas" :key="it.id" class="hover:bg-wash/60 transition-colors">
+          <tr v-for="it in visibleIdeas" :key="it.id" class="hover:bg-wash/60 transition-colors">
             <td>
               <strong class="font-semibold text-ink text-sm">{{ it.topic }}</strong>
             </td>
@@ -171,6 +182,37 @@ async function onPromote(it: Idea): Promise<void> {
           </tr>
         </tbody>
       </TableFrame>
+
+      <!-- Pagination bar -->
+      <div
+        v-if="totalIdeas > 0"
+        class="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 mt-2 bg-surface rounded-xl border border-line/60 text-xs text-muted"
+      >
+        <span>Showing <strong class="font-semibold text-ink">{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong class="font-semibold text-ink">{{ totalIdeas }}</strong> ideas</span>
+        <div v-if="totalPages > 1" class="flex items-center gap-1.5 ml-auto">
+          <button
+            type="button"
+            class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+            :disabled="pageIndex === 0"
+            aria-label="Previous page"
+            @click="pageIndex--"
+          >
+            ‹ Prev
+          </button>
+          <span class="font-mono text-xs px-1 text-ink">
+            {{ pageIndex + 1 }} / {{ totalPages }}
+          </span>
+          <button
+            type="button"
+            class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+            :disabled="pageIndex >= totalPages - 1"
+            aria-label="Next page"
+            @click="pageIndex++"
+          >
+            Next ›
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Standard Slide DockBar -->

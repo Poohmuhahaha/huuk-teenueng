@@ -1,19 +1,46 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   FlexRender, tableFeatures, useTable,
   rowSortingFeature, createSortedRowModel, sortFn_alphanumeric, sortFn_basic,
+  rowPaginationFeature, createPaginatedRowModel,
 } from '@tanstack/vue-table'
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { Txn } from '@/mock/db'
 import TableFrame from '@/components/tables/TableFrame.vue'
 
-const props = defineProps<{ rows: Txn[]; currency: string }>()
+const props = withDefaults(
+  defineProps<{
+    rows: Txn[]
+    currency: string
+    pageSize?: number
+  }>(),
+  {
+    pageSize: 8,
+  }
+)
+
+const pageIndex = ref(0)
+const pageSize = ref(props.pageSize)
+
+watch(() => props.pageSize, (newSize) => {
+  if (newSize) {
+    pageSize.value = newSize
+    pageIndex.value = 0
+  }
+})
+
+watch(() => props.rows.length, () => {
+  const maxPage = Math.max(0, Math.ceil(props.rows.length / pageSize.value) - 1)
+  if (pageIndex.value > maxPage) pageIndex.value = 0
+})
 
 const features = tableFeatures({
   rowSortingFeature,
   sortedRowModel: createSortedRowModel(),
   sortFns: { alphanumeric: sortFn_alphanumeric, basic: sortFn_basic },
+  rowPaginationFeature,
+  paginatedRowModel: createPaginatedRowModel(),
 })
 
 const columns: ColumnDef<typeof features, Txn, unknown>[] = [
@@ -33,7 +60,33 @@ const columns: ColumnDef<typeof features, Txn, unknown>[] = [
 ]
 
 const data = computed(() => props.rows)
-const table = useTable({ features, columns, data })
+const table = useTable({
+  features,
+  columns,
+  data,
+  state: {
+    get pagination() {
+      return { pageIndex: pageIndex.value, pageSize: pageSize.value }
+    },
+  },
+  onPaginationChange: (updater) => {
+    const next = typeof updater === 'function'
+      ? updater({ pageIndex: pageIndex.value, pageSize: pageSize.value })
+      : updater
+    pageIndex.value = next.pageIndex
+    pageSize.value = next.pageSize
+  },
+})
+
+const totalRows = computed(() => props.rows.length)
+const totalPages = computed(() => Math.max(1, Math.ceil(totalRows.value / pageSize.value)))
+const rangeStart = computed(() => totalRows.value === 0 ? 0 : pageIndex.value * pageSize.value + 1)
+const rangeEnd = computed(() => Math.min(totalRows.value, (pageIndex.value + 1) * pageSize.value))
+
+function setPageSize(size: number) {
+  pageSize.value = size
+  pageIndex.value = 0
+}
 
 function ariaSort(canSort: boolean, sorted: false | 'asc' | 'desc'): 'ascending' | 'descending' | 'none' {
   if (!canSort) return 'none'
@@ -185,6 +238,53 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
             {{ row.original.kind }}
           </span>
         </div>
+      </div>
+    </div>
+
+    <!-- Pagination bar (Desktop & Mobile) -->
+    <div
+      v-if="totalRows > 0"
+      class="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 mt-2.5 rounded-xl bg-surface border border-line/60 shadow-2xs text-xs text-muted"
+    >
+      <div class="flex items-center gap-2">
+        <span>Showing <strong class="font-semibold text-ink">{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong class="font-semibold text-ink">{{ totalRows }}</strong> entries</span>
+        <div v-if="totalRows > 8" class="hidden sm:flex items-center gap-1 ml-3 text-[11px]">
+          <span class="text-muted/70">Per page:</span>
+          <button
+            v-for="size in [8, 15, 30]"
+            :key="size"
+            type="button"
+            class="px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer"
+            :class="pageSize === size ? 'bg-ink text-white font-bold' : 'hover:bg-wash text-muted'"
+            @click="setPageSize(size)"
+          >
+            {{ size }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="totalPages > 1" class="flex items-center gap-1.5 ml-auto">
+        <button
+          type="button"
+          class="inline-flex items-center justify-center px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-ink transition-colors cursor-pointer"
+          :disabled="!table.getCanPreviousPage()"
+          aria-label="Previous page"
+          @click="table.previousPage()"
+        >
+          ‹ Prev
+        </button>
+        <span class="font-mono text-xs px-2 text-ink">
+          {{ pageIndex + 1 }} / {{ totalPages }}
+        </span>
+        <button
+          type="button"
+          class="inline-flex items-center justify-center px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-ink transition-colors cursor-pointer"
+          :disabled="!table.getCanNextPage()"
+          aria-label="Next page"
+          @click="table.nextPage()"
+        >
+          Next ›
+        </button>
       </div>
     </div>
   </div>

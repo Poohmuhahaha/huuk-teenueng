@@ -3,19 +3,49 @@ import { computed, ref, watch } from 'vue'
 import {
   FlexRender, tableFeatures, useTable,
   rowSortingFeature, createSortedRowModel, sortFn_alphanumeric,
+  rowPaginationFeature, createPaginatedRowModel,
 } from '@tanstack/vue-table'
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { Post } from '@/mock/db'
 import StatusChip from '@/components/ui/StatusChip.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
 
-const props = defineProps<{ rows: Post[]; loading?: boolean; selectedId?: string | null }>()
+const props = withDefaults(
+  defineProps<{
+    rows: Post[]
+    loading?: boolean
+    selectedId?: string | null
+    pageSize?: number
+  }>(),
+  {
+    loading: false,
+    selectedId: null,
+    pageSize: 10,
+  }
+)
 const emit = defineEmits<{ select: [post: Post] }>()
+
+const pageIndex = ref(0)
+const pageSize = ref(props.pageSize)
+
+watch(() => props.pageSize, (newSize) => {
+  if (newSize) {
+    pageSize.value = newSize
+    pageIndex.value = 0
+  }
+})
+
+watch(() => props.rows.length, () => {
+  const maxPage = Math.max(0, Math.ceil(props.rows.length / pageSize.value) - 1)
+  if (pageIndex.value > maxPage) pageIndex.value = 0
+})
 
 const features = tableFeatures({
   rowSortingFeature,
   sortedRowModel: createSortedRowModel(),
   sortFns: { alphanumeric: sortFn_alphanumeric },
+  rowPaginationFeature,
+  paginatedRowModel: createPaginatedRowModel(),
 })
 
 const columns: ColumnDef<typeof features, Post, unknown>[] = [
@@ -31,7 +61,33 @@ const columns: ColumnDef<typeof features, Post, unknown>[] = [
 ]
 
 const data = computed(() => props.rows)
-const table = useTable({ features, columns, data })
+const table = useTable({
+  features,
+  columns,
+  data,
+  state: {
+    get pagination() {
+      return { pageIndex: pageIndex.value, pageSize: pageSize.value }
+    },
+  },
+  onPaginationChange: (updater) => {
+    const next = typeof updater === 'function'
+      ? updater({ pageIndex: pageIndex.value, pageSize: pageSize.value })
+      : updater
+    pageIndex.value = next.pageIndex
+    pageSize.value = next.pageSize
+  },
+})
+
+const totalRows = computed(() => props.rows.length)
+const totalPages = computed(() => Math.max(1, Math.ceil(totalRows.value / pageSize.value)))
+const rangeStart = computed(() => totalRows.value === 0 ? 0 : pageIndex.value * pageSize.value + 1)
+const rangeEnd = computed(() => Math.min(totalRows.value, (pageIndex.value + 1) * pageSize.value))
+
+function setPageSize(size: number) {
+  pageSize.value = size
+  pageIndex.value = 0
+}
 
 const checked = ref<Set<string>>(new Set())
 const visibleIds = computed(() => table.getRowModel().rows.map((r) => r.original.id))
@@ -40,10 +96,10 @@ const allChecked = computed(() =>
 )
 const someChecked = computed(() => visibleIds.value.some((id) => checked.value.has(id)))
 
-// Drop selections that scrolled out of the filtered/sorted view.
-watch(visibleIds, (ids) => {
-  const visible = new Set(ids)
-  const next = new Set([...checked.value].filter((id) => visible.has(id)))
+// Drop selections for posts that no longer exist in rows
+const existingIds = computed(() => new Set(props.rows.map((r) => r.id)))
+watch(existingIds, (ids) => {
+  const next = new Set([...checked.value].filter((id) => ids.has(id)))
   if (next.size !== checked.value.size) checked.value = next
 })
 
@@ -133,6 +189,52 @@ function onRowKeydown(e: KeyboardEvent, post: Post): void {
         </tr>
       </tbody>
     </TableFrame>
-    <p class="text-muted text-sm px-5 py-2.5 m-0 border-t border-faint bg-surface flex-none">{{ checked.size }} selected · click a row to edit · headers sort</p>
+    <div class="text-muted text-xs sm:text-sm px-4 py-2.5 m-0 border-t border-faint bg-surface flex-none flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span>{{ checked.size }} selected</span>
+        <span class="text-muted/60">·</span>
+        <span>Showing <strong class="font-semibold text-ink">{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong class="font-semibold text-ink">{{ totalRows }}</strong> topics</span>
+        <div v-if="totalRows > 10" class="hidden sm:flex items-center gap-1 ml-2 text-xs">
+          <span class="text-muted/70">Show:</span>
+          <button
+            v-for="size in [10, 25, 50]"
+            :key="size"
+            type="button"
+            class="px-2 py-0.5 rounded text-xs font-mono transition-colors cursor-pointer"
+            :class="pageSize === size ? 'bg-ink text-white font-bold' : 'hover:bg-wash text-muted'"
+            @click="setPageSize(size)"
+          >
+            {{ size }}
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 ml-auto">
+        <span class="text-xs text-muted/70 hidden md:inline">click a row to edit</span>
+        <div v-if="totalPages > 1" class="flex items-center gap-1.5 ml-2">
+          <button
+            type="button"
+            class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+            :disabled="!table.getCanPreviousPage()"
+            aria-label="Previous page"
+            @click="table.previousPage()"
+          >
+            ‹ Prev
+          </button>
+          <span class="font-mono text-xs px-1 text-ink">
+            {{ pageIndex + 1 }} / {{ totalPages }}
+          </span>
+          <button
+            type="button"
+            class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+            :disabled="!table.getCanNextPage()"
+            aria-label="Next page"
+            @click="table.nextPage()"
+          >
+            Next ›
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
