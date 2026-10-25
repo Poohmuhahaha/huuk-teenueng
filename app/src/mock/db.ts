@@ -337,7 +337,7 @@ export const brand: Brand = {
   moodboard: [],
   radius: 12,
   fillOpacity: 100,
-  strokeWidth: 1,
+  strokeWidth: 0,
   shadow: 'soft',
 }
 

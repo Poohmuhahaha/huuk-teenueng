@@ -180,15 +180,15 @@
   --surface-2: #fafafa;
   --ink: #0a0a0a;
   --muted: #666666;
-  --faint: #e5e7eb;
+  --faint: transparent;
   --wash: #f8f9fa;
-  --line: #e5e7eb;
+  --line: transparent;
 
   --accent: #000000;
   --accent-hover: #222222;
   --accent-ink: #ffffff;
   --accent-wash: #f4f5f6;
-  --accent-line: #d1d5db;
+  --accent-line: transparent;
   --focus: #000000;
   --selected: #f3f4f6;
 
@@ -205,6 +205,7 @@
   --radius-sm: 8px;
   --radius-lg: 16px;
   --radius-pill: 999px;
+  --stroke-w: 0px;
 
   --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
   --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -217,6 +218,9 @@
 }
 
 * { box-sizing: border-box; }
+*, ::before, ::after {
+  border-color: transparent;
+}
 
 /* Fill/fit: every control takes the container width without ever overflowing
    it. In row layouts flex-shrink keeps siblings inside the container.
@@ -731,10 +735,10 @@ button.wire { font-family: inherit; cursor: pointer; }
 h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 6px; }
 h2 { font-size: 18px; font-weight: 650; letter-spacing: -0.005em; margin: 24px 0 8px; }
 .card {
-  border: var(--stroke-w, 1px) solid var(--faint); border-radius: var(--radius); padding: 18px;
+  border: none !important; border-radius: var(--radius); padding: 18px;
   background: var(--surface); box-shadow: var(--shadow-sm);
 }
-.panel { border: var(--stroke-w, 1px) solid var(--faint); border-radius: var(--radius); padding: 12px; background: var(--surface); }
+.panel { border: none !important; border-radius: var(--radius); padding: 12px; background: var(--surface); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .grid2 > *, .grid3 > *, .grid4 > *, .grid6 > * { min-width: 0; }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -746,15 +750,15 @@ h2 { font-size: 18px; font-weight: 650; letter-spacing: -0.005em; margin: 24px 0
 
 .btn {
   font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
-  border: 1px solid var(--faint); border-radius: var(--radius-sm); background: var(--surface);
+  border: none; border-radius: var(--radius-sm); background: var(--surface);
   color: var(--ink); padding: 8px 15px;
   box-shadow: var(--shadow-xs);
   transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.06s, box-shadow 0.15s;
 }
-.btn:hover { background: var(--wash); border-color: var(--line); }
+.btn:hover { background: var(--wash); border-color: transparent; }
 .btn:active { transform: translateY(1px); box-shadow: none; }
-.btn-primary { background: var(--accent-strong, var(--accent)); color: var(--accent-strong-ink, var(--accent-ink)); border-color: var(--accent-strong, var(--accent)); }
-.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-primary { background: var(--accent-strong, var(--accent)); color: var(--accent-strong-ink, var(--accent-ink)); border: none; }
+.btn-primary:hover { background: var(--accent-hover); border-color: transparent; }
 .btn:disabled { opacity: 0.5; cursor: default; box-shadow: none; transform: none; }
 /* Compact icon action: fixed 44px circle carrying only an icon or glyph.
    Doubled class so it also beats the fill/fit rule for links (a.btn). */
@@ -763,12 +767,12 @@ h2 { font-size: 18px; font-weight: 650; letter-spacing: -0.005em; margin: 24px 0
 a.btn { color: inherit; text-align: center; text-decoration: none; }
 .field, select.field, input.field, textarea.field {
   font: inherit; font-size: 14.5px; width: 100%; color: var(--ink);
-  border: 1px solid var(--faint); border-radius: var(--radius-sm); padding: 8px 12px; background: var(--surface);
+  border: none; border-radius: var(--radius-sm); padding: 8px 12px; background: var(--wash);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .field::placeholder { color: var(--muted); }
 .field:focus, select.field:focus, input.field:focus, textarea.field:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash);
+  outline: none; border-color: transparent; box-shadow: 0 0 0 2px var(--ink);
 }
 label.lbl { display: block; font-size: 13px; font-weight: 650; color: var(--muted); margin: 10px 0 4px; }
 .chip {
@@ -802,11 +806,11 @@ label.lbl { display: block; font-size: 13px; font-weight: 650; color: var(--mute
 /* tables — one chrome for TanStack tables and plain tables alike, owned by
    the TableFrame component (bordered scrolling frame + table.tbl).
    Tables stay at a fixed 18px corner (flat theme keeps no shadow). */
-.tblwrap { overflow-x: auto; border: 1px solid var(--faint); border-radius: 18px; background: var(--surface); box-shadow: none; }
+.tblwrap { overflow-x: auto; border: none !important; border-radius: 18px; background: var(--surface); box-shadow: none; }
 table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
-.tbl th, .tbl td { border-bottom: 1px solid var(--faint); padding: 10px 14px; text-align: left; }
+.tbl th, .tbl td { border-bottom: 1px solid var(--wash); padding: 10px 14px; text-align: left; }
 .tbl thead th {
-  border-bottom: 1px solid var(--line); background: var(--wash);
+  border-bottom: 1px solid var(--wash); background: var(--wash);
   color: var(--ink-soft); font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
   white-space: nowrap;
 }
@@ -858,13 +862,13 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 /* cards & feed */
 .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .pcard {
-  border: 1px solid var(--faint); border-radius: var(--radius); overflow: hidden; cursor: pointer;
+  border: none !important; border-radius: var(--radius); overflow: hidden; cursor: pointer;
   background: var(--surface); box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+  transition: box-shadow 0.15s, transform 0.15s;
 }
-.pcard:hover { background: var(--surface); box-shadow: var(--shadow-md); transform: translateY(-1px); border-color: var(--line); }
+.pcard:hover { background: var(--surface); box-shadow: var(--shadow-md); transform: translateY(-1px); border-color: transparent !important; }
 .pcard .cover {
-  height: 90px; background: var(--surface-2); border-bottom: 1px solid var(--faint);
+  height: 90px; background: var(--surface-2); border-bottom: none;
   display: flex; align-items: center; justify-content: center;
   font-size: 24px; font-weight: 700; color: var(--muted);
 }
@@ -1021,7 +1025,7 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
 }
 .slide-card {
   flex: 1 1 0%; position: relative;
-  border: 1px solid var(--faint); border-radius: 24px;
+  border: none !important; border-radius: 24px;
   background: var(--surface); overflow: hidden;
   box-shadow: var(--shadow-md);
   height: auto;
@@ -1056,10 +1060,11 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
     flex: 0 0 min(1368px, calc(100vw - 100px));
   }
   .slide .slide-card {
-    transition: opacity 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    transition: opacity 0.25s ease, box-shadow 0.25s ease;
   }
   .slide:not(.active) .slide-card {
-    border-color: var(--line);
+    border: none !important;
+    border-color: transparent !important;
     opacity: 0.55;
     cursor: pointer;
   }
@@ -1067,7 +1072,8 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
     opacity: 0.85;
   }
   .slide.active .slide-card {
-    border-color: var(--line);
+    border: none !important;
+    border-color: transparent !important;
     box-shadow: var(--shadow-md);
     opacity: 1;
   }
@@ -1105,7 +1111,7 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
   height: 38px;
   border-radius: 9999px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: none !important;
   padding: 0 4px;
   box-shadow: none;
 }
@@ -1715,7 +1721,7 @@ textarea.field, textarea {
 .linkitem, .member-row, .ads-stat, .livecard, .read-article {
   border-radius: var(--radius, 12px);
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: none !important;
   box-shadow: var(--shadow-xs);
 }
 /* Card: Top 10% Black Tint -> Bottom White & Tint Fade */
@@ -1731,7 +1737,7 @@ textarea.field, textarea {
     #ffffff 72%,
     rgba(0, 0, 0, 0.06) 100%
   ), #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: none !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1746,7 +1752,7 @@ textarea.field, textarea {
     #ffffff 72%,
     rgba(0, 0, 0, 0.09) 100%
   ), #ffffff;
-  border-color: rgba(0, 0, 0, 0.14);
+  border-color: transparent !important;
   box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.06);
 }
 
@@ -1760,15 +1766,15 @@ textarea.field, textarea {
 .sparkline-dot {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
-.card, .panel, .slide-card { border: 1px solid var(--line); }
-.plans-card, .plogin-card, .modal, .guide-panel, .lp-card { border: 1px solid var(--line); }
+.card, .panel, .slide-card { border: none !important; }
+.plans-card, .plogin-card, .modal, .guide-panel, .lp-card { border: none !important; }
 
 /* chips / badges → modern subtle pills */
 .chip, .badge-success, .badge-warning, .badge-danger, .feature-tag, .statuschip,
-.plan-badge, .conn-btn, .socialmini { border-radius: var(--radius-pill); }
+.plan-badge, .conn-btn, .socialmini { border-radius: var(--radius-pill); border-color: transparent !important; }
 
 /* navbar + nav */
-.topbar { background: rgba(255, 255, 255, 0.95); border-bottom: 1px solid var(--line); backdrop-filter: blur(12px); }
+.topbar { background: rgba(255, 255, 255, 0.95); border-bottom: none !important; backdrop-filter: blur(12px); }
 .navlink { border-radius: var(--radius-pill); }
 .navlink.active { background: var(--wash); color: var(--ink); font-weight: 700; text-decoration: none; }
 

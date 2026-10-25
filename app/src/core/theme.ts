@@ -50,7 +50,7 @@ export function brandStyle(brand: Brand | null | undefined): BrandStyleSummary {
         ? Math.min(100, brand?.fillOpacity ?? 100)
         : 100,
     strokeWidth:
-      Number.isFinite(brand?.strokeWidth) ? Math.min(3, Math.max(0, brand?.strokeWidth ?? 1)) : 1,
+      Number.isFinite(brand?.strokeWidth) ? Math.min(3, Math.max(0, brand?.strokeWidth ?? 0)) : 0,
     shadow: ['none', 'soft', 'strong'].includes(brand?.shadow ?? '') ? (brand?.shadow as string) : 'soft',
   }
 }

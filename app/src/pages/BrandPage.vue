@@ -53,7 +53,7 @@ const PALETTE_USAGE: Record<(typeof PALETTE_SLOTS)[number], string> = {
 }
 const moodboardDraft = ref('')
 // ---- style tokens (Figma-flavored design controls) ----
-const styleDraft = ref({ radius: 12, fillOpacity: 100, strokeWidth: 1, shadow: 'soft' })
+const styleDraft = ref({ radius: 12, fillOpacity: 100, strokeWidth: 0, shadow: 'soft' })
 const styleNotice = ref('')
 const styleErr = ref('')
 const styleBusy = ref(false)
