@@ -191,7 +191,7 @@ function onRowKeydown(e: KeyboardEvent, post: Post): void {
     </TableFrame>
     <!-- Bottom pagination & selection bar -->
     <div
-      class="tbl-footer flex-none flex items-center justify-between gap-3 px-4 py-2 bg-surface border-t border-faint text-xs text-muted min-h-[42px] select-none"
+      class="tbl-footer flex-none flex items-center justify-between gap-3 px-5 py-3 bg-surface border-t border-faint text-sm text-muted min-h-[50px] select-none"
     >
       <!-- Left: Selection status & item count -->
       <div class="flex items-center gap-2 min-w-0 truncate">
@@ -208,16 +208,16 @@ function onRowKeydown(e: KeyboardEvent, post: Post): void {
       </div>
 
       <!-- Right: Per-page selector & Page stepper -->
-      <div class="flex items-center gap-3 flex-none ml-auto">
+      <div class="flex items-center gap-3.5 flex-none ml-auto">
         <!-- Page size selector -->
-        <div v-if="totalRows > 10" class="hidden sm:flex items-center gap-1 text-[11px]">
-          <span class="text-muted/60">Show:</span>
-          <div class="inline-flex rounded-md p-0.5 bg-wash border border-line/60">
+        <div v-if="totalRows > 10" class="hidden sm:flex items-center gap-1.5 text-xs">
+          <span class="text-muted/70 font-medium">Show:</span>
+          <div class="inline-flex rounded-lg p-0.5 bg-wash border border-line/60">
             <button
               v-for="size in [10, 25, 50]"
               :key="size"
               type="button"
-              class="px-2 py-0.5 rounded text-[11px] font-mono transition-all cursor-pointer"
+              class="px-2.5 py-1 rounded-md text-xs font-mono transition-all cursor-pointer"
               :class="pageSize === size ? 'bg-surface text-ink font-bold shadow-2xs' : 'text-muted hover:text-ink'"
               @click="setPageSize(size)"
             >
@@ -227,10 +227,10 @@ function onRowKeydown(e: KeyboardEvent, post: Post): void {
         </div>
 
         <!-- Integrated Stepper Pill [ ‹ | 1 / 3 | › ] -->
-        <div v-if="totalPages > 1" class="inline-flex items-center rounded-lg border border-line bg-surface shadow-2xs overflow-hidden">
+        <div v-if="totalPages > 1" class="inline-flex items-center rounded-lg border border-line bg-surface shadow-xs overflow-hidden h-8 sm:h-8.5">
           <button
             type="button"
-            class="px-2.5 py-1 text-xs text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-r border-line"
+            class="px-3 h-full inline-flex items-center justify-center text-sm font-semibold text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-r border-line"
             :disabled="!table.getCanPreviousPage()"
             aria-label="Previous page"
             title="Previous page"
@@ -238,12 +238,12 @@ function onRowKeydown(e: KeyboardEvent, post: Post): void {
           >
             ‹
           </button>
-          <span class="px-2.5 py-1 font-mono text-[11px] text-ink whitespace-nowrap select-none">
+          <span class="px-3 h-full inline-flex items-center justify-center font-mono text-xs sm:text-sm font-medium text-ink whitespace-nowrap select-none">
             {{ pageIndex + 1 }} / {{ totalPages }}
           </span>
           <button
             type="button"
-            class="px-2.5 py-1 text-xs text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-l border-line"
+            class="px-3 h-full inline-flex items-center justify-center text-sm font-semibold text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-l border-line"
             :disabled="!table.getCanNextPage()"
             aria-label="Next page"
             title="Next page"

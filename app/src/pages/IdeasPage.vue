@@ -186,13 +186,13 @@ async function onPromote(it: Idea): Promise<void> {
       <!-- Pagination bar -->
       <div
         v-if="totalIdeas > 0"
-        class="flex items-center justify-between gap-3 px-4 py-2 mt-2 bg-surface rounded-xl border border-line/60 text-xs text-muted min-h-[40px] select-none"
+        class="flex items-center justify-between gap-3 px-5 py-3 mt-2.5 bg-surface rounded-xl border border-line/60 shadow-xs text-sm text-muted min-h-[50px] select-none"
       >
         <span class="truncate">Showing <strong class="font-semibold text-ink font-mono">{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong class="font-semibold text-ink font-mono">{{ totalIdeas }}</strong> ideas</span>
-        <div v-if="totalPages > 1" class="inline-flex items-center rounded-lg border border-line bg-surface shadow-2xs overflow-hidden flex-none ml-auto">
+        <div v-if="totalPages > 1" class="inline-flex items-center rounded-lg border border-line bg-surface shadow-xs overflow-hidden flex-none ml-auto h-8 sm:h-8.5">
           <button
             type="button"
-            class="px-2.5 py-1 text-xs text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-r border-line"
+            class="px-3 h-full inline-flex items-center justify-center text-sm font-semibold text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-r border-line"
             :disabled="pageIndex === 0"
             aria-label="Previous page"
             title="Previous page"
@@ -200,12 +200,12 @@ async function onPromote(it: Idea): Promise<void> {
           >
             ‹
           </button>
-          <span class="px-2.5 py-1 font-mono text-[11px] text-ink whitespace-nowrap select-none">
+          <span class="px-3 h-full inline-flex items-center justify-center font-mono text-xs sm:text-sm font-medium text-ink whitespace-nowrap select-none">
             {{ pageIndex + 1 }} / {{ totalPages }}
           </span>
           <button
             type="button"
-            class="px-2.5 py-1 text-xs text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-l border-line"
+            class="px-3 h-full inline-flex items-center justify-center text-sm font-semibold text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-l border-line"
             :disabled="pageIndex >= totalPages - 1"
             aria-label="Next page"
             title="Next page"
