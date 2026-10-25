@@ -133,30 +133,30 @@ const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)
 
     <!-- Variant: Towers (Vertical 1:1 Square Blocks Matrix) -->
     <template v-else-if="variant === 'towers'">
-      <div class="w-full flex items-end justify-between gap-2 sm:gap-3 pt-2 pb-1">
+      <div class="w-full flex items-end justify-center gap-5 sm:gap-8 pt-1 pb-1">
         <div
           v-for="(col, ci) in towersData"
           :key="col.label"
-          class="flex-1 min-w-0 flex flex-col items-center justify-end max-w-[64px] group/col cursor-default"
+          class="flex-none w-12 sm:w-14 flex flex-col items-center justify-end group/col cursor-default"
           :title="`${col.label}: ${currency}${col.value.toLocaleString('en-US')} (${col.pct}% of total)`"
         >
           <!-- Top Metrics: Share Pill & Formatted Value -->
-          <div class="flex flex-col items-center mb-2.5 transition-transform duration-200 group-hover/col:-translate-y-0.5">
-            <span class="text-[10px] font-semibold text-muted bg-wash border border-line/60 px-1.5 py-0.5 rounded-full mb-1 transition-colors group-hover/col:bg-black group-hover/col:text-white">
+          <div class="flex flex-col items-center mb-2 transition-transform duration-200 group-hover/col:-translate-y-0.5">
+            <span class="text-[9.5px] font-semibold text-muted bg-wash border border-line/60 px-1.5 py-0.5 rounded-full mb-1 transition-colors group-hover/col:bg-black group-hover/col:text-white">
               {{ col.pct }}%
             </span>
-            <span class="text-xs sm:text-[13px] font-bold font-mono text-ink tracking-tight whitespace-nowrap">
+            <span class="text-[11px] sm:text-[12px] font-bold font-mono text-ink tracking-tight whitespace-nowrap">
               {{ formatTowerValue(col.value) }}
             </span>
           </div>
 
           <!-- Vertical Stack of 1:1 Squares -->
-          <div class="w-full flex flex-col-reverse gap-1 sm:gap-1.5 items-center my-1 select-none">
+          <div class="flex flex-col-reverse gap-[2.5px] sm:gap-[3px] items-center my-1 select-none">
             <div
               v-for="r in numRows"
               :key="r"
-              class="w-full max-w-[34px] sm:max-w-[40px] aspect-square rounded-[2px] sm:rounded-[3px] transition-all duration-200"
-              :class="r <= col.activeLevel ? 'bg-ink tower-square-active group-hover/col:scale-105 group-hover/col:brightness-125' : 'bg-ink/[0.06] tower-square-ghost'"
+              class="w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] aspect-square rounded-[2px] sm:rounded-[2.5px] transition-all duration-200"
+              :class="r <= col.activeLevel ? 'bg-ink tower-square-active group-hover/col:scale-110 group-hover/col:brightness-125' : 'bg-ink/[0.06] tower-square-ghost'"
               :style="{
                 animationDelay: `${ci * 45 + (r - 1) * 20}ms`,
                 opacity: r <= col.activeLevel ? getTowerSquareOpacity(r, col.activeLevel) : undefined,
@@ -165,12 +165,12 @@ const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)
             />
           </div>
 
-          <!-- Bottom Label: Month / Category Name -->
-          <div class="flex flex-col items-center mt-2 text-center min-w-0 max-w-full">
-            <span class="text-xs font-bold text-ink truncate max-w-full group-hover/col:text-brand-600 transition-colors">
+          <!-- Bottom Label: Month / Category Name with subtle baseline separator -->
+          <div class="w-full border-t border-line/40 pt-1.5 mt-1 flex flex-col items-center text-center min-w-0 max-w-full">
+            <span class="text-[11px] sm:text-xs font-bold text-ink truncate max-w-full group-hover/col:text-brand-600 transition-colors">
               {{ col.primaryLabel }}
             </span>
-            <span v-if="col.secondaryLabel" class="text-[10px] font-medium text-muted font-mono leading-none mt-0.5">
+            <span v-if="col.secondaryLabel" class="text-[9.5px] font-medium text-muted font-mono leading-none mt-0.5">
               {{ col.secondaryLabel }}
             </span>
           </div>
