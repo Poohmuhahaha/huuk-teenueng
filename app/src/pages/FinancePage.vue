@@ -126,7 +126,14 @@ async function add(): Promise<void> {
     </div>
 
     <div>
-      <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-2.5">Transactions</h2>
+      <div class="flex items-center justify-between gap-2 mb-2.5">
+        <div class="flex items-center gap-2">
+          <h2 class="text-xs font-bold uppercase tracking-widest text-muted m-0">Transactions</h2>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
+            {{ txns?.length ?? 0 }} entries
+          </span>
+        </div>
+      </div>
       <div v-if="isPending" class="muted">Loading ledger…</div>
       <div v-else-if="isError" class="card" role="alert">
         <p class="muted">Could not load ledger: {{ loadError?.message }}</p>
@@ -139,39 +146,61 @@ async function add(): Promise<void> {
       <TxnTable v-else :rows="txns ?? []" :currency="CURRENCY" />
     </div>
 
-    <div>
-      <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-2.5">Log transaction</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-surface border border-line p-4 rounded-xl shadow-xs">
+    <div class="card-fade p-4 sm:p-5 flex flex-col gap-3.5">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Log transaction</h2>
+        <!-- Kind Toggle Switch (Income vs Expense) -->
+        <div class="inline-flex items-center p-0.5 rounded-full bg-wash border border-line select-none">
+          <button
+            type="button"
+            class="px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer"
+            :class="dKind === 'IN' ? 'bg-emerald-600 text-white shadow-xs' : 'text-muted hover:text-ink'"
+            :disabled="!canWrite"
+            @click="dKind = 'IN'"
+          >
+            + Income (IN)
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer"
+            :class="dKind === 'OUT' ? 'bg-black text-white shadow-xs' : 'text-muted hover:text-ink'"
+            :disabled="!canWrite"
+            @click="dKind = 'OUT'"
+          >
+            - Expense (OUT)
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
         <div>
           <label class="lbl block text-xs font-semibold text-muted mb-1.5">Date</label>
-          <input class="field w-full" type="date" v-model="dDate" :disabled="!canWrite"
+          <input class="field w-full m-0" type="date" v-model="dDate" :disabled="!canWrite"
             :title="canWrite ? '' : t('auth.noPerm')" />
         </div>
         <div>
-          <label class="lbl block text-xs font-semibold text-muted mb-1.5">Amount</label>
-          <input class="field w-full font-mono" type="number" v-model.number="dAmount" :disabled="!canWrite"
-            :title="canWrite ? '' : t('auth.noPerm')" />
-        </div>
-        <div>
-          <label class="lbl block text-xs font-semibold text-muted mb-1.5">Kind</label>
-          <select class="field w-full" v-model="dKind" :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')">
-            <option value="IN">IN</option>
-            <option value="OUT">OUT</option>
-          </select>
+          <label class="lbl block text-xs font-semibold text-muted mb-1.5">Amount ({{ CURRENCY }})</label>
+          <input class="field w-full font-mono m-0" type="number" v-model.number="dAmount" :disabled="!canWrite"
+            :title="canWrite ? '' : t('auth.noPerm')" placeholder="0" />
         </div>
         <div>
           <label class="lbl block text-xs font-semibold text-muted mb-1.5">Sub-category</label>
-          <input class="field w-full" v-model="dSub" :disabled="!canWrite"
-            :title="canWrite ? '' : t('auth.noPerm')" placeholder="e.g. Software, Ad spend" />
+          <input class="field w-full m-0" v-model="dSub" :disabled="!canWrite"
+            :title="canWrite ? '' : t('auth.noPerm')" placeholder="e.g. Software, Ad spend, Brand" />
+        </div>
+        <div>
+          <button
+            class="btn btn-primary w-full h-10 font-semibold rounded-xl flex items-center justify-center gap-1.5 m-0"
+            :disabled="!canWrite || addTxn.isPending.value"
+            :title="canWrite ? '' : t('auth.noPerm')"
+            @click="add"
+          >
+            <span v-if="!addTxn.isPending.value">+</span>
+            {{ addTxn.isPending.value ? t('common.loading') : 'Add transaction' }}
+          </button>
         </div>
       </div>
-      <p v-if="addError" class="autherr mt-2" role="alert">{{ addError }}</p>
-      <div class="mt-3">
-        <button class="btn btn-primary w-auto" :disabled="!canWrite || addTxn.isPending.value"
-          :title="canWrite ? '' : t('auth.noPerm')" @click="add">
-          {{ addTxn.isPending.value ? t('common.loading') : '+ Add transaction' }}
-        </button>
-      </div>
+      <p v-if="addError" class="autherr m-0 text-xs" role="alert">{{ addError }}</p>
     </div>
   </div>
 </template>
