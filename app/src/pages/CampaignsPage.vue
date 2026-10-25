@@ -262,59 +262,163 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
       </DockBar>
 
       <div class="camp-main camp-list">
+        <!-- List Header -->
+        <div class="flex items-center justify-between pb-3 mb-2 border-b border-line/60">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-muted">Campaigns</span>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-wash text-ink">{{ (visible ?? []).length }}</span>
+          </div>
+          <button type="button" class="text-xs font-semibold text-accent hover:underline cursor-pointer bg-transparent border-0 p-0"
+            :disabled="!canWrite" @click="newCampaign">
+            + New
+          </button>
+        </div>
+
         <span v-if="saved" class="muted">{{ t('campaign.saved') }}</span>
         <span v-if="error" class="autherr" role="alert">{{ error }}</span>
-        <div v-if="isPending" class="muted">{{ t('common.loading') }}</div>
+        <div v-if="isPending" class="muted py-4 text-center">{{ t('common.loading') }}</div>
         <div v-else-if="isError" class="card" role="alert">
           <p class="muted">{{ loadError?.message }}</p>
           <button type="button" class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
         </div>
-        <p v-else-if="!visible || visible.length === 0" class="muted">{{ t('campaign.empty') }}</p>
+        <div v-else-if="!visible || visible.length === 0" class="muted py-8 text-center text-xs">
+          {{ t('campaign.empty') }}
+        </div>
         <template v-else>
           <button v-for="c in visible" :key="c.id" type="button" class="camp-item"
             :class="{ active: c.id === selectedId }" @click="select(c.id)">
-            <span class="camp-item-head">
-              <strong>{{ c.name }}</strong>
-              <span class="camp-status" :class="c.status">{{ statusLabel(c.status) }}</span>
-            </span>
-            <span class="muted">{{ c.startDate || '—' }} → {{ c.endDate || '—' }}</span>
-            <span class="muted">
-              {{ c.contentIds.length }} {{ t('campaign.linked') }} ·
-              {{ c.budget ? `฿${c.budget.toLocaleString()}` : t('campaign.noBudget') }}
-            </span>
+            <div class="camp-item-head">
+              <strong class="text-sm font-bold text-ink truncate">{{ c.name }}</strong>
+              <span class="camp-status flex-none" :class="c.status">{{ statusLabel(c.status) }}</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs text-muted">
+              <span>{{ c.startDate || '—' }} → {{ c.endDate || '—' }}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs text-muted mt-1 w-full pt-1.5 border-t border-line/30">
+              <span class="font-mono text-[11px]">{{ c.contentIds.length }} {{ t('campaign.linked') }}</span>
+              <span class="font-mono font-semibold text-ink text-[11px]">{{ c.budget ? `฿${c.budget.toLocaleString()}` : t('campaign.noBudget') }}</span>
+            </div>
+            <div v-if="c.platforms && c.platforms.length" class="flex items-center gap-1 mt-0.5">
+              <PlatformLogo v-for="p in c.platforms" :key="p" :name="p" :size="13" />
+            </div>
           </button>
         </template>
       </div>
 
-      <div v-if="(deckFull || wide) && !editorOpen" class="camp-detail p-6 flex flex-col justify-center items-center text-center">
-        <div class="max-w-md w-full bg-surface border border-line rounded-2xl p-6 shadow-2xs text-left">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xs font-bold uppercase tracking-widest text-muted">{{ t('campaign.title') }} Overview</h3>
-            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-wash text-ink">{{ visible.length }} Total</span>
+      <!-- Right Pane Overview when not in editing mode -->
+      <div v-if="(deckFull || wide) && !editorOpen" class="camp-detail camp-overview flex-1 flex flex-col gap-5 py-2">
+        <div class="flex items-center justify-between pb-3.5 border-b border-line/60">
+          <div>
+            <h2 class="text-base font-bold text-ink tracking-tight m-0">{{ t('campaign.title') }} Overview</h2>
+            <p class="text-xs text-muted mt-0.5 m-0">Schedules, platform targets, and budgets across campaigns</p>
           </div>
-          <div class="grid grid-cols-3 gap-2 mb-5">
-            <div class="p-2.5 bg-wash/60 rounded-xl border border-line/40">
-              <span class="text-2xs text-muted font-bold uppercase tracking-wider block mb-1">Active</span>
-              <span class="text-lg font-black text-ink">{{ activeCount }}</span>
-            </div>
-            <div class="p-2.5 bg-wash/60 rounded-xl border border-line/40">
-              <span class="text-2xs text-muted font-bold uppercase tracking-wider block mb-1">Linked</span>
-              <span class="text-lg font-black text-ink">{{ totalLinked }}</span>
-            </div>
-            <div class="p-2.5 bg-wash/60 rounded-xl border border-line/40">
-              <span class="text-2xs text-muted font-bold uppercase tracking-wider block mb-1">Budget</span>
-              <span class="text-lg font-black text-ink font-mono">฿{{ totalBudget.toLocaleString('en-US') }}</span>
-            </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-wash text-ink border border-line/50 font-mono">
+              {{ (visible ?? []).length }} Total
+            </span>
+            <button type="button" class="btn btn-primary text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5"
+              :disabled="!canWrite" @click="newCampaign">
+              <span class="text-sm leading-none">+</span>
+              <span>New campaign</span>
+            </button>
           </div>
-          <p class="text-xs text-muted mb-4 leading-relaxed">{{ t('campaign.pickHint') }}</p>
-          <button type="button" class="btn btn-primary w-full text-xs font-bold uppercase tracking-wider" :disabled="!canWrite" @click="newCampaign">
-            + {{ t('campaign.new') }}
-          </button>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="p-3.5 bg-surface rounded-xl border border-line/60 shadow-2xs">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-2xs font-bold uppercase tracking-wider text-muted">Active Campaigns</span>
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            </div>
+            <div class="text-2xl font-black text-ink font-mono">{{ activeCount }}</div>
+            <span class="text-[11px] text-muted">{{ (visible ?? []).length - activeCount }} draft or paused</span>
+          </div>
+
+          <div class="p-3.5 bg-surface rounded-xl border border-line/60 shadow-2xs">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-2xs font-bold uppercase tracking-wider text-muted">Total Budget</span>
+              <span class="text-xs text-muted font-mono">THB</span>
+            </div>
+            <div class="text-2xl font-black text-ink font-mono">฿{{ totalBudget.toLocaleString('en-US') }}</div>
+            <span class="text-[11px] text-muted">Allocated for this window</span>
+          </div>
+
+          <div class="p-3.5 bg-surface rounded-xl border border-line/60 shadow-2xs">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-2xs font-bold uppercase tracking-wider text-muted">Linked Content</span>
+              <svg class="w-3.5 h-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            </div>
+            <div class="text-2xl font-black text-ink font-mono">{{ totalLinked }}</div>
+            <span class="text-[11px] text-muted">Posts attached to campaigns</span>
+          </div>
+        </div>
+
+        <!-- Campaign Roster Table -->
+        <div class="flex-1 flex flex-col gap-2 mt-1 min-h-0">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-muted m-0">Campaign Roster</h3>
+            <span class="text-xs text-muted">{{ t('campaign.pickHint') }}</span>
+          </div>
+
+          <div class="rounded-xl border border-line/60 bg-surface shadow-2xs overflow-hidden">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-line/60 bg-wash/50 text-muted font-bold text-2xs uppercase tracking-wider">
+                  <th class="py-2.5 px-3.5">Campaign</th>
+                  <th class="py-2.5 px-3">Status</th>
+                  <th class="py-2.5 px-3">Window</th>
+                  <th class="py-2.5 px-3">Platforms</th>
+                  <th class="py-2.5 px-3 text-right">Budget</th>
+                  <th class="py-2.5 px-3 text-center">Linked</th>
+                  <th class="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-line/40">
+                <tr v-for="c in visible" :key="c.id"
+                  class="hover:bg-wash/40 cursor-pointer transition-colors group"
+                  @click="select(c.id)">
+                  <td class="py-3 px-3.5 font-medium text-ink">
+                    <div class="font-bold text-sm leading-snug">{{ c.name }}</div>
+                    <div v-if="c.objective" class="text-muted text-[11px] truncate max-w-[220px]">{{ c.objective }}</div>
+                  </td>
+                  <td class="py-3 px-3">
+                    <span class="camp-status" :class="c.status">{{ statusLabel(c.status) }}</span>
+                  </td>
+                  <td class="py-3 px-3 text-muted font-mono text-[11px] whitespace-nowrap">
+                    {{ c.startDate || '—' }} → {{ c.endDate || '—' }}
+                  </td>
+                  <td class="py-3 px-3">
+                    <div v-if="c.platforms && c.platforms.length" class="flex items-center gap-1.5">
+                      <PlatformLogo v-for="p in c.platforms" :key="p" :name="p" :size="14" />
+                    </div>
+                    <span v-else class="text-muted text-[11px]">—</span>
+                  </td>
+                  <td class="py-3 px-3 text-right font-mono font-semibold text-ink whitespace-nowrap">
+                    {{ c.budget ? `฿${c.budget.toLocaleString()}` : '—' }}
+                  </td>
+                  <td class="py-3 px-3 text-center font-mono">
+                    <span class="px-2 py-0.5 rounded-full bg-wash text-[11px] font-semibold">{{ c.contentIds.length }}</span>
+                  </td>
+                  <td class="py-3 px-3 text-right whitespace-nowrap">
+                    <button type="button" class="btn text-[11px] py-1 px-2.5 opacity-80 group-hover:opacity-100 hover:border-ink transition-all cursor-pointer">
+                      Edit ↗
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="!visible || visible.length === 0">
+                  <td colspan="7" class="py-8 text-center text-muted">
+                    {{ t('campaign.empty') }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <Drawer v-model="editorOpen" class="editor-sheet" :inline="deckFull || wide"
-        :side="deckFull ? 'right' : 'bottom'" :width="'480px'" contained
+      <Drawer v-model="editorOpen" :inline="deckFull || wide"
+        :side="deckFull ? 'right' : 'bottom'" :width="'100%'" contained
         :title="draft?.name || t('campaign.new')">
     <template v-if="draft">
       <div class="grid2">
