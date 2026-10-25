@@ -9,6 +9,9 @@ import { monthOfDate } from '@/core/deeplink'
 import { deckFull } from '@/core/deck'
 import { useWidePane } from '@/composables/useWidePane'
 import DockBar from '@/components/ui/DockBar.vue'
+import Drawer from '@/components/overlays/Drawer.vue'
+import PlatformLogo from '@/components/ui/PlatformLogo.vue'
+import StatusChip from '@/components/ui/StatusChip.vue'
 import { monthName, t } from '@/core/i18n'
 import type { Post } from '@/mock/db'
 
@@ -192,7 +195,16 @@ function statusDotClass(status?: string): string {
   return 'bg-blue-400'
 }
 
+const selectedPost = ref<Post | null>(null)
+const postSheetOpen = ref(false)
+
 function openPost(p: Post): void {
+  selectedPost.value = p
+  postSheetOpen.value = true
+}
+
+function goToPlanner(p: Post): void {
+  postSheetOpen.value = false
   void router.push({ path: '/plan', query: { tab: 'monthly', m: String(month.value), post: p.id } })
 }
 
@@ -392,5 +404,79 @@ function goAdd(date?: string): void {
         <p v-if="isEmpty || !days.length" class="muted">No posts in {{ monthName(month) }} {{ year }}.</p>
       </section>
     </div>
+
+    <!-- Post Quick View & Details Sheet -->
+    <Drawer
+      v-model="postSheetOpen"
+      :side="isWide ? 'right' : 'bottom'"
+      :width="'420px'"
+      title="Scheduled Content"
+    >
+      <div v-if="selectedPost" class="p-1 flex flex-col gap-4 text-left">
+        <div>
+          <div class="flex items-center justify-between gap-2 mb-1.5">
+            <span class="text-2xs font-bold uppercase tracking-wider text-muted">Topic</span>
+            <StatusChip :status="selectedPost.status" />
+          </div>
+          <h3 class="text-lg font-bold text-ink leading-snug m-0">
+            {{ selectedPost.topic || 'Untitled' }}
+          </h3>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-wash border border-line text-xs">
+          <div>
+            <span class="text-muted block text-2xs uppercase font-bold tracking-wider mb-0.5">Date & Time</span>
+            <span class="font-bold text-ink font-mono">{{ selectedPost.date || 'No date' }} {{ selectedPost.time ? `· ${selectedPost.time}` : '' }}</span>
+          </div>
+          <div>
+            <span class="text-muted block text-2xs uppercase font-bold tracking-wider mb-0.5">Format</span>
+            <span class="font-bold text-ink">{{ selectedPost.format || 'Standard' }}</span>
+          </div>
+          <div v-if="selectedPost.pillar">
+            <span class="text-muted block text-2xs uppercase font-bold tracking-wider mb-0.5">Content Pillar</span>
+            <span class="font-semibold text-ink">{{ selectedPost.pillar }}</span>
+          </div>
+          <div v-if="selectedPost.platforms?.length">
+            <span class="text-muted block text-2xs uppercase font-bold tracking-wider mb-0.5">Platforms</span>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <PlatformLogo v-for="pl in selectedPost.platforms" :key="pl" :name="pl" :size="14" />
+            </div>
+          </div>
+        </div>
+
+        <div v-if="selectedPost.hook" class="flex flex-col gap-1">
+          <span class="text-2xs font-bold uppercase tracking-wider text-muted">Hook</span>
+          <p class="text-xs text-ink bg-surface border border-line rounded-lg p-2.5 m-0 leading-relaxed italic">
+            "{{ selectedPost.hook }}"
+          </p>
+        </div>
+
+        <div v-if="selectedPost.caption" class="flex flex-col gap-1">
+          <span class="text-2xs font-bold uppercase tracking-wider text-muted">Caption & Notes</span>
+          <p class="text-xs text-ink bg-surface border border-line rounded-lg p-2.5 m-0 leading-relaxed whitespace-pre-wrap">
+            {{ selectedPost.caption }}
+          </p>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex items-center justify-between w-full gap-2">
+          <button type="button" class="btn text-xs py-2 px-3.5 cursor-pointer" @click="postSheetOpen = false">
+            Close
+          </button>
+          <button
+            v-if="selectedPost"
+            type="button"
+            class="btn btn-primary text-xs py-2 px-4 font-semibold cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+            @click="goToPlanner(selectedPost)"
+          >
+            <span>Open in Full Planner</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </template>
+    </Drawer>
   </div>
 </template>

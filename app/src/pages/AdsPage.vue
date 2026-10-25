@@ -4,7 +4,7 @@
 // server (apps/server/src/ads.rs). Management (pause/resume, budget, duplicate,
 // boost) only unlocks after the explicit opt-in and is recorded in the audit
 // trail — every write also requires the `platforms.manage` permission.
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import {
   useAds, useLive, usePlatforms, usePermission,
   useSyncAds, useSetAdsManage, useAdCampaignStatus, useAdCampaignBudget,
@@ -15,6 +15,7 @@ import { t } from '@/core/i18n'
 import InfoTip from '@/components/ui/InfoTip.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
 import KpiCard from '@/components/ui/KpiCard.vue'
+import Drawer from '@/components/overlays/Drawer.vue'
 import type { AdCampaign } from '@/mock/db'
 
 const { data: view, isPending, isError, error: loadError } = useAds()
@@ -97,6 +98,18 @@ const openId = ref('')
 function toggle(id: string): void {
   openId.value = openId.value === id ? '' : id
 }
+const openCampaign = computed(() => campaigns.value.find((c) => c.id === openId.value) ?? null)
+
+const isMobile = ref(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+function updateMobile(): void {
+  isMobile.value = window.innerWidth < 768
+}
+onMounted(() => {
+  window.addEventListener('resize', updateMobile)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateMobile)
+})
 
 function money(minor: number): string {
   const value = (minor / 100).toLocaleString('en-US', {
@@ -351,71 +364,91 @@ const audit = computed(() => view.value?.audit ?? [])
                   </button>
                 </td>
               </tr>
-
-              <!-- expanded: settings + ad sets + ads + actions -->
-              <tr v-if="openId === c.id" :key="`${c.id}-detail`" class="[&>td]:bg-surface-2">
-                <td colspan="9">
-                  <div class="py-1.5 px-0.5 pb-2.5">
-                    <div class="grid2">
-                      <div>
-                        <h4 class="my-3 mb-1.5 text-xs-plus uppercase tracking-wider text-muted">{{ t('ads.settings') }}</h4>
-                        <dl class="grid grid-kv gap-x-3 gap-y-1 m-0 text-sm-minus [&>dt]:text-muted [&>dd]:m-0">
-                          <dt>{{ t('ads.objective') }}</dt><dd>{{ c.objective }}</dd>
-                          <dt>{{ t('ads.bidStrategy') }}</dt><dd>{{ c.bidStrategy || '—' }}</dd>
-                          <dt>{{ t('ads.schedule') }}</dt>
-                          <dd>{{ c.startTime?.slice(0, 10) || '—' }} → {{ c.stopTime?.slice(0, 10) || '—' }}</dd>
-                          <dt>{{ t('ads.budgetRemaining') }}</dt>
-                          <dd>{{ c.budgetRemaining ? money(c.budgetRemaining) : '—' }}</dd>
-                          <dt>{{ t('ads.special') }}</dt>
-                          <dd>{{ c.specialAdCategories.join(', ') || '—' }}</dd>
-                        </dl>
-                      </div>
-                      <div>
-                        <h4 class="my-3 mb-1.5 text-xs-plus uppercase tracking-wider text-muted">{{ t('ads.actions') }}</h4>
-                        <div class="row">
-                          <button class="btn" :disabled="!canWrite" @click="openBudget(c)">
-                            {{ t('ads.editBudget') }}
-                          </button>
-                          <button class="btn" :disabled="!canWrite || duplicate.isPending.value"
-                            @click="onDuplicate(c)">
-                            {{ t('ads.duplicate') }}
-                          </button>
-                          <button class="btn" :disabled="!canWrite || !boostPosts.length"
-                            @click="openBoost(adsOf(adsetsOf(c.id)[0]?.id ?? '')[0]?.storyId ?? '')">
-                            {{ t('ads.boost') }}
-                          </button>
-                        </div>
-                        <p v-if="!canWrite" class="muted">{{ t('ads.manageNeeded') }}</p>
-                      </div>
-                    </div>
-
-                    <h4 class="my-3 mb-1.5 text-xs-plus uppercase tracking-wider text-muted">{{ t('ads.adsets') }}</h4>
-                    <div v-for="s in adsetsOf(c.id)" :key="s.id" class="panel mb-2">
-                      <div class="row">
-                        <strong>{{ s.name }}</strong>
-                        <span class="badge" :class="statusClass(s.status)">{{ s.status }}</span>
-                        <span class="muted">{{ s.optimizationGoal }} · {{ s.billingEvent }}</span>
-                      </div>
-                      <p class="muted my-1.5">
-                        {{ t('ads.targeting') }}: {{ s.targeting || '—' }}
-                        <template v-if="s.promotedObject"> · {{ t('ads.promoted') }}: {{ s.promotedObject }}</template>
-                      </p>
-                      <ul class="mt-1 pl-4.5 flex flex-col gap-1 text-sm-minus">
-                        <li v-for="a in adsOf(s.id)" :key="a.id">
-                          <span class="badge" :class="statusClass(a.status)">{{ a.status }}</span>
-                          {{ a.creativeTitle || a.name }}
-                          <span v-if="a.storyId" class="muted">· {{ t('ads.boostedPost') }} {{ a.storyId }}</span>
-                        </li>
-                      </ul>
-                      <p v-if="!adsOf(s.id).length" class="muted">{{ t('ads.noAds') }}</p>
-                    </div>
-                    <p v-if="!adsetsOf(c.id).length" class="muted">{{ t('ads.noAdsets') }}</p>
-                  </div>
-                </td>
-              </tr>
             </template>
           </tbody>
-      </TableFrame>
+        </TableFrame>
+
+        <!-- Ad Campaign Detail Sheet (Bottom Sheet on mobile, Right Drawer on desktop) -->
+        <Drawer
+          :model-value="Boolean(openId && openCampaign)"
+          :title="openCampaign?.name || t('ads.settings')"
+          :side="isMobile ? 'bottom' : 'right'"
+          :width="'480px'"
+          @update:model-value="(val) => { if (!val) openId = '' }"
+        >
+          <div v-if="openCampaign" class="p-1 flex flex-col gap-4 text-left">
+            <!-- Campaign Settings -->
+            <div>
+              <h4 class="text-xs font-bold uppercase tracking-wider text-muted mb-2">{{ t('ads.settings') }}</h4>
+              <dl class="grid grid-cols-2 gap-2.5 p-3.5 rounded-xl bg-wash border border-line m-0 text-xs">
+                <div>
+                  <dt class="text-2xs text-muted uppercase font-bold tracking-wider mb-0.5">{{ t('ads.objective') }}</dt>
+                  <dd class="m-0 font-semibold text-ink">{{ openCampaign.objective }}</dd>
+                </div>
+                <div>
+                  <dt class="text-2xs text-muted uppercase font-bold tracking-wider mb-0.5">{{ t('ads.bidStrategy') }}</dt>
+                  <dd class="m-0 font-semibold text-ink">{{ openCampaign.bidStrategy || '—' }}</dd>
+                </div>
+                <div>
+                  <dt class="text-2xs text-muted uppercase font-bold tracking-wider mb-0.5">{{ t('ads.schedule') }}</dt>
+                  <dd class="m-0 font-mono text-ink">{{ openCampaign.startTime?.slice(0, 10) || '—' }} → {{ openCampaign.stopTime?.slice(0, 10) || '—' }}</dd>
+                </div>
+                <div>
+                  <dt class="text-2xs text-muted uppercase font-bold tracking-wider mb-0.5">{{ t('ads.budgetRemaining') }}</dt>
+                  <dd class="m-0 font-mono font-bold text-ink">{{ openCampaign.budgetRemaining ? money(openCampaign.budgetRemaining) : '—' }}</dd>
+                </div>
+                <div class="col-span-2">
+                  <dt class="text-2xs text-muted uppercase font-bold tracking-wider mb-0.5">{{ t('ads.special') }}</dt>
+                  <dd class="m-0 text-muted">{{ openCampaign.specialAdCategories.join(', ') || '—' }}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <!-- Actions -->
+            <div>
+              <h4 class="text-xs font-bold uppercase tracking-wider text-muted mb-2">{{ t('ads.actions') }}</h4>
+              <div class="flex items-center gap-2 flex-wrap">
+                <button class="btn text-xs py-1.5 px-3 font-semibold" :disabled="!canWrite" @click="openBudget(openCampaign)">
+                  {{ t('ads.editBudget') }}
+                </button>
+                <button class="btn text-xs py-1.5 px-3 font-semibold" :disabled="!canWrite || duplicate.isPending.value"
+                  @click="onDuplicate(openCampaign)">
+                  {{ t('ads.duplicate') }}
+                </button>
+                <button class="btn text-xs py-1.5 px-3 font-semibold" :disabled="!canWrite || !boostPosts.length"
+                  @click="openBoost(adsOf(adsetsOf(openCampaign.id)[0]?.id ?? '')[0]?.storyId ?? '')">
+                  {{ t('ads.boost') }}
+                </button>
+              </div>
+              <p v-if="!canWrite" class="muted text-xs mt-1.5 mb-0">{{ t('ads.manageNeeded') }}</p>
+            </div>
+
+            <!-- Ad Sets -->
+            <div>
+              <h4 class="text-xs font-bold uppercase tracking-wider text-muted mb-2">{{ t('ads.adsets') }}</h4>
+              <div v-for="s in adsetsOf(openCampaign.id)" :key="s.id" class="p-3.5 rounded-xl border border-line bg-surface mb-2.5 flex flex-col gap-2">
+                <div class="flex items-center justify-between gap-2">
+                  <strong class="text-sm font-bold text-ink truncate">{{ s.name }}</strong>
+                  <span class="badge flex-none text-2xs" :class="statusClass(s.status)">{{ s.status }}</span>
+                </div>
+                <span class="text-2xs text-muted font-medium">{{ s.optimizationGoal }} · {{ s.billingEvent }}</span>
+                <p class="text-xs text-muted my-0.5">
+                  {{ t('ads.targeting') }}: {{ s.targeting || '—' }}
+                  <template v-if="s.promotedObject"> · {{ t('ads.promoted') }}: {{ s.promotedObject }}</template>
+                </p>
+                <ul class="m-0 pl-4 flex flex-col gap-1 text-xs">
+                  <li v-for="a in adsOf(s.id)" :key="a.id">
+                    <span class="badge text-2xs mr-1" :class="statusClass(a.status)">{{ a.status }}</span>
+                    <span class="font-medium text-ink">{{ a.creativeTitle || a.name }}</span>
+                    <span v-if="a.storyId" class="text-muted ml-1">· {{ t('ads.boostedPost') }} {{ a.storyId }}</span>
+                  </li>
+                </ul>
+                <p v-if="!adsOf(s.id).length" class="text-muted text-xs m-0">{{ t('ads.noAds') }}</p>
+              </div>
+              <p v-if="!adsetsOf(openCampaign.id).length" class="text-muted text-xs m-0">{{ t('ads.noAdsets') }}</p>
+            </div>
+          </div>
+        </Drawer>
     </template>
 
     <!-- audit trail -->
