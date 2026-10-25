@@ -1718,12 +1718,42 @@ textarea.field, textarea {
   border: 1px solid var(--line);
   box-shadow: var(--shadow-xs);
 }
+/* Card: Top 10% Black Tint -> Bottom White & Tint Fade */
 .card-fade {
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease;
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem; /* 24px */
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.02) 25%,
+    #ffffff 45%,
+    #ffffff 72%,
+    rgba(0, 0, 0, 0.06) 100%
+  ), #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .card-fade:hover {
-  transform: translateY(-1.5px);
+  transform: translateY(-2px);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(0, 0, 0, 0.03) 25%,
+    #ffffff 45%,
+    #ffffff 72%,
+    rgba(0, 0, 0, 0.09) 100%
+  ), #ffffff;
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.06);
 }
+
+.text-ink-soft {
+  color: rgba(10, 10, 10, 0.65);
+}
+
 .sparkline-reveal {
   transition: opacity 0.3s ease;
 }

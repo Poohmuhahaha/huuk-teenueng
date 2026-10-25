@@ -4,16 +4,22 @@ import { computed, useId } from 'vue'
 const props = withDefaults(
   defineProps<{
     values: number[]
+    variant?: 'squares' | 'line'
     width?: number
     height?: number
     color?: string
+    rows?: number
+    columnsCount?: number
     showDot?: boolean
     showArea?: boolean
   }>(),
   {
+    variant: 'squares',
     width: 100,
     height: 36,
     color: '#18181b',
+    rows: 4,
+    columnsCount: 24,
     showDot: true,
     showArea: true,
   },
@@ -28,6 +34,50 @@ function num(v: unknown): number {
 
 const clean = computed(() => props.values.map(num))
 
+/** Resamples values into dense 1:1 square columns */
+const matrixColumns = computed(() => {
+  const vals = clean.value
+  const targetLen = Math.max(16, Math.min(32, props.columnsCount || 24))
+  if (!vals.length) {
+    return Array.from({ length: targetLen }, () => ({ activeLevel: 0, val: 0 }))
+  }
+
+  const n = vals.length
+  const resampled: number[] = []
+  if (n === 1) {
+    for (let i = 0; i < targetLen; i++) resampled.push(vals[0])
+  } else {
+    for (let i = 0; i < targetLen; i++) {
+      const t = (i / (targetLen - 1)) * (n - 1)
+      const idx = Math.floor(t)
+      const frac = t - idx
+      if (idx >= n - 1) {
+        resampled.push(vals[n - 1])
+      } else {
+        resampled.push(vals[idx] * (1 - frac) + vals[idx + 1] * frac)
+      }
+    }
+  }
+
+  const minV = Math.min(...resampled)
+  const maxV = Math.max(...resampled)
+  const range = maxV === minV ? 1 : maxV - minV
+  const maxRows = props.rows || 4
+
+  return resampled.map((v) => {
+    if (v === 0 && minV === 0) return { activeLevel: 1, val: v }
+    const norm = Math.max(0, Math.min(1, (v - minV) / range))
+    const activeLevel = Math.max(1, Math.min(maxRows, Math.round(norm * (maxRows - 1)) + 1))
+    return { activeLevel, val: v }
+  })
+})
+
+function getSquareOpacity(row: number, activeLevel: number): number {
+  if (row === activeLevel) return 0.95
+  return Math.max(0.4, 0.95 - (activeLevel - row) * 0.16)
+}
+
+/** Smooth Bezier Line Curve (fallback / alternative mode) */
 const curve = computed(() => {
   const vals = clean.value
   if (!vals.length) return null
@@ -81,8 +131,30 @@ const curve = computed(() => {
 </script>
 
 <template>
+  <!-- Variant: Dense 1:1 Square Block Matrix -->
+  <div
+    v-if="variant === 'squares'"
+    class="w-full flex items-end gap-[2.5px] sm:gap-[3px] select-none py-1"
+    aria-hidden="true"
+  >
+    <div
+      v-for="(col, ci) in matrixColumns"
+      :key="ci"
+      class="flex-1 flex flex-col-reverse gap-[2.5px] sm:gap-[3px]"
+    >
+      <div
+        v-for="r in rows"
+        :key="r"
+        class="w-full aspect-square rounded-[1.5px] sm:rounded-[2px] transition-all duration-200"
+        :class="r <= col.activeLevel ? 'bg-ink' : 'bg-ink/[0.06]'"
+        :style="r <= col.activeLevel ? { opacity: getSquareOpacity(r, col.activeLevel) } : {}"
+      />
+    </div>
+  </div>
+
+  <!-- Variant: Smooth Bezier Line Curve -->
   <svg
-    v-if="curve"
+    v-else-if="curve"
     :viewBox="`0 0 ${width} ${height}`"
     fill="none"
     preserveAspectRatio="none"

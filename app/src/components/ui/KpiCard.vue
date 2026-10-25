@@ -2,16 +2,22 @@
 import { computed } from 'vue'
 import Sparkline from './Sparkline.vue'
 
-const props = defineProps<{
-  label: string
-  value: string | number
-  hint?: string
-  trend?: string | number
-  info?: string
-  to?: string
-  interactive?: boolean
-  spark?: number[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    label: string
+    value: string | number
+    hint?: string
+    trend?: string | number
+    info?: string
+    to?: string
+    interactive?: boolean
+    spark?: number[]
+    sparkVariant?: 'squares' | 'line'
+  }>(),
+  {
+    sparkVariant: 'squares',
+  },
+)
 
 const emit = defineEmits<{ select: [] }>()
 
@@ -42,7 +48,7 @@ const trendFormatted = computed(() => {
     :to="to"
     :role="interactive ? 'button' : undefined"
     :tabindex="interactive ? 0 : undefined"
-    class="card-fade group border border-line rounded-[20px] sm:rounded-[24px] bg-surface shadow-xs hover:shadow-md hover:border-ink transition-all relative flex flex-col justify-between p-4 sm:p-5 text-left no-underline text-inherit focus-visible:border-ink focus-visible:ring-2 focus-visible:ring-accent overflow-hidden"
+    class="card-fade group flex h-full flex-col justify-between p-4 sm:p-5 text-left no-underline text-inherit focus-visible:ring-2 focus-visible:ring-accent"
     :class="{ 'cursor-pointer': interactive || to }"
     @click="interactive ? pick() : undefined"
     @keydown.enter.prevent="interactive ? pick() : undefined"
@@ -51,7 +57,7 @@ const trendFormatted = computed(() => {
     <div class="relative z-10">
       <!-- Header row: Label + Trend Pill / Action -->
       <div class="flex items-center justify-between gap-2">
-        <h3 class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted tracking-tight m-0 leading-none">
+        <h3 class="flex items-center gap-1.5 text-[12.5px] font-medium text-ink-soft tracking-tight m-0 leading-none">
           <span>{{ label }}</span>
           <button
             v-if="info"
@@ -149,7 +155,7 @@ const trendFormatted = computed(() => {
 
       <!-- Value row: Metric + Subtitle -->
       <div class="mt-2.5 flex items-baseline justify-between gap-2">
-        <p class="tabular text-[24px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono m-0">
+        <p class="tabular text-[25px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink sm:text-[27px] font-mono m-0">
           {{ value }}
         </p>
         <p
@@ -161,12 +167,12 @@ const trendFormatted = computed(() => {
       </div>
     </div>
 
-    <!-- Full-width smooth bezier sparkline spanning across card base -->
+    <!-- Full-width 1:1 square matrix spanning across card base -->
     <div
       v-if="spark && spark.length"
-      class="relative -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 mt-3.5 overflow-hidden rounded-b-[20px] sm:rounded-b-[24px]"
+      class="relative -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 mt-3.5 px-4 sm:px-5 pb-3 sm:pb-3.5 pt-1.5 overflow-hidden rounded-b-[20px] sm:rounded-b-[24px]"
     >
-      <Sparkline :values="spark" :height="36" />
+      <Sparkline :values="spark" :variant="sparkVariant" />
     </div>
   </component>
 </template>
