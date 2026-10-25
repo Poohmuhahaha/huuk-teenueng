@@ -7,7 +7,6 @@ import BarChart from '@/components/ui/BarChart.vue'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
 import DockBar from '@/components/ui/DockBar.vue'
-import LiveSection from '@/components/live/LiveSection.vue'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import { useWidePane } from '@/composables/useWidePane'
 import { activeMonth, activeYear } from '@/core/navdate'
@@ -206,7 +205,6 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
             </div>
           </div>
         </div>
-        <LiveSection variant="table" />
       </div>
     </div>
   </div>

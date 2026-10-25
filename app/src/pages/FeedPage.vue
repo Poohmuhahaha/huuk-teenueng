@@ -6,7 +6,6 @@ import { activePlatform, FEED_META, platformIdBySetupName } from '@/core/platfor
 import type { FeedPlatformId } from '@/core/platforms'
 import { currentRole } from '@/core/auth'
 import FeedGrid from '@/components/ui/FeedGrid.vue'
-import LiveSection from '@/components/live/LiveSection.vue'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import SocialMediaBar from '@/components/ui/SocialMediaBar.vue'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
@@ -314,7 +313,5 @@ function setYear(y: number): void {
       </div>
     </div>
 
-    <!-- Live Mirror Section -->
-    <LiveSection variant="grid" :limit="6" />
   </div>
 </template>
