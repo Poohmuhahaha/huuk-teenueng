@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAds, useDashboard } from '@/core/queries'
 import { guardSuppressed } from '@/core/protected'
@@ -13,10 +13,13 @@ import DockBar from '@/components/ui/DockBar.vue'
 import KpiCard from '@/components/ui/KpiCard.vue'
 import CountUpNumber from '@/components/ui/CountUpNumber.vue'
 import BarChart from '@/components/ui/BarChart.vue'
+import type { BarItem } from '@/components/ui/BarChart.vue'
 import LineChart from '@/components/ui/LineChart.vue'
 import StatusChip from '@/components/ui/StatusChip.vue'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import ProtectedModal from '@/components/overlays/ProtectedModal.vue'
+import Drawer from '@/components/overlays/Drawer.vue'
+import type { Post } from '@/mock/db'
 
 const router = useRouter()
 // The deck works on one month: this is the shared value every card follows.
@@ -28,6 +31,69 @@ const guardOpen = ref(false)
 
 const root = ref<HTMLElement | null>(null)
 useWidePane(root, 'dash-scroll')
+
+const isMobile = ref(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+function updateMobile(): void {
+  isMobile.value = window.innerWidth < 768
+}
+onMounted(() => {
+  window.addEventListener('resize', updateMobile)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateMobile)
+})
+
+interface BreakdownContext {
+  type: 'pillar' | 'platform' | 'status'
+  item: BarItem
+}
+
+const breakdown = ref<BreakdownContext | null>(null)
+const breakdownSheetOpen = ref(false)
+const breakdownSubFilter = ref<'all' | 'done' | 'pending'>('all')
+
+function openBreakdown(type: 'pillar' | 'platform' | 'status', item: BarItem): void {
+  breakdown.value = { type, item }
+  breakdownSubFilter.value = 'all'
+  breakdownSheetOpen.value = true
+}
+
+const breakdownPosts = computed<Post[]>(() => {
+  if (!breakdown.value) return []
+  const all = postsQ.data.value ?? []
+  const { type, item } = breakdown.value
+
+  let filtered = all.filter((p) => {
+    if (type === 'pillar') {
+      return item.label === 'Unassigned' ? !p.pillar : p.pillar === item.label
+    }
+    if (type === 'platform') {
+      return item.label === 'Direct' ? (!p.platforms || p.platforms.length === 0) : p.platforms.includes(item.label)
+    }
+    if (type === 'status') {
+      return p.status === item.label
+    }
+    return true
+  })
+
+  if (breakdownSubFilter.value === 'done') {
+    filtered = filtered.filter((p) => p.status === 'Done')
+  } else if (breakdownSubFilter.value === 'pending') {
+    filtered = filtered.filter((p) => p.status !== 'Done')
+  }
+
+  return filtered
+})
+
+function goToPost(post: Post): void {
+  breakdownSheetOpen.value = false
+  void router.push({ path: '/plan', query: { tab: 'monthly', m: String(month.value), post: post.id } })
+}
+
+function goToPlanner(): void {
+  breakdownSheetOpen.value = false
+  void router.push({ path: '/plan', query: { tab: 'monthly', m: String(month.value) } })
+}
 
 // Hub tab (subnavbar) — sections come from HUB_TABS['/dashboard'].
 const { active: section } = useHubTab('/dashboard')
@@ -311,18 +377,30 @@ function goMaster(): void {
             </div>
 
             <div class="mt-6">
-              <h2 class="mb-2 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Planned vs posted · by pillar</h2>
-              <BarChart :items="pillarBars" />
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Planned vs posted · by pillar</h2>
+                <RouterLink class="text-xs font-semibold text-muted hover:text-ink transition-colors flex items-center gap-1" :to="`/plan?tab=monthly&m=${month}`">
+                  <span>View in Planner</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7 17L17 7M17 7H7M17 7V17" />
+                  </svg>
+                </RouterLink>
+              </div>
+              <BarChart :items="pillarBars" @select-item="(it) => openBreakdown('pillar', it)" />
             </div>
 
             <div class="grid2 mt-5">
               <div>
-                <h2 class="mb-2 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By platform</h2>
-                <BarChart :items="platformBars" />
+                <div class="flex items-center justify-between mb-2">
+                  <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By platform</h2>
+                </div>
+                <BarChart :items="platformBars" @select-item="(it) => openBreakdown('platform', it)" />
               </div>
               <div>
-                <h2 class="mb-2 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By status</h2>
-                <BarChart :items="statusBars" />
+                <div class="flex items-center justify-between mb-2">
+                  <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By status</h2>
+                </div>
+                <BarChart :items="statusBars" @select-item="(it) => openBreakdown('status', it)" />
               </div>
             </div>
           </template>
@@ -609,5 +687,117 @@ function goMaster(): void {
     </div>
 
     <ProtectedModal :open="guardOpen" field="Top-5 views cell" @cancel="guardOpen = false" @confirm="goMaster" />
+
+    <!-- Category Drill-down Posts Sheet (Bottom Sheet on mobile, Right Drawer on desktop) -->
+    <Drawer
+      v-model="breakdownSheetOpen"
+      :side="isMobile ? 'bottom' : 'right'"
+      :width="'460px'"
+      :title="breakdown ? `${breakdown.type === 'pillar' ? 'Pillar' : breakdown.type === 'platform' ? 'Platform' : 'Status'}: ${breakdown.item.label}` : 'Category Topics'"
+    >
+      <div v-if="breakdown" class="flex flex-col gap-4 text-left p-1">
+        <!-- Summary KPI Capsule -->
+        <div class="p-3.5 rounded-xl bg-wash border border-line flex flex-col gap-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span v-if="breakdown.item.platform" class="flex-none" :style="{ color: breakdown.item.color }">
+                <PlatformLogo :name="breakdown.item.platform" :size="16" />
+              </span>
+              <span v-else class="w-3 h-3 rounded-full flex-none shadow-2xs" :style="{ background: breakdown.item.color }" />
+              <strong class="text-sm font-bold text-ink">{{ breakdown.item.label }}</strong>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-mono font-bold text-ink">{{ breakdown.item.value }} topics</span>
+              <span class="text-2xs font-semibold px-2 py-0.5 rounded-full bg-black text-white">
+                {{ breakdown.item.sublabel || `${breakdown.item.value} total` }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Sub-filters inside sheet: All / Done / In progress -->
+          <div class="flex items-center gap-1.5 pt-2 border-t border-line/60">
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-full text-2xs font-semibold transition-all cursor-pointer select-none"
+              :class="breakdownSubFilter === 'all' ? 'bg-ink text-white font-bold shadow-xs' : 'text-muted hover:text-ink hover:bg-surface/80'"
+              @click="breakdownSubFilter = 'all'"
+            >
+              All ({{ breakdownPosts.length }})
+            </button>
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-full text-2xs font-semibold transition-all cursor-pointer select-none"
+              :class="breakdownSubFilter === 'done' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-muted hover:text-ink hover:bg-surface/80'"
+              @click="breakdownSubFilter = 'done'"
+            >
+              Done
+            </button>
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-full text-2xs font-semibold transition-all cursor-pointer select-none"
+              :class="breakdownSubFilter === 'pending' ? 'bg-amber-600 text-white font-bold shadow-xs' : 'text-muted hover:text-ink hover:bg-surface/80'"
+              @click="breakdownSubFilter = 'pending'"
+            >
+              In Progress
+            </button>
+          </div>
+        </div>
+
+        <!-- Topics List -->
+        <div class="flex flex-col gap-2">
+          <span class="text-2xs font-bold uppercase tracking-wider text-muted">Scheduled Topics for {{ month }}/{{ year }}</span>
+          
+          <div v-if="!breakdownPosts.length" class="p-8 border border-dashed border-line rounded-xl text-center text-muted text-xs">
+            No topics in this category match the filter.
+          </div>
+
+          <div
+            v-for="post in breakdownPosts"
+            :key="post.id"
+            class="group p-3 rounded-xl border border-line bg-surface hover:border-ink hover:bg-wash/40 transition-all cursor-pointer flex flex-col gap-2"
+            role="button"
+            tabindex="0"
+            @click="goToPost(post)"
+            @keydown.enter="goToPost(post)"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <strong class="text-xs font-bold text-ink leading-snug line-clamp-2">{{ post.topic }}</strong>
+              <StatusChip :status="post.status" class="flex-none scale-90 origin-top-right" />
+            </div>
+
+            <div class="flex items-center justify-between text-2xs text-muted pt-1 border-t border-faint">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span v-if="post.date" class="font-mono text-ink font-medium">{{ post.date }}</span>
+                <span v-if="post.format">· {{ post.format }}</span>
+                <div v-if="post.platforms?.length" class="inline-flex items-center gap-1 ml-1">
+                  <PlatformLogo v-for="pl in post.platforms" :key="pl" :name="pl" :size="11" />
+                </div>
+              </div>
+              <span class="text-ink font-semibold flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                Edit ↗
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex items-center justify-between w-full gap-2">
+          <button type="button" class="btn text-xs py-2 px-3.5 cursor-pointer" @click="breakdownSheetOpen = false">
+            Close
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary text-xs py-2 px-4 font-semibold cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+            @click="goToPlanner"
+          >
+            <span>Open Planner</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </template>
+    </Drawer>
   </div>
 </template>

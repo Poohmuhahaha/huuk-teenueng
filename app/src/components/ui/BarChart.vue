@@ -36,6 +36,8 @@ const props = withDefaults(
   },
 )
 
+const emit = defineEmits<{ (e: 'select-item', item: BarItem): void }>()
+
 function num(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) ? Math.max(0, v) : 0
 }
@@ -419,7 +421,13 @@ onMounted(() => {
           <div
             v-for="it in itemsWithShare"
             :key="it.label"
-            class="group border-b border-line/40 py-2.5 last:border-b-0"
+            class="group border-b border-line/40 py-2.5 last:border-b-0 cursor-pointer rounded-xl px-2.5 -mx-2.5 transition-colors hover:bg-wash/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            role="button"
+            tabindex="0"
+            :aria-label="`${it.label}: ${it.value}`"
+            @click="emit('select-item', it)"
+            @keydown.enter="emit('select-item', it)"
+            @keydown.space.prevent="emit('select-item', it)"
           >
             <!-- Top line: label + swatch + count + percentage -->
             <div class="flex items-center justify-between gap-2 mb-1.5">
@@ -430,13 +438,25 @@ onMounted(() => {
                 <span v-else class="w-2.5 h-2.5 rounded-full flex-none shadow-2xs" :style="{ background: it.color }" />
                 <span class="text-[13px] font-bold text-ink truncate">{{ it.label }}</span>
               </div>
-              <div class="flex items-center gap-2 flex-none">
+              <div class="flex items-center gap-1.5 flex-none">
                 <span class="text-sm font-bold text-ink font-mono">
                   <CountUpNumber :value="it.value.toLocaleString('en-US')" />
                 </span>
                 <span class="text-[11px] font-semibold text-muted bg-wash border border-line px-1.5 py-0.5 rounded-full">
                   <CountUpNumber :value="`${it.pct}%`" />
                 </span>
+                <svg
+                  class="w-3.5 h-3.5 text-muted opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0 ml-0.5 flex-none"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
               </div>
             </div>
 
