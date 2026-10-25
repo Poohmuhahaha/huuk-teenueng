@@ -14,6 +14,7 @@ import { beginOAuth } from '@/core/oauth'
 import { t } from '@/core/i18n'
 import InfoTip from '@/components/ui/InfoTip.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
+import KpiCard from '@/components/ui/KpiCard.vue'
 import type { AdCampaign } from '@/mock/db'
 
 const { data: view, isPending, isError, error: loadError } = useAds()
@@ -308,23 +309,11 @@ const audit = computed(() => view.value?.audit ?? [])
     </div>
 
     <template v-else>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <div class="panel flex flex-col gap-1 p-3.5 bg-surface border border-line rounded-xl shadow-2xs [&>strong]:text-xl">
-          <span class="text-2xs text-muted font-bold uppercase tracking-wider">{{ t('ads.spend') }}</span>
-          <strong class="font-mono">{{ money(totals.spend * 100) }}</strong>
-        </div>
-        <div class="panel flex flex-col gap-1 p-3.5 bg-surface border border-line rounded-xl shadow-2xs [&>strong]:text-xl">
-          <span class="text-2xs text-muted font-bold uppercase tracking-wider">{{ t('ads.results') }}<template v-if="totals.label"> · {{ totals.label }}</template></span>
-          <strong class="font-mono">{{ fmt(totals.results) }}</strong>
-        </div>
-        <div class="panel flex flex-col gap-1 p-3.5 bg-surface border border-line rounded-xl shadow-2xs [&>strong]:text-xl">
-          <span class="text-2xs text-muted font-bold uppercase tracking-wider">{{ t('ads.ctr') }}</span>
-          <strong class="font-mono">{{ totals.ctr.toFixed(2) }}%</strong>
-        </div>
-        <div class="panel flex flex-col gap-1 p-3.5 bg-surface border border-line rounded-xl shadow-2xs [&>strong]:text-xl">
-          <span class="text-2xs text-muted font-bold uppercase tracking-wider">{{ t('ads.cpc') }}</span>
-          <strong class="font-mono">{{ money(totals.cpc * 100) }}</strong>
-        </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
+        <KpiCard :label="t('ads.spend')" :value="money(totals.spend * 100)" hint="Last 30 days" />
+        <KpiCard :label="t('ads.results')" :value="fmt(totals.results)" :hint="totals.label || 'Total link clicks'" />
+        <KpiCard :label="t('ads.ctr')" :value="totals.ctr.toFixed(2) + '%'" hint="Click-through rate" />
+        <KpiCard :label="t('ads.cpc')" :value="money(totals.cpc * 100)" hint="Cost per click" />
       </div>
 
       <!-- campaign table -->

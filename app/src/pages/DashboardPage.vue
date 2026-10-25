@@ -202,6 +202,17 @@ const trendData = computed(() => {
     }
   }
 
+  function calcTrend(arr: number[]): string {
+    if (arr.length < 2) return '+0%'
+    const mid = Math.floor(arr.length / 2)
+    const first = arr.slice(0, mid).reduce((a, b) => a + b, 0)
+    const second = arr.slice(mid).reduce((a, b) => a + b, 0)
+    if (first === 0 && second === 0) return '+0%'
+    if (first === 0) return '+100%'
+    const diff = ((second - first) / first) * 100
+    return `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`
+  }
+
   const labels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`)
 
   return {
@@ -217,6 +228,10 @@ const trendData = computed(() => {
       wip: dailyWip,
       views: dailyViews,
       likes: dailyLikes,
+    },
+    trends: {
+      views: calcTrend(dailyViews),
+      likes: calcTrend(dailyLikes),
     },
   }
 })
@@ -279,11 +294,11 @@ function goMaster(): void {
           <template v-if="section === 'overview'">
             <div class="grid6">
               <KpiCard label="Total" :value="stats.total" hint="topics this month" :spark="trendData.sparks.total" to="/plan?tab=monthly" />
-              <KpiCard label="Posted" :value="stats.posted" :hint="`${postedPct}% of all`" :spark="trendData.sparks.posted" to="/plan?tab=monthly" />
+              <KpiCard label="Posted" :value="stats.posted" :hint="`${postedPct}% of all`" :trend="`${postedPct}%`" :spark="trendData.sparks.posted" to="/plan?tab=monthly" />
               <KpiCard label="Pending" :value="stats.pending" hint="to start" :spark="trendData.sparks.pending" to="/plan?tab=monthly" />
               <KpiCard label="WIP" :value="stats.wip" hint="in design or dev" :spark="trendData.sparks.wip" to="/plan?tab=monthly" />
-              <KpiCard label="Views" :value="stats.views.toLocaleString('en-US')" hint="this month" :spark="trendData.sparks.views" to="/analyze?tab=performance" />
-              <KpiCard label="Likes" :value="stats.likes.toLocaleString('en-US')" hint="this month" :spark="trendData.sparks.likes" to="/analyze?tab=performance" />
+              <KpiCard label="Views" :value="stats.views.toLocaleString('en-US')" hint="this month" :trend="trendData.trends.views" :spark="trendData.sparks.views" to="/analyze?tab=performance" />
+              <KpiCard label="Likes" :value="stats.likes.toLocaleString('en-US')" hint="this month" :trend="trendData.trends.likes" :spark="trendData.sparks.likes" to="/analyze?tab=performance" />
             </div>
 
             <!-- Views & Engagement Line Chart -->

@@ -53,6 +53,12 @@ const monthlyOut = computed(() => {
   return sorted(m)
 })
 
+const financeSparks = computed(() => ({
+  income: monthlyIn.value.map((m) => m.value),
+  expense: monthlyOut.value.map((m) => m.value),
+  balance: monthlyIn.value.map((m, i) => m.value - (monthlyOut.value[i]?.value ?? 0)),
+}))
+
 async function add(): Promise<void> {
   if (!canWrite.value || addTxn.isPending.value) return
   addError.value = ''
@@ -76,7 +82,7 @@ async function add(): Promise<void> {
 
 <template>
   <div class="financepage text-left w-full flex flex-col gap-5">
-    <BudgetCards :income="income" :expense="expense" :balance="balance" :currency="CURRENCY" />
+    <BudgetCards :income="income" :expense="expense" :balance="balance" :currency="CURRENCY" :sparks="financeSparks" />
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="p-4 bg-surface border border-line rounded-xl shadow-xs">

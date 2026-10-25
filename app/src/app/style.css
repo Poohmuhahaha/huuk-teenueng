@@ -1718,6 +1718,18 @@ textarea.field, textarea {
   border: 1px solid var(--line);
   box-shadow: var(--shadow-xs);
 }
+.card-fade {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease;
+}
+.card-fade:hover {
+  transform: translateY(-1.5px);
+}
+.sparkline-reveal {
+  transition: opacity 0.3s ease;
+}
+.sparkline-dot {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
 .card, .panel, .slide-card { border: 1px solid var(--line); }
 .plans-card, .plogin-card, .modal, .guide-panel, .lp-card { border: 1px solid var(--line); }
 
