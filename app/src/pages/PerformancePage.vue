@@ -4,7 +4,9 @@ import { useAllPosts, useMetrics, useSetup, useImportMetrics, usePermission } fr
 import { t } from '@/core/i18n'
 import { platformGoals, plus7 } from '@/mock/db'
 import BarChart from '@/components/ui/BarChart.vue'
+import MonthToggle from '@/components/ui/MonthToggle.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
+import DockBar from '@/components/ui/DockBar.vue'
 import LiveSection from '@/components/live/LiveSection.vue'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import { useWidePane } from '@/composables/useWidePane'
@@ -83,33 +85,29 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
 </script>
 
 <template>
-  <div class="perf-page text-left w-full flex flex-col gap-3" ref="root">
-    <!-- Header Toolbar matching CI -->
-    <div class="flex items-center justify-between gap-3 mb-1 flex-wrap">
-      <div class="flex items-center gap-2">
-        <h2 class="text-xs font-bold uppercase tracking-widest text-muted m-0">Performance Metrics</h2>
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
-          {{ platform || 'Select platform' }}
-        </span>
-      </div>
-      <div class="flex items-center gap-2 ml-auto">
-        <label class="sr-only" for="perf-platform">Platform</label>
-        <select id="perf-platform" class="field h-8 sm:h-9 min-w-28 m-0 rounded-xl text-xs font-semibold" v-model="platform" aria-label="Platform">
-          <option v-for="o in setup?.platforms ?? []" :key="o" :value="o">{{ o }}</option>
-        </select>
-        <button
-          type="button"
-          class="btn btn-primary h-8 sm:h-9 whitespace-nowrap px-4 flex-none rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-transform hover:scale-[1.02]"
-          :disabled="!platform || imp.isPending.value || !canImport"
-          :title="canImport ? '' : t('auth.noPerm')"
-          @click="imp.mutate({ platform, month, year })"
-        >
-          <span>{{ imp.isPending.value ? 'Importing…' : 'Import metrics' }}</span>
-        </button>
-      </div>
-    </div>
+  <div class="perf-page" ref="root">
+    <div class="perf-grid">
+      <DockBar label="Performance controls">
+        <div class="flex items-center justify-between w-full gap-3">
+          <div class="flex items-center gap-2">
+            <MonthToggle v-model="month" v-model:year="year" />
+            <span class="dock-sep" aria-hidden="true" />
+            <label class="sr-only" for="perf-platform">Platform</label>
+            <select id="perf-platform" class="field h-10 min-w-28 m-0 rounded-full" v-model="platform" aria-label="Platform">
+              <option v-for="o in setup?.platforms ?? []" :key="o" :value="o">{{ o }}</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2 ml-auto">
+            <button class="btn btn-primary h-10 whitespace-nowrap px-5 flex-none rounded-full" :disabled="!platform || imp.isPending.value || !canImport"
+              :title="canImport ? '' : t('auth.noPerm')"
+              @click="imp.mutate({ platform, month, year })">
+              {{ imp.isPending.value ? 'Importing…' : 'Import' }}
+            </button>
+          </div>
+        </div>
+      </DockBar>
 
-    <div class="perf-main">
+      <div class="perf-main">
         <span v-if="imp.data.value" class="text-xs text-muted">Imported {{ imp.data.value.imported }} metric row(s) for {{ platform }} · {{ month }}/{{ year }}.</span>
         <span v-if="imp.error.value" class="text-xs text-danger">{{ imp.error.value instanceof Error ? imp.error.value.message : imp.error.value }}</span>
         <div v-if="isPending" class="muted">Loading performance…</div>
@@ -210,5 +208,6 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
         </div>
         <LiveSection variant="table" />
       </div>
+    </div>
   </div>
 </template>

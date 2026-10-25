@@ -10,6 +10,9 @@ import FeedGrid from '@/components/ui/FeedGrid.vue'
 import LiveSection from '@/components/live/LiveSection.vue'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import SocialMediaBar from '@/components/ui/SocialMediaBar.vue'
+import MonthToggle from '@/components/ui/MonthToggle.vue'
+import DockBar from '@/components/ui/DockBar.vue'
+import { activeMonth, activeYear } from '@/core/navdate'
 
 const { data: setup } = useSetup()
 const platform = ref('')
@@ -79,10 +82,44 @@ const monthLabel = computed(() => {
   const m = Number(upto.value.slice(5, 7))
   return MONTHS.includes(m) ? m : null
 })
+
+function goMonth(m: number | string): void {
+  activeMonth.value = Number(m)
+  const lastDay = new Date(activeYear.value, Number(m), 0).getDate()
+  upto.value = `${activeYear.value}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+}
+
+function setYear(y: number): void {
+  activeYear.value = y
+  const m = activeMonth.value
+  const lastDay = new Date(y, m, 0).getDate()
+  upto.value = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+}
 </script>
 
 <template>
   <div class="feedpage text-left w-full flex flex-col gap-5">
+    <DockBar label="Feed controls">
+      <div class="flex items-center justify-between w-full gap-3">
+        <div class="flex items-center gap-2">
+          <MonthToggle :model-value="activeMonth" :year="activeYear" @update:model-value="goMonth" @update:year="setYear" />
+          <span class="dock-sep" aria-hidden="true" />
+          <span class="text-xs font-semibold text-muted tracking-wider uppercase font-mono">
+            {{ preview.length }} Posts
+          </span>
+        </div>
+        <div class="flex items-center gap-2 ml-auto">
+          <RouterLink class="btn btn-icon w-auto" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
+            </svg>
+          </RouterLink>
+          <RouterLink class="btn btn-primary btn-icon w-auto" to="/plan?tab=monthly" title="Add new topic" aria-label="Add new topic">+</RouterLink>
+        </div>
+      </div>
+    </DockBar>
+
     <div v-if="isError" class="card" role="alert">
       <p class="muted">Could not load posts: {{ loadError?.message }}</p>
       <button class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>

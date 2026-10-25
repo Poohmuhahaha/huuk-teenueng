@@ -3262,7 +3262,8 @@ header.topbar .in-topbar .tabselect-item.active {
 .hubpage > .camp-page,
 .hubpage > .studio-page,
 .hubpage > .perf-page,
-.hubpage > .brandpage {
+.hubpage > .brandpage,
+.hubpage > .feedpage {
   flex: 1 0 auto; display: flex; flex-direction: column;
   width: 100%; min-width: 0; margin-bottom: 0;
 }

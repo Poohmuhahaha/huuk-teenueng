@@ -8,6 +8,7 @@ import { navDate, yearOfDate } from '@/core/navdate'
 import { monthOfDate } from '@/core/deeplink'
 import { deckFull } from '@/core/deck'
 import { useWidePane } from '@/composables/useWidePane'
+import DockBar from '@/components/ui/DockBar.vue'
 import Drawer from '@/components/overlays/Drawer.vue'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import StatusChip from '@/components/ui/StatusChip.vue'
@@ -214,55 +215,53 @@ function goAdd(date?: string): void {
 
 <template>
   <div ref="root" class="cal-container">
-    <!-- Header Toolbar matching CI -->
-    <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
-      <div class="flex items-center gap-2">
-        <!-- View switcher capsule -->
-        <div class="inline-flex items-center gap-1 p-1 bg-wash border border-line rounded-full shadow-2xs">
+    <!-- Standard Huuk DockBar (teleports to slide-dock at bottom of deck) -->
+    <DockBar label="Calendar controls">
+      <div class="flex items-center justify-between w-full gap-3">
+        <div class="flex items-center gap-2">
+          <!-- View switcher capsule -->
+          <div class="inline-flex items-center gap-1 p-1 bg-wash border border-line rounded-full shadow-2xs">
+            <button
+              type="button"
+              class="px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer select-none whitespace-nowrap"
+              :class="viewMode === 'grid' ? '!bg-ink !text-white shadow-xs font-bold' : 'text-muted hover:text-ink hover:bg-surface/60'"
+              @click="viewMode = 'grid'"
+            >
+              Month
+            </button>
+            <button
+              type="button"
+              class="px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer select-none whitespace-nowrap"
+              :class="viewMode === 'agenda' ? '!bg-ink !text-white shadow-xs font-bold' : 'text-muted hover:text-ink hover:bg-surface/60'"
+              @click="viewMode = 'agenda'"
+            >
+              Agenda
+            </button>
+          </div>
+          <span class="dock-sep" aria-hidden="true" />
+          <span class="text-xs font-semibold text-muted tracking-wider uppercase font-mono">
+            {{ posts?.length ?? 0 }} Posts
+          </span>
+        </div>
+        <div class="flex items-center gap-2 ml-auto">
+          <RouterLink class="btn btn-icon w-auto" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
+            </svg>
+          </RouterLink>
           <button
             type="button"
-            class="px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer select-none whitespace-nowrap"
-            :class="viewMode === 'grid' ? '!bg-ink !text-white shadow-xs font-bold' : 'text-muted hover:text-ink hover:bg-surface/60'"
-            @click="viewMode = 'grid'"
+            class="btn btn-primary btn-icon w-auto"
+            :title="t('planner.addTopic')"
+            aria-label="New post"
+            @click="() => goAdd()"
           >
-            Month
-          </button>
-          <button
-            type="button"
-            class="px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer select-none whitespace-nowrap"
-            :class="viewMode === 'agenda' ? '!bg-ink !text-white shadow-xs font-bold' : 'text-muted hover:text-ink hover:bg-surface/60'"
-            @click="viewMode = 'agenda'"
-          >
-            Agenda
+            +
           </button>
         </div>
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
-          {{ posts?.length ?? 0 }} posts
-        </span>
       </div>
-      <div class="flex items-center gap-2 ml-auto">
-        <RouterLink
-          class="btn h-8 sm:h-9 px-3 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs hover:border-ink transition-colors"
-          to="/analyze?tab=performance"
-          title="Import metrics"
-        >
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
-          </svg>
-          <span class="hidden sm:inline">Import metrics</span>
-        </RouterLink>
-        <button
-          type="button"
-          class="btn btn-primary h-8 sm:h-9 px-3.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-transform hover:scale-[1.02]"
-          :title="t('planner.addTopic')"
-          aria-label="New post"
-          @click="() => goAdd()"
-        >
-          <span class="text-sm font-bold leading-none">+</span>
-          <span>New post</span>
-        </button>
-      </div>
-    </div>
+    </DockBar>
 
     <div v-if="isPending" class="muted py-8 text-center" role="status">Loading calendar…</div>
     <div v-else-if="isError" class="card" role="alert">
