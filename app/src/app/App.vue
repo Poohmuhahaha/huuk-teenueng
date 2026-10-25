@@ -53,7 +53,7 @@ const showWorkspaceSetup = computed(
   <RouterView v-if="route.meta.public" />
   <!-- Production gate: nothing to do before signing in. -->
   <LoginPage v-else-if="showLogin" />
-  <!-- Boot Loading Animation Screen -->
+  <!-- Boot Loading Animation Screen: 1:1 Squares Wave Loader -->
   <div
     v-else-if="!ready"
     class="min-h-screen w-full flex flex-col items-center justify-center bg-surface select-none relative overflow-hidden"
@@ -63,23 +63,26 @@ const showWorkspaceSetup = computed(
       class="absolute w-80 h-80 rounded-full bg-wash blur-3xl -z-10 pointer-events-none opacity-80"
     />
 
-    <div class="flex flex-col items-center text-center gap-5 px-6 max-w-sm">
-      <!-- Animated Huuk Brand Logo -->
-      <div class="relative flex items-center justify-center">
-        <img
-          src="/huuk-logo.svg"
-          alt="Huuk"
-          class="h-8 sm:h-9 w-auto object-contain relative z-10 transition-transform duration-500 animate-pulse"
+    <div class="flex flex-col items-center text-center gap-6 px-6 max-w-sm">
+      <!-- Huuk Brand Logo -->
+      <img
+        src="/huuk-logo.svg"
+        alt="Huuk"
+        class="h-8 sm:h-9 w-auto object-contain opacity-90 transition-opacity"
+      />
+
+      <!-- 1:1 Squares Loading Wave -->
+      <div class="flex items-center gap-2.5 sm:gap-3 py-2" role="status" aria-label="Loading">
+        <div
+          v-for="i in 5"
+          :key="i"
+          class="square-loader-item w-7 h-7 sm:w-8 sm:h-8 aspect-square flex-none"
+          :style="{ animationDelay: `${(i - 1) * 0.14}s` }"
         />
       </div>
 
-      <!-- Modern Indeterminate Progress Bar -->
-      <div class="w-44 h-1 bg-wash rounded-full overflow-hidden relative">
-        <div class="boot-progress-bar absolute inset-y-0 bg-ink rounded-full" />
-      </div>
-
       <!-- Dynamic Loading Status with Animated Bouncing Dots -->
-      <div class="flex items-center gap-1.5 text-xs font-medium text-muted tracking-wide mt-1">
+      <div class="flex items-center gap-1.5 text-xs font-semibold text-muted tracking-wider uppercase">
         <span>{{ t('common.loading').replace(/…|\.\.\./, '') }}</span>
         <span class="inline-flex gap-1 items-center">
           <span class="w-1 h-1 rounded-full bg-muted/70 animate-bounce [animation-delay:0ms]" />

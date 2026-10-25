@@ -223,6 +223,27 @@
   border-color: transparent;
 }
 
+/* 1:1 Squares Loading Wave Animation */
+@keyframes square-wave {
+  0%, 100% {
+    transform: scale(0.72) translateY(0);
+    opacity: 0.22;
+    background-color: var(--wash, #f3f4f6);
+    border-radius: 8px;
+  }
+  50% {
+    transform: scale(1.08) translateY(-6px);
+    opacity: 1;
+    background-color: var(--ink, #0a0a0a);
+    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.22);
+    border-radius: 12px;
+  }
+}
+
+.square-loader-item {
+  animation: square-wave 1.25s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
 /* Boot loader progress animation */
 @keyframes boot-progress {
   0% {
