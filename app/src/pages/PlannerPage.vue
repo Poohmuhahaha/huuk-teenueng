@@ -14,8 +14,6 @@ import { useWidePane } from '@/composables/useWidePane'
 import type { Post, Status } from '@/mock/db'
 import { guardSuppressed } from '@/core/protected'
 import MasterTable from '@/components/tables/MasterTable.vue'
-import MonthToggle from '@/components/ui/MonthToggle.vue'
-import DockBar from '@/components/ui/DockBar.vue'
 import StatusFunnel from '@/components/ui/StatusFunnel.vue'
 import CopyBar from '@/components/ui/CopyBar.vue'
 import Drawer from '@/components/overlays/Drawer.vue'
@@ -215,26 +213,6 @@ function pick(p: Post): void {
   editorOpen.value = true
 }
 
-function goMonth(value: string | number): void {
-  const next = validMonth(value)
-  if (next === null || next === month.value) return
-  month.value = next
-  editorOpen.value = false
-  selectedId.value = null
-  // Embedded in the Plan hub: the parent owns the tab/month and the URL.
-  if (props.embedded) emit('update:month', String(next))
-  else void router.replace({ path: `/planner/${next}`, query: route.query })
-}
-
-function setYear(value: number): void {
-  const next = validYear(value)
-  if (next === null || next === year.value) return
-  year.value = next
-  editorOpen.value = false
-  selectedId.value = null
-  // The route stays month-only; the shared year is the deep link for years.
-}
-
 const assembled = computed(() => {
   const c = (draft.value.caption ?? '').trim()
   const a = (draft.value.cta ?? '').trim()
@@ -290,29 +268,41 @@ watch(
 </script>
 
 <template>
-  <div class="planner-page" ref="root">
-    <div class="planner-grid">
-    <DockBar label="Planner controls">
-      <div class="flex items-center justify-between w-full gap-3">
-        <div class="flex items-center gap-2">
-          <MonthToggle :model-value="m" :year="year" @update:model-value="goMonth" @update:year="setYear" />
-          <span class="dock-sep" aria-hidden="true" />
-          <span class="text-xs font-semibold text-muted tracking-wider uppercase">{{ (posts ?? []).length }} Topics</span>
-        </div>
-        <div class="flex items-center gap-2 ml-auto">
-          <RouterLink class="btn btn-icon w-auto" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
-            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
-              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
-            </svg>
-          </RouterLink>
-          <button class="btn btn-primary btn-icon w-auto" :disabled="!canWrite || busy"
-            :title="canWrite ? t('planner.addTopic') : t('auth.noPerm')" aria-label="Add new topic" @click="addRow">{{ busy || addPost.isPending.value ? '…' : '+' }}</button>
-        </div>
+  <div class="planner-page text-left w-full flex flex-col gap-3" ref="root">
+    <!-- Header Toolbar matching FinancePage CI -->
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-2">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-muted m-0">Content Plan</h2>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
+          {{ (posts ?? []).length }} topics
+        </span>
       </div>
-    </DockBar>
+      <div class="flex items-center gap-2 ml-auto">
+        <RouterLink
+          class="btn h-8 sm:h-9 px-3 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs hover:border-ink transition-colors"
+          to="/analyze?tab=performance"
+          title="Import metrics"
+        >
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
+          </svg>
+          <span class="hidden sm:inline">Import metrics</span>
+        </RouterLink>
+        <button
+          type="button"
+          class="btn btn-primary h-8 sm:h-9 px-3.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-transform hover:scale-[1.02]"
+          :disabled="!canWrite || busy"
+          :title="canWrite ? t('planner.addTopic') : t('auth.noPerm')"
+          aria-label="Add new topic"
+          @click="addRow"
+        >
+          <span class="text-sm font-bold leading-none">{{ busy || addPost.isPending.value ? '…' : '+' }}</span>
+          <span>{{ t('planner.addTopic') }}</span>
+        </button>
+      </div>
+    </div>
 
-    <div class="planner-main">
+    <div class="planner-main w-full">
       <div v-if="isPending" class="muted">Loading rows…</div>
       <div v-else-if="isError" class="card">
         <p class="muted">Could not load posts: {{ loadError?.message }}</p>
@@ -455,7 +445,6 @@ watch(
       </IconButton>
     </template>
   </Drawer>
-  </div>
   <ProtectedModal :open="guardOpen" field="assembled Copy-Paste"
     @cancel="guardOpen = false" @confirm="guardOpen = false" />
   </div>

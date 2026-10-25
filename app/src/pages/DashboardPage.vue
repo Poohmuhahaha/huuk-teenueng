@@ -7,9 +7,7 @@ import { t } from '@/core/i18n'
 import { useHubTab } from '@/core/subnav'
 import { activeMonth, activeYear } from '@/core/navdate'
 import { useWidePane } from '@/composables/useWidePane'
-import MonthToggle from '@/components/ui/MonthToggle.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
-import DockBar from '@/components/ui/DockBar.vue'
 import KpiCard from '@/components/ui/KpiCard.vue'
 import CountUpNumber from '@/components/ui/CountUpNumber.vue'
 import BarChart from '@/components/ui/BarChart.vue'
@@ -235,6 +233,8 @@ const statusBars = computed(() => {
     }))
 })
 
+const chartMode = ref<'growth' | 'daily'>('growth')
+
 // Daily engagement and post volume timeline across the month
 const trendData = computed(() => {
   const posts = postsQ.data.value ?? []
@@ -276,11 +276,25 @@ const trendData = computed(() => {
     }
   }
 
+  // Cumulative views and likes over time
+  const cumulativeViews = new Array(daysInMonth).fill(0)
+  const cumulativeLikes = new Array(daysInMonth).fill(0)
+  let runViews = 0
+  let runLikes = 0
+  for (let i = 0; i < daysInMonth; i++) {
+    runViews += dailyViews[i]
+    runLikes += dailyLikes[i]
+    cumulativeViews[i] = runViews
+    cumulativeLikes[i] = runLikes
+  }
+
   function calcTrend(arr: number[]): string {
-    if (arr.length < 2) return '+0%'
-    const mid = Math.floor(arr.length / 2)
+    const activeIndices = arr.map((v, i) => v > 0 ? i : -1).filter((i) => i >= 0)
+    if (activeIndices.length < 2) return '+0%'
+    const maxDay = Math.max(...activeIndices) + 1
+    const mid = Math.max(1, Math.floor(maxDay / 2))
     const first = arr.slice(0, mid).reduce((a, b) => a + b, 0)
-    const second = arr.slice(mid).reduce((a, b) => a + b, 0)
+    const second = arr.slice(mid, maxDay).reduce((a, b) => a + b, 0)
     if (first === 0 && second === 0) return '+0%'
     if (first === 0) return '+100%'
     const diff = ((second - first) / first) * 100
@@ -291,9 +305,13 @@ const trendData = computed(() => {
 
   return {
     labels,
-    series: [
-      { label: 'Views', values: dailyViews, area: true },
-      { label: 'Likes', values: dailyLikes },
+    cumulativeSeries: [
+      { label: 'Cumulative Views', values: cumulativeViews, area: true },
+      { label: 'Cumulative Likes', values: cumulativeLikes },
+    ],
+    dailySeries: [
+      { label: 'Daily Views', values: dailyViews, area: true },
+      { label: 'Daily Likes', values: dailyLikes },
     ],
     sparks: {
       total: dailyTotal,
@@ -338,28 +356,38 @@ function goMaster(): void {
 </script>
 
 <template>
-  <div class="dash-page" ref="root">
-    <div class="dash-grid">
-      <DockBar label="Dashboard controls">
-        <div class="flex items-center justify-between w-full gap-3">
-          <div class="flex items-center gap-2">
-            <MonthToggle v-model="month" v-model:year="year" />
-            <span class="dock-sep" aria-hidden="true" />
-            <span class="text-xs font-semibold text-muted tracking-wider uppercase">{{ sectionLabel }}</span>
-          </div>
-          <div class="flex items-center gap-2 ml-auto">
-            <RouterLink class="btn btn-icon w-auto" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
-              <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
-                stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
-              </svg>
-            </RouterLink>
-            <RouterLink class="btn btn-primary btn-icon w-auto" to="/plan?tab=monthly" title="New topic" aria-label="New topic">+</RouterLink>
-          </div>
-        </div>
-      </DockBar>
+  <div class="dash-page text-left w-full flex flex-col gap-3" ref="root">
+    <!-- Header Toolbar matching CI -->
+    <div class="flex items-center justify-between gap-3 mb-1 flex-wrap">
+      <div class="flex items-center gap-2">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-muted m-0">Dashboard Overview</h2>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
+          {{ sectionLabel }}
+        </span>
+      </div>
+      <div class="flex items-center gap-2 ml-auto">
+        <RouterLink
+          class="btn h-8 sm:h-9 px-3 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs hover:border-ink transition-colors"
+          to="/analyze?tab=performance"
+          title="Import metrics"
+        >
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
+          </svg>
+          <span class="hidden sm:inline">Import metrics</span>
+        </RouterLink>
+        <RouterLink
+          class="btn btn-primary h-8 sm:h-9 px-3.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-transform hover:scale-[1.02]"
+          to="/plan?tab=monthly"
+          title="New topic"
+        >
+          <span class="text-sm font-bold leading-none">+</span>
+          <span>New topic</span>
+        </RouterLink>
+      </div>
+    </div>
 
-      <div class="dash-main">
+    <div class="dash-main w-full">
         <div v-if="postsQ.isError.value || metricsQ.isError.value" class="card">
           <p class="muted">Could not load dashboard data: {{ (postsQ.error.value ?? metricsQ.error.value)?.message }}</p>
         </div>
@@ -377,10 +405,37 @@ function goMaster(): void {
 
             <!-- Views & Engagement Line Chart -->
             <div class="mt-6">
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Views & Engagement Growth</h2>
+              <div class="flex items-center justify-between mb-2.5 flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                  <h2 class="m-0 text-xs font-bold uppercase tracking-widest text-muted">Views & Engagement Growth</h2>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
+                    {{ (stats?.views ?? 0).toLocaleString('en-US') }} views
+                  </span>
+                </div>
+                <div class="inline-flex items-center gap-1 p-0.5 bg-wash border border-line rounded-lg shadow-2xs">
+                  <button
+                    type="button"
+                    class="px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer select-none"
+                    :class="chartMode === 'growth' ? '!bg-surface !text-ink shadow-xs font-bold' : 'text-muted hover:text-ink'"
+                    @click="chartMode = 'growth'"
+                  >
+                    Growth (Cumulative)
+                  </button>
+                  <button
+                    type="button"
+                    class="px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer select-none"
+                    :class="chartMode === 'daily' ? '!bg-surface !text-ink shadow-xs font-bold' : 'text-muted hover:text-ink'"
+                    @click="chartMode = 'daily'"
+                  >
+                    Daily Activity
+                  </button>
+                </div>
               </div>
-              <LineChart :labels="trendData.labels" :series="trendData.series" :height="160" />
+              <LineChart
+                :labels="trendData.labels"
+                :series="chartMode === 'growth' ? trendData.cumulativeSeries : trendData.dailySeries"
+                :height="160"
+              />
             </div>
 
             <div class="mt-6">
@@ -701,7 +756,6 @@ function goMaster(): void {
           </template>
         </template>
       </div>
-    </div>
 
     <ProtectedModal :open="guardOpen" field="Top-5 views cell" @cancel="guardOpen = false" @confirm="goMaster" />
 

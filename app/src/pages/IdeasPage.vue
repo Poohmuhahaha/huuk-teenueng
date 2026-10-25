@@ -6,7 +6,6 @@ import { t } from '@/core/i18n'
 import { activeMonth, activeYear } from '@/core/navdate'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
-import DockBar from '@/components/ui/DockBar.vue'
 import Drawer from '@/components/overlays/Drawer.vue'
 import { deckFull } from '@/core/deck'
 import { useWidePane } from '@/composables/useWidePane'
@@ -110,6 +109,29 @@ async function onPromote(it: Idea): Promise<void> {
     <div v-if="actionError" class="m-3 px-3.5 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-700 text-xs font-medium flex items-center justify-between" role="alert">
       <span>{{ actionError }}</span>
       <button type="button" class="text-xs opacity-60 hover:opacity-100 cursor-pointer" @click="actionError = ''">✕</button>
+    </div>
+
+    <!-- Header Toolbar matching FinancePage CI -->
+    <div class="flex items-center justify-between gap-3 px-1 mb-2.5 flex-wrap">
+      <div class="flex items-center gap-2">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-muted m-0">Content Ideas</h2>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
+          {{ ideas?.length ?? 0 }} ideas
+        </span>
+      </div>
+      <div class="flex items-center gap-2 ml-auto">
+        <button
+          type="button"
+          class="btn btn-primary h-8 sm:h-9 px-3.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-transform hover:scale-[1.02]"
+          :disabled="!canWrite"
+          :title="canWrite ? 'Add new idea' : t('auth.noPerm')"
+          aria-label="Add new idea"
+          @click="openNew"
+        >
+          <span class="text-sm font-bold leading-none">+</span>
+          <span>New idea</span>
+        </button>
+      </div>
     </div>
 
     <!-- Table content -->
@@ -217,28 +239,6 @@ async function onPromote(it: Idea): Promise<void> {
       </div>
     </div>
 
-    <!-- Standard Slide DockBar -->
-    <DockBar label="Ideas controls">
-      <div class="flex items-center justify-between w-full gap-3">
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-semibold text-muted tracking-wider uppercase font-mono">
-            {{ ideas?.length ?? 0 }} Ideas
-          </span>
-        </div>
-        <div class="flex items-center gap-2 ml-auto">
-          <button
-            type="button"
-            class="btn btn-primary btn-icon w-auto"
-            :disabled="!canWrite"
-            :title="canWrite ? 'Add new idea' : t('auth.noPerm')"
-            aria-label="Add new idea"
-            @click="openNew"
-          >
-            +
-          </button>
-        </div>
-      </div>
-    </DockBar>
 
     <!-- Slide-over Drawer for Capturing New Idea -->
     <Drawer
