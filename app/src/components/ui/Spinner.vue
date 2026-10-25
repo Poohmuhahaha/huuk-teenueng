@@ -4,9 +4,14 @@ withDefaults(defineProps<{ size?: number; label?: string }>(), { size: 16, label
 
 <template>
   <span
-    class="inline-block border-2 border-wash border-t-ink rounded-full animate-spin"
+    class="inline-block border-2 rounded-full animate-spin"
     role="status"
     :aria-label="label"
-    :style="{ width: `${size}px`, height: `${size}px` }"
+    :style="{
+      width: `${size}px`,
+      height: `${size}px`,
+      borderColor: 'rgba(0, 0, 0, 0.1)',
+      borderTopColor: 'var(--ink, #000000)',
+    }"
   />
 </template>

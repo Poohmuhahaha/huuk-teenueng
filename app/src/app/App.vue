@@ -53,7 +53,42 @@ const showWorkspaceSetup = computed(
   <RouterView v-if="route.meta.public" />
   <!-- Production gate: nothing to do before signing in. -->
   <LoginPage v-else-if="showLogin" />
-  <div v-else-if="!ready" class="min-h-screen grid place-items-center text-sm text-muted">{{ t('common.loading') }}</div>
+  <!-- Boot Loading Animation Screen -->
+  <div
+    v-else-if="!ready"
+    class="min-h-screen w-full flex flex-col items-center justify-center bg-surface select-none relative overflow-hidden"
+  >
+    <!-- Ambient subtle background glow -->
+    <div
+      class="absolute w-80 h-80 rounded-full bg-wash blur-3xl -z-10 pointer-events-none opacity-80"
+    />
+
+    <div class="flex flex-col items-center text-center gap-5 px-6 max-w-sm">
+      <!-- Animated Huuk Brand Logo -->
+      <div class="relative flex items-center justify-center">
+        <img
+          src="/huuk-logo.svg"
+          alt="Huuk"
+          class="h-8 sm:h-9 w-auto object-contain relative z-10 transition-transform duration-500 animate-pulse"
+        />
+      </div>
+
+      <!-- Modern Indeterminate Progress Bar -->
+      <div class="w-44 h-1 bg-wash rounded-full overflow-hidden relative">
+        <div class="boot-progress-bar absolute inset-y-0 bg-ink rounded-full" />
+      </div>
+
+      <!-- Dynamic Loading Status with Animated Bouncing Dots -->
+      <div class="flex items-center gap-1.5 text-xs font-medium text-muted tracking-wide mt-1">
+        <span>{{ t('common.loading').replace(/…|\.\.\./, '') }}</span>
+        <span class="inline-flex gap-1 items-center">
+          <span class="w-1 h-1 rounded-full bg-muted/70 animate-bounce [animation-delay:0ms]" />
+          <span class="w-1 h-1 rounded-full bg-muted/70 animate-bounce [animation-delay:150ms]" />
+          <span class="w-1 h-1 rounded-full bg-muted/70 animate-bounce [animation-delay:300ms]" />
+        </span>
+      </div>
+    </div>
+  </div>
   <!-- First run: a signed-in account without a workspace creates one first. -->
   <WorkspaceSetupPage v-else-if="showWorkspaceSetup" />
   <AppShell v-else>
