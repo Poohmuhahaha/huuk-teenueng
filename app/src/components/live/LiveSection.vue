@@ -140,11 +140,17 @@ async function onReconnect(): Promise<void> {
 </script>
 
 <template>
-  <section class="mt-6">
-    <div class="flex items-center flex-wrap gap-3">
-      <h2 class="section-title m-0 text-sm font-bold tracking-widest uppercase text-ink">{{ t('live.title') }}</h2>
-      <span class="text-muted text-[13px]">{{ t('live.synced') }} {{ syncedLabel(live?.fetchedAt) }}</span>
-      <button class="btn live-sync ml-auto w-auto px-5" :disabled="!mayManage || sync.isPending.value"
+  <section class="mt-4">
+    <div class="flex items-center justify-between flex-wrap gap-2.5 mb-2">
+      <div class="flex items-center gap-2 flex-wrap">
+        <h2 class="section-title m-0 text-xs font-bold uppercase tracking-widest text-muted">{{ t('live.title') }}</h2>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
+          {{ posts.length }} posts
+        </span>
+        <span class="text-xs text-muted font-mono">{{ t('live.synced') }} {{ syncedLabel(live?.fetchedAt) }}</span>
+      </div>
+      <button class="btn btn-primary live-sync ml-auto h-8 px-3.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-transform hover:scale-[1.02]"
+        :disabled="!mayManage || sync.isPending.value"
         :title="mayManage ? '' : t('auth.noPerm')" @click="onSync">
         {{ sync.isPending.value ? t('live.syncing') : t('live.sync') }}
       </button>
@@ -197,20 +203,20 @@ async function onReconnect(): Promise<void> {
         <div class="relative aspect-square grid place-items-center bg-wash overflow-hidden">
           <img v-if="p.thumbnailUrl || p.mediaUrl" :src="p.thumbnailUrl || p.mediaUrl"
             :alt="p.caption" loading="lazy" class="w-full h-full object-cover" />
-          <div v-else class="w-full h-full flex flex-col justify-between p-3.5 bg-gradient-to-br from-neutral-900 via-stone-900 to-black text-white relative overflow-hidden select-none">
+          <div v-else class="w-full h-full flex flex-col justify-between p-3.5 bg-wash/50 text-ink relative overflow-hidden select-none border-b border-line">
             <div class="flex items-center justify-between z-10">
               <PlatformLogo :id="p.platform" :size="16" :tile="true" />
-              <span v-if="p.videoLength" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/60 text-white/90 backdrop-blur-sm border border-white/10">{{ mmss(p.videoLength) }}</span>
+              <span v-if="p.videoLength" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface text-muted backdrop-blur-sm border border-line">{{ mmss(p.videoLength) }}</span>
             </div>
             <div class="flex flex-col items-center justify-center my-auto text-center z-10 px-1">
-              <div class="w-9 h-9 rounded-full bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white mb-2 shadow-sm">
+              <div class="w-9 h-9 rounded-full bg-surface border border-line flex items-center justify-center text-ink mb-1.5 shadow-2xs">
                 <span v-if="p.kind === 'video' || p.kind === 'reel'" class="text-xs translate-x-0.5">▶</span>
                 <span v-else class="text-xs">📸</span>
               </div>
-              <p class="text-xs font-medium text-white/90 line-clamp-2 leading-snug">{{ p.caption || p.attachmentTitle || 'Live post' }}</p>
+              <p class="text-xs font-medium text-ink line-clamp-2 leading-snug m-0">{{ p.caption || p.attachmentTitle || 'Live post' }}</p>
             </div>
-            <div class="text-[10px] text-white/60 font-mono text-center z-10">{{ dateOf(p.createdAt) }}</div>
-            <div class="absolute -right-4 -bottom-4 opacity-10 pointer-events-none scale-125">
+            <div class="text-[10px] text-muted font-mono text-center z-10">{{ dateOf(p.createdAt) }}</div>
+            <div class="absolute -right-4 -bottom-4 opacity-5 pointer-events-none scale-125">
               <PlatformLogo :id="p.platform" :size="80" :color="false" />
             </div>
           </div>
