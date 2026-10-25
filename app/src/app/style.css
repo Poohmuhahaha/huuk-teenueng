@@ -2586,8 +2586,6 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
    scrolls. The classes are set by the pages themselves, keyed to the card's
    real width, so the layout aligns while the card expands.
    ========================================================================= */
-.card-scroll.planner-scroll,
-.card-scroll.ideas-scroll,
 .card-scroll.camp-scroll,
 .card-scroll.perf-scroll {
   display: flex;
@@ -2595,6 +2593,145 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   overflow: hidden;
   padding: 44px 32px 28px;
   text-align: left;
+}
+
+/* Zero padding and zero gap for cards hosting dedicated tables (e.g. Planner / Ideas / MasterTable) */
+.card-scroll.planner-scroll,
+.card-scroll:has(.planner-page),
+.card-scroll:has(.planner-main),
+.card-scroll.ideas-scroll,
+.card-scroll:has(.ideas-page),
+.card-scroll:has(> .hubpage > .planner-page),
+.card-scroll:has(> .hubpage > .ideas-page),
+.card-scroll:has(> .tblwrap),
+.card-scroll:has(> * > .tblwrap:only-child),
+.deck.full .card-scroll.planner-scroll,
+.deck.full .card-scroll:has(.planner-page),
+.deck.full .card-scroll.ideas-scroll,
+.deck.full .card-scroll:has(.ideas-page),
+.card:has(> .tblwrap),
+.card:has(> table.tbl),
+.card.card-table,
+.panel:has(> .tblwrap) {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  text-align: left;
+  height: 100% !important;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.card-scroll.planner-scroll > .hubpage,
+.card-scroll:has(.planner-page) > .hubpage,
+.card-scroll.ideas-scroll > .hubpage,
+.card-scroll:has(.ideas-page) > .hubpage {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 100% !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
+}
+
+.card-scroll.planner-scroll .planner-page,
+.card-scroll:has(.planner-page) .planner-page,
+.card-scroll.ideas-scroll .ideas-page,
+.card-scroll:has(.ideas-page) .ideas-page {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
+.card-scroll.planner-scroll .planner-grid,
+.card-scroll:has(.planner-page) .planner-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.card-scroll.planner-scroll .planner-main,
+.card-scroll:has(.planner-page) .planner-main {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-y: auto !important;
+}
+
+.card-scroll.planner-scroll .tblwrap,
+.card-scroll:has(.planner-page) .tblwrap,
+.card-scroll.ideas-scroll .tblwrap,
+.card-scroll:has(.ideas-page) .tblwrap,
+.card:has(> .tblwrap) > .tblwrap,
+.panel:has(> .tblwrap) > .tblwrap {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  margin: 0 !important;
+  width: 100% !important;
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  box-shadow: none !important;
+}
+
+/* Ensure slide-card hosting table pages fills available height completely */
+.slide:has(.planner-page) .slide-card,
+.slide.active .slide-card:has(.planner-page),
+.slide:has(.ideas-page) .slide-card,
+.slide.active .slide-card:has(.ideas-page) {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+/* First and last column cell padding for comfortable insets inside card rounded corners */
+.card-scroll.planner-scroll .tbl th:first-child,
+.card-scroll.planner-scroll .tbl td:first-child,
+.card-scroll.ideas-scroll .tbl th:first-child,
+.card-scroll.ideas-scroll .tbl td:first-child,
+.card:has(> .tblwrap) .tbl th:first-child,
+.card:has(> .tblwrap) .tbl td:first-child {
+  padding-left: 20px !important;
+}
+
+.card-scroll.planner-scroll .tbl th:last-child,
+.card-scroll.planner-scroll .tbl td:last-child,
+.card-scroll.ideas-scroll .tbl th:last-child,
+.card-scroll.ideas-scroll .tbl td:last-child,
+.card:has(> .tblwrap) .tbl th:last-child,
+.card:has(> .tblwrap) .tbl td:last-child {
+  padding-right: 20px !important;
+}
+
+/* Bottom helper bar inside MasterTable */
+.card-scroll.planner-scroll .planner-main p.text-muted,
+.card-scroll:has(.planner-page) p.text-muted {
+  padding: 10px 20px !important;
+  margin: 0 !important;
+  border-top: 1px solid var(--faint) !important;
+  background: var(--surface) !important;
+  flex-shrink: 0 !important;
 }
 
 /* Zero padding and zero gap for Hashtags view to sit completely flush with the card frame */

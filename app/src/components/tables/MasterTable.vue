@@ -85,12 +85,12 @@ function onRowKeydown(e: KeyboardEvent, post: Post): void {
 </script>
 
 <template>
-  <div>
+  <div class="w-full flex-1 flex flex-col min-h-0">
     <div v-if="$slots.actions" class="tbl-tools flex items-center justify-center gap-2.5 mb-2">
       <slot name="actions" />
     </div>
-    <div v-if="loading" class="text-muted text-sm" role="status">Loading rows…</div>
-    <TableFrame v-else>
+    <div v-if="loading" class="text-muted text-sm p-4" role="status">Loading rows…</div>
+    <TableFrame v-else class="flex-1 min-h-0 overflow-auto">
       <thead>
         <tr>
           <th v-for="header in table.getHeaderGroups()[0]?.headers ?? []" :key="header.id"
@@ -133,6 +133,6 @@ function onRowKeydown(e: KeyboardEvent, post: Post): void {
         </tr>
       </tbody>
     </TableFrame>
-    <p class="text-muted text-sm">{{ checked.size }} selected · click a row to edit · headers sort</p>
+    <p class="text-muted text-sm px-5 py-2.5 m-0 border-t border-faint bg-surface flex-none">{{ checked.size }} selected · click a row to edit · headers sort</p>
   </div>
 </template>

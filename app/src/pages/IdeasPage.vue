@@ -92,11 +92,11 @@ async function onPromote(it: Idea): Promise<void> {
 <template>
   <div ref="root" class="ideas-page w-full flex-1 flex flex-col min-h-0 text-left">
     <!-- Notice / Alert notifications -->
-    <div v-if="notice" class="mb-3 px-3.5 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-xs font-medium flex items-center justify-between" role="status">
+    <div v-if="notice" class="m-3 px-3.5 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-xs font-medium flex items-center justify-between" role="status">
       <span>{{ notice }}</span>
       <button type="button" class="text-xs opacity-60 hover:opacity-100 cursor-pointer" @click="notice = ''">✕</button>
     </div>
-    <div v-if="actionError" class="mb-3 px-3.5 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-700 text-xs font-medium flex items-center justify-between" role="alert">
+    <div v-if="actionError" class="m-3 px-3.5 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-700 text-xs font-medium flex items-center justify-between" role="alert">
       <span>{{ actionError }}</span>
       <button type="button" class="text-xs opacity-60 hover:opacity-100 cursor-pointer" @click="actionError = ''">✕</button>
     </div>
@@ -104,17 +104,17 @@ async function onPromote(it: Idea): Promise<void> {
     <!-- Table content -->
     <div class="flex-1 min-h-0 overflow-y-auto">
       <div v-if="isPending" class="muted py-8 text-center">Loading ideas…</div>
-      <div v-else-if="isError" class="card py-8 text-center" role="alert">
+      <div v-else-if="isError" class="card m-4 py-8 text-center" role="alert">
         <p class="muted mb-3">Could not load ideas: {{ loadError?.message }}</p>
         <button type="button" class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
       </div>
-      <div v-else-if="isEmpty" class="card py-12 text-center flex flex-col items-center justify-center gap-3">
+      <div v-else-if="isEmpty" class="card m-4 py-12 text-center flex flex-col items-center justify-center gap-3">
         <p class="muted">No ideas captured yet. Capture your first idea to get started!</p>
         <button type="button" class="btn btn-primary" :disabled="!canWrite" @click="openNew">
           + New Idea
         </button>
       </div>
-      <TableFrame v-else>
+      <TableFrame v-else class="h-full">
         <thead>
           <tr>
             <th class="w-[30%]">Topic</th>
