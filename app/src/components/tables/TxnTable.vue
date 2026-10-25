@@ -127,22 +127,37 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
         class="p-3.5 sm:p-4 flex items-center justify-between gap-3 active:bg-wash/60 transition-colors cursor-pointer"
       >
         <!-- Left Column: Icon + Category + Sub/Date -->
-        <div class="flex items-center gap-3 min-w-0">
-          <div
-            class="w-9 h-9 rounded-full flex items-center justify-center flex-none"
-            :class="row.original.kind === 'IN' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400'"
+        <div class="flex items-center gap-2.5 min-w-0">
+          <!-- Inward arrow ↙ for IN (No background circle) -->
+          <svg
+            v-if="row.original.kind === 'IN'"
+            class="w-4 h-4 flex-none text-emerald-600 dark:text-emerald-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
           >
-            <!-- Inward arrow ↙ for IN -->
-            <svg v-if="row.original.kind === 'IN'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="17" y1="7" x2="7" y2="17" />
-              <polyline points="17 17 7 17 7 7" />
-            </svg>
-            <!-- Outward arrow ↗ for OUT -->
-            <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="7" y1="17" x2="17" y2="7" />
-              <polyline points="7 7 17 7 17 17" />
-            </svg>
-          </div>
+            <line x1="17" y1="7" x2="7" y2="17" />
+            <polyline points="17 17 7 17 7 7" />
+          </svg>
+          <!-- Outward arrow ↗ for OUT (No background circle) -->
+          <svg
+            v-else
+            class="w-4 h-4 flex-none text-rose-600 dark:text-rose-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="7" y1="17" x2="17" y2="7" />
+            <polyline points="7 7 17 7 17 17" />
+          </svg>
 
           <div class="flex flex-col min-w-0">
             <span class="text-[13.5px] font-bold text-ink truncate leading-snug">
