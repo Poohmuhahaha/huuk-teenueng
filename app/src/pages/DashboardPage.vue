@@ -359,7 +359,7 @@ function goMaster(): void {
         <div v-else-if="!stats" class="muted">Computing…</div>
         <template v-else>
           <template v-if="section === 'overview'">
-            <div class="grid6">
+            <div class="grid6 dash-kpi-grid grid grid-cols-2 md:grid-cols-3 gap-3">
               <KpiCard label="Total" :value="stats.total" hint="topics this month" :spark="trendData.sparks.total" to="/plan?tab=monthly" />
               <KpiCard label="Posted" :value="stats.posted" :hint="`${postedPct}% of all`" :trend="`${postedPct}%`" :spark="trendData.sparks.posted" to="/plan?tab=monthly" />
               <KpiCard label="Pending" :value="stats.pending" hint="to start" :spark="trendData.sparks.pending" to="/plan?tab=monthly" />

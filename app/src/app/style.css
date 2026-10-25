@@ -2853,20 +2853,41 @@ textarea.field, textarea {
 
 
 
-/* Dashboard KPI grid — the global single-column hub rule stacks every grid;
-   a data summary reads better compact, so the KPI row keeps its columns at
-   every card width. */
-.card-scroll .dash-page .grid6 {
+/* Dashboard KPI grid — split 6 KPI cards into 2 rows (3 columns each) on tablet/desktop,
+   and 2 columns on mobile. Prevents horizontal squishing on wide screens. */
+.card-scroll .dash-page .grid6,
+.dash-page .grid6,
+.dash-kpi-grid {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 @container screen (min-width: 720px) {
-  .card-scroll .dash-page .grid6 {
+  .card-scroll .dash-page .grid6,
+  .dash-page .grid6,
+  .dash-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 720px) {
+  .card-scroll .dash-page .grid6,
+  .dash-page .grid6,
+  .dash-kpi-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @container screen (min-width: 1100px) {
-  .card-scroll .dash-page .grid6 {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+  .card-scroll .dash-page .grid6,
+  .dash-page .grid6,
+  .dash-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1100px) {
+  .card-scroll .dash-page .grid6,
+  .dash-page .grid6,
+  .dash-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -3134,7 +3155,8 @@ header.topbar .in-topbar .tabselect-item.active {
   .app h1 { display: none; }
   /* Mobile only: keep dashboard KPI cards compact — a tall card left a dead
      gap between the number and the sparkline. */
-  .dash-main .grid6 > * { min-height: 126px; }
+  .dash-main .grid6 > *,
+  .dash-main .dash-kpi-grid > * { min-height: 126px; }
 }
 /* Very small phones: shave the enlarged pills just enough that 4 tabs
    (Brand/Workspace/Members/Connections) fit a 390px viewport. */
