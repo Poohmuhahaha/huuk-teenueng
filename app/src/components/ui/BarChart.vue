@@ -20,7 +20,7 @@ export interface BarItem {
 const props = withDefaults(
   defineProps<{
     items: BarItem[]
-    variant?: 'bars' | 'towers'
+    variant?: 'bars' | 'towers' | 'area'
     currency?: string
     card?: boolean
     rows?: number
@@ -44,6 +44,8 @@ function itemColor(i: number, custom?: string): string {
   return custom ?? colors[i % colors.length]
 }
 
+const gradientId = `wave-grad-${Math.random().toString(36).slice(2, 7)}`
+
 const totalValue = computed(() => props.items.reduce((acc, it) => acc + num(it.value), 0))
 const maxVal = computed(() => {
   const vals = props.items.map((it) => num(it.value))
@@ -57,9 +59,6 @@ const itemsWithShare = computed(() => {
   return props.items.map((it, i) => {
     const val = num(it.value)
     const pct = totalValue.value > 0 ? Math.round((val / sum) * 100) : 0
-    // When posted counts are available the fill bar tracks real posting
-    // progress (matching the "% posted" caption) instead of repeating the
-    // share-of-total already shown by the stacked track and the % badge.
     const progress = it.posted !== undefined ? Math.round((num(it.posted) / (val || 1)) * 100) : pct
     return {
       ...it,
@@ -81,7 +80,6 @@ const towersData = computed(() => {
     const pct = totalValue.value > 0 ? Math.round((val / sum) * 100) : 0
     const activeLevel = val > 0 ? Math.max(1, Math.min(rowCount, Math.round((val / max) * rowCount))) : 0
 
-    // Date formatting if label is YYYY-MM
     const dateMatch = /^(\d{4})-(\d{2})$/.exec(it.label)
     let primaryLabel = it.label
     let secondaryLabel = ''
@@ -102,6 +100,85 @@ const towersData = computed(() => {
       color: itemColor(colIdx, it.color),
     }
   })
+})
+
+const areaPoints = computed(() => {
+  const vals = props.items.map((it) => num(it.value))
+  if (!vals.length) return null
+
+  const maxV = Math.max(...vals, 1)
+  const width = 100
+  const height = 44
+  const padTop = 6
+  const padBottom = 2
+  const usableH = height - padTop - padBottom
+
+  const n = props.items.length
+  const sum = totalValue.value || 1
+
+  const pts = props.items.map((it, i) => {
+    const val = num(it.value)
+    const norm = Math.max(0, Math.min(1, val / maxV))
+    const x = n === 1 ? 50 : (i / (n - 1)) * width
+    const y = height - padBottom - norm * usableH
+    const pct = totalValue.value > 0 ? Math.round((val / sum) * 100) : 0
+
+    const dateMatch = /^(\d{4})-(\d{2})$/.exec(it.label)
+    let primaryLabel = it.label
+    let secondaryLabel = ''
+    if (dateMatch) {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const mIdx = parseInt(dateMatch[2], 10) - 1
+      primaryLabel = monthNames[mIdx] ?? dateMatch[2]
+      secondaryLabel = `'${dateMatch[1].slice(2)}`
+    }
+
+    return {
+      x,
+      y,
+      val,
+      pct,
+      label: it.label,
+      primaryLabel,
+      secondaryLabel,
+      color: itemColor(i, it.color),
+    }
+  })
+
+  if (pts.length === 1) {
+    const y = pts[0].y
+    return {
+      pts,
+      linePath: `M 0 ${y} L 100 ${y}`,
+      areaPath: `M 0 ${y} L 100 ${y} L 100 ${height} L 0 ${height} Z`,
+      lastPt: pts[0],
+    }
+  }
+
+  const segments: string[] = [`M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`]
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[Math.min(pts.length - 1, i + 2)]
+    const cp1x = p1.x + (p2.x - p0.x) / 6
+    const cp1y = p1.y + (p2.y - p0.y) / 6
+    const cp2x = p2.x - (p3.x - p1.x) / 6
+    const cp2y = p2.y - (p3.y - p1.y) / 6
+    segments.push(
+      `C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`,
+    )
+  }
+
+  const linePath = segments.join(' ')
+  const areaPath = `${linePath} L 100.00 ${height.toFixed(2)} L 0 ${height.toFixed(2)} Z`
+
+  return {
+    pts,
+    linePath,
+    areaPath,
+    lastPt: pts[pts.length - 1],
+  }
 })
 
 function formatTowerValue(v: number): string {
@@ -130,6 +207,85 @@ const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)
     :aria-label="summary"
   >
     <div v-if="!items.length" class="text-muted text-sm py-8 text-center">No data yet.</div>
+
+    <!-- Variant: Area (Edge-to-Edge Smooth Spline Wave with Gradient Fade) -->
+    <template v-else-if="variant === 'area'">
+      <div class="w-full flex flex-col justify-end">
+        <!-- Month Data Markers / Legend Row above the wave -->
+        <div class="w-full flex items-center justify-between gap-2 px-1 pt-3 pb-3 text-ink">
+          <div
+            v-for="pt in areaPoints?.pts"
+            :key="pt.label"
+            class="flex flex-col items-center group/pt cursor-default transition-transform duration-200 hover:-translate-y-0.5"
+            :title="`${pt.label}: ${currency}${pt.val.toLocaleString('en-US')} (${pt.pct}%)`"
+          >
+            <span class="text-[9.5px] font-semibold text-muted bg-wash border border-line/60 px-1.5 py-0.5 rounded-full mb-1 group-hover/pt:bg-black group-hover/pt:text-white transition-colors">
+              {{ pt.pct }}%
+            </span>
+            <span class="text-xs sm:text-[13px] font-bold font-mono text-ink tracking-tight">
+              {{ formatTowerValue(pt.val) }}
+            </span>
+            <span class="text-[11px] font-bold text-ink mt-0.5">
+              {{ pt.primaryLabel }}
+              <span v-if="pt.secondaryLabel" class="text-[9.5px] font-medium text-muted font-mono">{{ pt.secondaryLabel }}</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Full-width smooth bezier sparkline spanning edge-to-edge into card-fade corners -->
+        <div class="relative -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 mt-2 overflow-hidden rounded-b-[24px]">
+          <svg
+            viewBox="0 0 100 44"
+            fill="none"
+            preserveAspectRatio="none"
+            class="h-16 sm:h-20 w-full block overflow-visible"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient :id="gradientId" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#18181b" stop-opacity="0.22" />
+                <stop offset="60%" stop-color="#18181b" stop-opacity="0.06" />
+                <stop offset="100%" stop-color="#18181b" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+
+            <g v-if="areaPoints" class="sparkline-reveal">
+              <!-- Gradient Area -->
+              <path
+                :d="areaPoints.areaPath"
+                :fill="`url(#${gradientId})`"
+                class="transition-all duration-500"
+              />
+
+              <!-- Stroke Line -->
+              <path
+                :d="areaPoints.linePath"
+                stroke="#18181b"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"
+                class="transition-all duration-500"
+              />
+
+              <!-- Highlight Dots at each month point -->
+              <circle
+                v-for="(pt, idx) in areaPoints.pts"
+                :key="pt.label"
+                :cx="pt.x"
+                :cy="pt.y"
+                :r="idx === areaPoints.pts.length - 1 ? 3 : 2.5"
+                fill="#18181b"
+                stroke="#ffffff"
+                stroke-width="1.5"
+                vector-effect="non-scaling-stroke"
+                class="transition-all duration-200 hover:scale-125"
+              />
+            </g>
+          </svg>
+        </div>
+      </div>
+    </template>
 
     <!-- Variant: Towers (Vertical 1:1 Square Blocks Matrix) -->
     <template v-else-if="variant === 'towers'">

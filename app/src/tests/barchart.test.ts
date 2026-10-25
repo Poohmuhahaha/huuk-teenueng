@@ -37,27 +37,50 @@ describe('BarChart component', () => {
         card: false,
       },
     })
-    // Date parsing test: "2026-01" -> "Jan" and "'26"
     expect(wrapper.text()).toContain('Jan')
     expect(wrapper.text()).toContain("'26")
     expect(wrapper.text()).toContain('Feb')
     expect(wrapper.text()).toContain('Sep')
     expect(wrapper.text()).toContain('Oct')
 
-    // Formatted values with currency
     expect(wrapper.text()).toContain('฿15,000')
     expect(wrapper.text()).toContain('฿34,600')
 
-    // Tower squares rendered (4 columns x 8 rows = 32 squares total)
     const activeSquares = wrapper.findAll('.tower-square-active')
     const ghostSquares = wrapper.findAll('.tower-square-ghost')
     expect(activeSquares.length).toBeGreaterThan(0)
     expect(ghostSquares.length).toBeGreaterThan(0)
     expect(activeSquares.length + ghostSquares.length).toBe(32)
 
-    // Borderless mode when card=false
     expect(wrapper.classes()).toContain('w-full')
     expect(wrapper.classes()).not.toContain('border')
+  })
+
+  it('renders edge-to-edge smooth spline area wave (variant="area")', () => {
+    const wrapper = mount(BarChart, {
+      props: {
+        items: sampleItems,
+        variant: 'area',
+        currency: '฿',
+        card: false,
+      },
+    })
+    // Month legend markers
+    expect(wrapper.text()).toContain('Jan')
+    expect(wrapper.text()).toContain("'26")
+    expect(wrapper.text()).toContain('Oct')
+    expect(wrapper.text()).toContain('฿15,000')
+    expect(wrapper.text()).toContain('฿34,600')
+
+    // SVG wave elements
+    const svg = wrapper.find('svg')
+    expect(svg.exists()).toBe(true)
+    const paths = wrapper.findAll('path')
+    expect(paths.length).toBe(2) // 1 for gradient area, 1 for stroke line
+    const dots = wrapper.findAll('circle')
+    expect(dots.length).toBe(4) // 4 month dots
+
+    expect(wrapper.classes()).toContain('w-full')
   })
 
   it('renders card border when card=true', () => {
