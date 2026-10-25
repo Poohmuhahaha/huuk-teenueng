@@ -244,46 +244,53 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
     <!-- Pagination bar (Desktop & Mobile) -->
     <div
       v-if="totalRows > 0"
-      class="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 mt-2.5 rounded-xl bg-surface border border-line/60 shadow-2xs text-xs text-muted"
+      class="flex items-center justify-between gap-3 px-4 py-2 mt-2 rounded-xl bg-surface border border-line/60 shadow-2xs text-xs text-muted min-h-[40px] select-none"
     >
-      <div class="flex items-center gap-2">
-        <span>Showing <strong class="font-semibold text-ink">{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong class="font-semibold text-ink">{{ totalRows }}</strong> entries</span>
+      <div class="flex items-center gap-2 min-w-0 truncate">
+        <span class="truncate">
+          Showing <strong class="font-semibold text-ink font-mono">{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong class="font-semibold text-ink font-mono">{{ totalRows }}</strong> entries
+        </span>
         <div v-if="totalRows > 8" class="hidden sm:flex items-center gap-1 ml-3 text-[11px]">
-          <span class="text-muted/70">Per page:</span>
-          <button
-            v-for="size in [8, 15, 30]"
-            :key="size"
-            type="button"
-            class="px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer"
-            :class="pageSize === size ? 'bg-ink text-white font-bold' : 'hover:bg-wash text-muted'"
-            @click="setPageSize(size)"
-          >
-            {{ size }}
-          </button>
+          <span class="text-muted/60">Per page:</span>
+          <div class="inline-flex rounded-md p-0.5 bg-wash border border-line/60">
+            <button
+              v-for="size in [8, 15, 30]"
+              :key="size"
+              type="button"
+              class="px-2 py-0.5 rounded text-[11px] font-mono transition-all cursor-pointer"
+              :class="pageSize === size ? 'bg-surface text-ink font-bold shadow-2xs' : 'text-muted hover:text-ink'"
+              @click="setPageSize(size)"
+            >
+              {{ size }}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div v-if="totalPages > 1" class="flex items-center gap-1.5 ml-auto">
+      <!-- Integrated Stepper Pill [ ‹ | 1 / 3 | › ] -->
+      <div v-if="totalPages > 1" class="inline-flex items-center rounded-lg border border-line bg-surface shadow-2xs overflow-hidden flex-none ml-auto">
         <button
           type="button"
-          class="inline-flex items-center justify-center px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-ink transition-colors cursor-pointer"
+          class="px-2.5 py-1 text-xs text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-r border-line"
           :disabled="!table.getCanPreviousPage()"
           aria-label="Previous page"
+          title="Previous page"
           @click="table.previousPage()"
         >
-          ‹ Prev
+          ‹
         </button>
-        <span class="font-mono text-xs px-2 text-ink">
+        <span class="px-2.5 py-1 font-mono text-[11px] text-ink whitespace-nowrap select-none">
           {{ pageIndex + 1 }} / {{ totalPages }}
         </span>
         <button
           type="button"
-          class="inline-flex items-center justify-center px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-ink transition-colors cursor-pointer"
+          class="px-2.5 py-1 text-xs text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-l border-line"
           :disabled="!table.getCanNextPage()"
           aria-label="Next page"
+          title="Next page"
           @click="table.nextPage()"
         >
-          Next ›
+          ›
         </button>
       </div>
     </div>

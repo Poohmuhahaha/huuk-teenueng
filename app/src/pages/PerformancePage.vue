@@ -176,30 +176,32 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
           <!-- Pagination bar -->
           <div
             v-if="totalByPost > 0"
-            class="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 mt-2 bg-surface rounded-xl border border-line/60 text-xs text-muted"
+            class="flex items-center justify-between gap-3 px-4 py-2 mt-2 bg-surface rounded-xl border border-line/60 text-xs text-muted min-h-[40px] select-none"
           >
-            <span>Showing <strong class="font-semibold text-ink">{{ rangePostStart }}–{{ rangePostEnd }}</strong> of <strong class="font-semibold text-ink">{{ totalByPost }}</strong> posts</span>
-            <div v-if="totalByPostPages > 1" class="flex items-center gap-1.5 ml-auto">
+            <span class="truncate">Showing <strong class="font-semibold text-ink font-mono">{{ rangePostStart }}–{{ rangePostEnd }}</strong> of <strong class="font-semibold text-ink font-mono">{{ totalByPost }}</strong> posts</span>
+            <div v-if="totalByPostPages > 1" class="inline-flex items-center rounded-lg border border-line bg-surface shadow-2xs overflow-hidden flex-none ml-auto">
               <button
                 type="button"
-                class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+                class="px-2.5 py-1 text-xs text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-r border-line"
                 :disabled="postPageIndex === 0"
                 aria-label="Previous page"
+                title="Previous page"
                 @click="postPageIndex--"
               >
-                ‹ Prev
+                ‹
               </button>
-              <span class="font-mono text-xs px-1 text-ink">
+              <span class="px-2.5 py-1 font-mono text-[11px] text-ink whitespace-nowrap select-none">
                 {{ postPageIndex + 1 }} / {{ totalByPostPages }}
               </span>
               <button
                 type="button"
-                class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+                class="px-2.5 py-1 text-xs text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-l border-line"
                 :disabled="postPageIndex >= totalByPostPages - 1"
                 aria-label="Next page"
+                title="Next page"
                 @click="postPageIndex++"
               >
-                Next ›
+                ›
               </button>
             </div>
           </div>

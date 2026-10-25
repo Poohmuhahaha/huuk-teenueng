@@ -381,30 +381,32 @@ const audit = computed(() => view.value?.audit ?? [])
         <!-- Pagination bar -->
         <div
           v-if="totalCampaigns > 0"
-          class="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 mt-2 bg-surface rounded-xl border border-line/60 text-xs text-muted"
+          class="flex items-center justify-between gap-3 px-4 py-2 mt-2 bg-surface rounded-xl border border-line/60 text-xs text-muted min-h-[40px] select-none"
         >
-          <span>Showing <strong class="font-semibold text-ink">{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong class="font-semibold text-ink">{{ totalCampaigns }}</strong> campaigns</span>
-          <div v-if="totalCampaignPages > 1" class="flex items-center gap-1.5 ml-auto">
+          <span class="truncate">Showing <strong class="font-semibold text-ink font-mono">{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong class="font-semibold text-ink font-mono">{{ totalCampaigns }}</strong> campaigns</span>
+          <div v-if="totalCampaignPages > 1" class="inline-flex items-center rounded-lg border border-line bg-surface shadow-2xs overflow-hidden flex-none ml-auto">
             <button
               type="button"
-              class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+              class="px-2.5 py-1 text-xs text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-r border-line"
               :disabled="pageIndex === 0"
               aria-label="Previous page"
+              title="Previous page"
               @click="pageIndex--"
             >
-              ‹ Prev
+              ‹
             </button>
-            <span class="font-mono text-xs px-1 text-ink">
+            <span class="px-2.5 py-1 font-mono text-[11px] text-ink whitespace-nowrap select-none">
               {{ pageIndex + 1 }} / {{ totalCampaignPages }}
             </span>
             <button
               type="button"
-              class="px-2.5 py-1 rounded-lg border border-line bg-surface hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed font-medium text-xs text-ink transition-colors cursor-pointer"
+              class="px-2.5 py-1 text-xs text-ink hover:bg-wash transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-l border-line"
               :disabled="pageIndex >= totalCampaignPages - 1"
               aria-label="Next page"
+              title="Next page"
               @click="pageIndex++"
             >
-              Next ›
+              ›
             </button>
           </div>
         </div>
