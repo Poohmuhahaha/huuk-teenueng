@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Sparkline from './Sparkline.vue'
+import { useCountUp } from '@/composables/useCountUp'
 
 const props = withDefaults(
   defineProps<{
@@ -24,6 +25,9 @@ const emit = defineEmits<{ select: [] }>()
 function pick(): void {
   emit('select')
 }
+
+// Smooth CountUp Animation
+const displayValue = useCountUp(() => props.value, { duration: 950 })
 
 const isPositiveTrend = computed(() => {
   if (props.trend === undefined || props.trend === null) return true
@@ -90,7 +94,7 @@ const trendFormatted = computed(() => {
         <!-- Trend Pill -->
         <span
           v-if="trendFormatted"
-          class="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] tracking-tight bg-black text-white font-semibold"
+          class="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] tracking-tight bg-black text-white font-semibold transition-transform duration-200 group-hover:scale-105"
         >
           <svg
             v-if="isPositiveTrend"
@@ -153,10 +157,10 @@ const trendFormatted = computed(() => {
         </svg>
       </div>
 
-      <!-- Value row: Metric + Subtitle -->
+      <!-- Value row: Metric with CountUp Animation + Subtitle -->
       <div class="mt-2.5 flex items-baseline justify-between gap-2">
-        <p class="tabular text-[25px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink sm:text-[27px] font-mono m-0">
-          {{ value }}
+        <p class="tabular text-[25px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono m-0">
+          {{ displayValue }}
         </p>
         <p
           v-if="hint && !hint.toLowerCase().includes('over')"

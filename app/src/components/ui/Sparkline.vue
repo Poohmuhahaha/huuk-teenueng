@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -27,6 +27,15 @@ const props = withDefaults(
 
 const uid = useId()
 const gradientId = computed(() => `spark-${uid.replace(/:/g, '')}`)
+
+const animKey = ref(0)
+watch(
+  () => props.values,
+  () => {
+    animKey.value += 1
+  },
+  { deep: true },
+)
 
 function num(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) ? Math.max(0, v) : 0
@@ -131,23 +140,28 @@ const curve = computed(() => {
 </script>
 
 <template>
-  <!-- Variant: Dense 1:1 Square Block Matrix -->
+  <!-- Variant: Dense 1:1 Square Block Matrix with Staggered Entrance Animation -->
   <div
     v-if="variant === 'squares'"
-    class="w-full flex items-end gap-[2.5px] sm:gap-[3px] select-none py-1"
+    :key="`sq-${animKey}`"
+    class="w-full flex items-end gap-[2.5px] sm:gap-[3px] select-none py-1 group/matrix"
     aria-hidden="true"
   >
     <div
       v-for="(col, ci) in matrixColumns"
       :key="ci"
-      class="flex-1 flex flex-col-reverse gap-[2.5px] sm:gap-[3px]"
+      class="flex-1 flex flex-col-reverse gap-[2.5px] sm:gap-[3px] transition-transform duration-200 group-hover:scale-y-[1.04] origin-bottom"
     >
       <div
         v-for="r in rows"
         :key="r"
         class="w-full aspect-square rounded-[1.5px] sm:rounded-[2px] transition-all duration-200"
-        :class="r <= col.activeLevel ? 'bg-ink' : 'bg-ink/[0.06]'"
-        :style="r <= col.activeLevel ? { opacity: getSquareOpacity(r, col.activeLevel) } : {}"
+        :class="r <= col.activeLevel ? 'bg-ink square-active' : 'bg-ink/[0.06] square-ghost'"
+        :style="{
+          opacity: r <= col.activeLevel ? getSquareOpacity(r, col.activeLevel) : undefined,
+          '--target-opacity': r <= col.activeLevel ? getSquareOpacity(r, col.activeLevel) : 1,
+          animationDelay: `${ci * 25 + (r - 1) * 35}ms`,
+        }"
       />
     </div>
   </div>
@@ -167,7 +181,7 @@ const curve = computed(() => {
         <stop offset="100%" :stop-color="color" stop-opacity="0" />
       </linearGradient>
     </defs>
-    <g class="sparkline-reveal">
+    <g :key="`ln-${animKey}`" class="sparkline-reveal">
       <circle v-if="curve.single" :cx="curve.single.x" :cy="curve.single.y" r="2.5" :fill="color" />
       <template v-else>
         <path v-if="showArea" :d="curve.areaPath" :fill="`url(#${gradientId})`" class="sparkline-area" />
@@ -192,3 +206,89 @@ const curve = computed(() => {
     </g>
   </svg>
 </template>
+
+<style scoped>
+/* Square Matrix Entrance Animation */
+.square-active {
+  animation: squarePopIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.square-ghost {
+  animation: ghostFadeIn 0.35s ease-out both;
+}
+
+@keyframes squarePopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(4px);
+  }
+  60% {
+    transform: scale(1.15) translateY(-0.5px);
+  }
+  100% {
+    opacity: var(--target-opacity, 1);
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes ghostFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Line Mode Animations */
+.sparkline-reveal {
+  animation: revealSpark 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes revealSpark {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0% 0 0);
+  }
+}
+
+.sparkline-area {
+  animation: fadeInSparkArea 1.1s ease-out forwards;
+}
+
+@keyframes fadeInSparkArea {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sparkline-dot {
+  animation: popInDot 0.4s 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes popInDot {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .square-active,
+  .square-ghost,
+  .sparkline-reveal,
+  .sparkline-area,
+  .sparkline-dot {
+    animation: none !important;
+  }
+}
+</style>
