@@ -2392,6 +2392,38 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   grid-template-columns: minmax(0, 1fr);
 }
 
+@media (min-width: 640px) {
+  .card-scroll .grid2,
+  .deck.full .card-scroll .grid2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .card-scroll .grid3,
+  .deck.full .card-scroll .grid3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .card-scroll .grid4,
+  .deck.full .card-scroll .grid4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Hub page section headers: clean Swiss sans-serif uppercase tracking instead of heavy serif */
+.hubpage h2,
+.perfpage h2,
+.financepage h2,
+.camp-page h2,
+.feedpage h2,
+.card-scroll h2:not(.modal h2) {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 28px 0 12px;
+  text-align: left;
+}
+
 /* Popups: compact multi-column forms + auto-width footer actions. */
 .p-dialog .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .p-dialog .grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }

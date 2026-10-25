@@ -244,31 +244,54 @@ const audit = computed(() => view.value?.audit ?? [])
 <template>
   <div class="mt-2">
     <h1 class="sr-only">{{ t('ads.title') }}</h1>
-    <div class="tbl-tools">
-      <span v-if="view?.fetchedAt" class="muted">{{ t('ads.synced') }} {{ new Date(view.fetchedAt * 1000).toLocaleString() }}</span>
-      <button class="btn btn-primary ml-0" :disabled="!mayManage || sync.isPending.value"
-        :title="mayManage ? '' : t('auth.noPerm')" @click="run(() => sync.mutateAsync(), t('ads.syncedNow'))">
-        {{ sync.isPending.value ? t('ads.syncing') : t('ads.sync') }}
-      </button>
+    
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-3 p-3 bg-surface border border-line rounded-xl">
+      <div class="flex items-center gap-2 flex-wrap">
+        <label v-if="accounts.length > 1" class="flex items-center gap-2 text-sm-minus">
+          <span class="muted">{{ t('ads.account') }}</span>
+          <select v-model="accountId" class="py-1 px-2.5 border border-line rounded-lg bg-surface font-inherit text-xs font-semibold">
+            <option v-for="a in accounts" :key="a.id" :value="a.id">
+              {{ a.name }} ({{ a.currency }})
+            </option>
+          </select>
+        </label>
+        <span v-else-if="activeAccount" class="chip">
+          {{ activeAccount.name }} · {{ activeAccount.currency }} · {{ activeAccount.timezone }}
+        </span>
+        <button v-if="campaigns.length" class="btn ads-boost w-auto px-4" :disabled="!canWrite || !boostPosts.length"
+          :title="canWrite ? '' : t('ads.manageNeeded')" @click="openBoost()">
+          {{ t('ads.boost') }}
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2.5 flex-wrap ml-auto">
+        <div class="inline-flex items-center gap-2">
+          <span class="badge" :class="view?.canManage ? 'badge-success' : ''">
+            {{ view?.canManage ? t('ads.manageOn') : t('ads.manageOff') }}
+          </span>
+          <button class="btn ads-manage-toggle w-auto px-3.5 text-xs font-semibold" :disabled="!mayManage || setManage.isPending.value"
+            :title="mayManage ? '' : t('auth.noPerm')" @click="onToggleManage">
+            {{ view?.canManage ? t('ads.manageDisable') : t('ads.manageEnable') }}
+          </button>
+          <InfoTip :text="t('ads.manageHint')" />
+        </div>
+
+        <div class="tbl-tools m-0 p-0 flex items-center gap-2">
+          <span v-if="view?.fetchedAt" class="muted text-xs hidden sm:inline">{{ t('ads.synced') }} {{ new Date(view.fetchedAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
+          <button class="btn btn-primary w-auto px-4 ml-0" :disabled="!mayManage || sync.isPending.value"
+            :title="mayManage ? '' : t('auth.noPerm')" @click="run(() => sync.mutateAsync(), t('ads.syncedNow'))">
+            {{ sync.isPending.value ? t('ads.syncing') : t('ads.sync') }}
+          </button>
+        </div>
+      </div>
     </div>
+
     <p v-if="isError" class="card muted">{{ loadError?.message }}</p>
     <p v-else-if="reconnectError" class="autherr" role="alert">{{ reconnectError }}</p>
     <p v-else-if="sync.error.value" class="autherr" role="alert">{{ sync.error.value.message }}</p>
     <p v-else-if="view?.error" class="autherr" role="alert">{{ view.error }}</p>
     <p v-if="actionError" class="autherr" role="alert">{{ actionError }}</p>
     <p v-else-if="notice" class="mt-2.5 text-sm-minus font-semibold text-success">{{ notice }}</p>
-
-    <!-- opt-in row -->
-    <div class="row my-3.5 mb-1.5 gap-2.5">
-      <span class="badge" :class="view?.canManage ? 'badge-success' : ''">
-        {{ view?.canManage ? t('ads.manageOn') : t('ads.manageOff') }}
-      </span>
-      <button class="btn ads-manage-toggle" :disabled="!mayManage || setManage.isPending.value"
-        :title="mayManage ? '' : t('auth.noPerm')" @click="onToggleManage">
-        {{ view?.canManage ? t('ads.manageDisable') : t('ads.manageEnable') }}
-      </button>
-      <InfoTip :text="t('ads.manageHint')" />
-    </div>
 
     <p v-if="isPending" class="muted">{{ t('common.loading') }}</p>
 
@@ -278,48 +301,29 @@ const audit = computed(() => view.value?.audit ?? [])
         {{ needsReconnect ? t('ads.reconnectNeeded')
           : accounts.length ? t('ads.empty') : t('ads.emptyAccounts') }}
       </p>
-      <button v-if="needsReconnect" class="btn btn-primary" :disabled="!mayManage || reconnecting"
+      <button v-if="needsReconnect" class="btn btn-primary w-auto" :disabled="!mayManage || reconnecting"
         @click="onReconnect">
         {{ reconnecting ? t('slogin.connecting') : t('ads.reconnect') }}
       </button>
     </div>
 
     <template v-else>
-      <!-- account picker + summary -->
-      <div class="row my-3.5 mb-2.5 gap-3 items-center">
-        <label v-if="accounts.length > 1" class="flex flex-col gap-1 text-sm-minus">
-          <span class="muted">{{ t('ads.account') }}</span>
-          <select v-model="accountId" class="py-1.5 px-2.5 border border-line rounded-lg bg-surface font-inherit">
-            <option v-for="a in accounts" :key="a.id" :value="a.id">
-              {{ a.name }} ({{ a.currency }})
-            </option>
-          </select>
-        </label>
-        <span v-else-if="activeAccount" class="chip">
-          {{ activeAccount.name }} · {{ activeAccount.currency }} · {{ activeAccount.timezone }}
-        </span>
-        <button class="btn ads-boost ml-0" :disabled="!canWrite || !boostPosts.length"
-          :title="canWrite ? '' : t('ads.manageNeeded')" @click="openBoost()">
-          {{ t('ads.boost') }}
-        </button>
-      </div>
-
-      <div class="grid grid-auto-cards gap-3 mb-3.5">
-        <div class="panel flex flex-col gap-1 [&>strong]:text-xl">
-          <span class="muted">{{ t('ads.spend') }}</span>
-          <strong>{{ money(totals.spend * 100) }}</strong>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="panel flex flex-col gap-1 p-3.5 bg-surface border border-line rounded-xl shadow-2xs [&>strong]:text-xl">
+          <span class="text-2xs text-muted font-bold uppercase tracking-wider">{{ t('ads.spend') }}</span>
+          <strong class="font-mono">{{ money(totals.spend * 100) }}</strong>
         </div>
-        <div class="panel flex flex-col gap-1 [&>strong]:text-xl">
-          <span class="muted">{{ t('ads.results') }}<template v-if="totals.label"> · {{ totals.label }}</template></span>
-          <strong>{{ fmt(totals.results) }}</strong>
+        <div class="panel flex flex-col gap-1 p-3.5 bg-surface border border-line rounded-xl shadow-2xs [&>strong]:text-xl">
+          <span class="text-2xs text-muted font-bold uppercase tracking-wider">{{ t('ads.results') }}<template v-if="totals.label"> · {{ totals.label }}</template></span>
+          <strong class="font-mono">{{ fmt(totals.results) }}</strong>
         </div>
-        <div class="panel flex flex-col gap-1 [&>strong]:text-xl">
-          <span class="muted">{{ t('ads.ctr') }}</span>
-          <strong>{{ totals.ctr.toFixed(2) }}%</strong>
+        <div class="panel flex flex-col gap-1 p-3.5 bg-surface border border-line rounded-xl shadow-2xs [&>strong]:text-xl">
+          <span class="text-2xs text-muted font-bold uppercase tracking-wider">{{ t('ads.ctr') }}</span>
+          <strong class="font-mono">{{ totals.ctr.toFixed(2) }}%</strong>
         </div>
-        <div class="panel flex flex-col gap-1 [&>strong]:text-xl">
-          <span class="muted">{{ t('ads.cpc') }}</span>
-          <strong>{{ money(totals.cpc * 100) }}</strong>
+        <div class="panel flex flex-col gap-1 p-3.5 bg-surface border border-line rounded-xl shadow-2xs [&>strong]:text-xl">
+          <span class="text-2xs text-muted font-bold uppercase tracking-wider">{{ t('ads.cpc') }}</span>
+          <strong class="font-mono">{{ money(totals.cpc * 100) }}</strong>
         </div>
       </div>
 

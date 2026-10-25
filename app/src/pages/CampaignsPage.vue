@@ -238,6 +238,10 @@ async function destroy(): Promise<void> {
     error.value = e instanceof Error ? e.message : String(e)
   }
 }
+
+const totalBudget = computed(() => (visible.value ?? []).reduce((acc, c) => acc + (c.budget || 0), 0))
+const activeCount = computed(() => (visible.value ?? []).filter((c) => c.status === 'active').length)
+const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc + (c.contentIds?.length || 0), 0))
 </script>
 
 <template>
@@ -282,9 +286,31 @@ async function destroy(): Promise<void> {
         </template>
       </div>
 
-      <div v-if="(deckFull || wide) && !editorOpen" class="camp-detail">
-        <p class="muted">{{ t('campaign.pick') }}</p>
-        <p class="muted">{{ t('campaign.pickHint') }}</p>
+      <div v-if="(deckFull || wide) && !editorOpen" class="camp-detail p-6 flex flex-col justify-center items-center text-center">
+        <div class="max-w-md w-full bg-surface border border-line rounded-2xl p-6 shadow-2xs text-left">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xs font-bold uppercase tracking-widest text-muted">{{ t('campaign.title') }} Overview</h3>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-wash text-ink">{{ visible.length }} Total</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 mb-5">
+            <div class="p-2.5 bg-wash/60 rounded-xl border border-line/40">
+              <span class="text-2xs text-muted font-bold uppercase tracking-wider block mb-1">Active</span>
+              <span class="text-lg font-black text-ink">{{ activeCount }}</span>
+            </div>
+            <div class="p-2.5 bg-wash/60 rounded-xl border border-line/40">
+              <span class="text-2xs text-muted font-bold uppercase tracking-wider block mb-1">Linked</span>
+              <span class="text-lg font-black text-ink">{{ totalLinked }}</span>
+            </div>
+            <div class="p-2.5 bg-wash/60 rounded-xl border border-line/40">
+              <span class="text-2xs text-muted font-bold uppercase tracking-wider block mb-1">Budget</span>
+              <span class="text-lg font-black text-ink font-mono">฿{{ totalBudget.toLocaleString('en-US') }}</span>
+            </div>
+          </div>
+          <p class="text-xs text-muted mb-4 leading-relaxed">{{ t('campaign.pickHint') }}</p>
+          <button type="button" class="btn btn-primary w-full text-xs font-bold uppercase tracking-wider" :disabled="!canWrite" @click="newCampaign">
+            + {{ t('campaign.new') }}
+          </button>
+        </div>
       </div>
 
       <Drawer v-model="editorOpen" class="editor-sheet" :inline="deckFull || wide"

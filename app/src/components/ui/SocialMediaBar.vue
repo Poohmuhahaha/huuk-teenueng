@@ -40,9 +40,10 @@ function linkOf(id: PlatformId): string | null {
     <span class="tracking-[0.08em] uppercase text-muted flex-none text-2xs font-extrabold max-sm:hidden">{{ t('social.title') }}</span>
     <div v-for="p in PLATFORMS" :key="p.id" class="inline-flex items-center gap-[7px] px-[13px] py-[5px] rounded-full border text-[13.5px] font-[550] flex-none transition-colors hover:bg-wash hover:text-ink"
       :class="activePlatforms.includes(p.id) ? 'on bg-ink text-accent-ink border-ink font-[650]' : 'bg-surface text-muted border-faint'" :title="`Include ${p.name}`">
-      <input type="checkbox" class="m-0 accent-accent" :checked="activePlatforms.includes(p.id)" :aria-label="`Include ${p.name}`"
+      <input type="checkbox" class="m-0 accent-accent cursor-pointer" :checked="activePlatforms.includes(p.id)" :aria-label="`Include ${p.name}`"
         @change="onToggle(p.id, $event)" />
-      <span class="flex-none inline-block w-2 h-2 rounded-full border-[1.5px]" :class="statusOf(p.id) === 'connected' ? (activePlatforms.includes(p.id) ? 'bg-accent-ink border-accent-ink' : 'bg-success border-success') : statusOf(p.id) === 'connecting' ? 'bg-warning border-warning' : statusOf(p.id) === 'error' ? 'border-dashed border-danger bg-surface' : 'bg-surface border-muted'" />
+      <span v-if="statusOf(p.id) !== 'disconnected'" class="flex-none inline-block w-2 h-2 rounded-full"
+        :class="statusOf(p.id) === 'connected' ? (activePlatforms.includes(p.id) ? 'bg-accent-ink' : 'bg-emerald-500') : statusOf(p.id) === 'connecting' ? 'bg-amber-500' : 'bg-rose-500'" />
       <PlatformLogo :id="p.id" :size="15" />
       <template v-if="linkOf(p.id)">
         <a class="socialname text-inherit cursor-pointer bg-transparent border-0 p-0 hover:underline w-auto" :href="linkOf(p.id) as string" target="_blank" rel="noopener noreferrer"

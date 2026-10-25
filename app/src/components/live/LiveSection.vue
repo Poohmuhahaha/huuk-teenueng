@@ -141,9 +141,9 @@ async function onReconnect(): Promise<void> {
 <template>
   <section class="mt-6">
     <div class="flex items-center flex-wrap gap-3">
-      <h2 style="margin: 0;">{{ t('live.title') }}</h2>
+      <h2 class="section-title m-0 text-sm font-bold tracking-widest uppercase text-ink">{{ t('live.title') }}</h2>
       <span class="text-muted text-[13px]">{{ t('live.synced') }} {{ syncedLabel(live?.fetchedAt) }}</span>
-      <button class="btn live-sync ml-auto" :disabled="!mayManage || sync.isPending.value"
+      <button class="btn live-sync ml-auto w-auto px-5" :disabled="!mayManage || sync.isPending.value"
         :title="mayManage ? '' : t('auth.noPerm')" @click="onSync">
         {{ sync.isPending.value ? t('live.syncing') : t('live.sync') }}
       </button>

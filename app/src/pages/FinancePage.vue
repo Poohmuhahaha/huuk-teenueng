@@ -76,7 +76,7 @@ async function add(): Promise<void> {
 
 <template>
   <BudgetCards :income="income" :expense="expense" :balance="balance" :currency="CURRENCY" />
-  <div class="grid2 mt">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
     <div><h2>Income by month</h2><BarChart :items="monthlyIn" /></div>
     <div><h2>Expense by month</h2><BarChart :items="monthlyOut" /></div>
   </div>
@@ -84,7 +84,7 @@ async function add(): Promise<void> {
   <div v-if="isPending" class="muted">Loading ledger…</div>
   <div v-else-if="isError" class="card" role="alert">
     <p class="muted">Could not load ledger: {{ loadError?.message }}</p>
-    <button type="button" class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
+    <button type="button" class="btn w-auto" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
   </div>
   <div v-else-if="isEmpty" class="empty-state">
     <p class="muted">No transactions recorded yet.</p>
@@ -92,7 +92,7 @@ async function add(): Promise<void> {
   </div>
   <TxnTable v-else :rows="txns ?? []" :currency="CURRENCY" />
   <h2>Log transaction</h2>
-  <div class="grid4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-surface border border-line p-4 rounded-xl">
     <div><label class="lbl">Date</label><input class="field" type="date" v-model="dDate" :disabled="!canWrite"
       :title="canWrite ? '' : t('auth.noPerm')" /></div>
     <div><label class="lbl">Amount</label><input class="field" type="number" v-model.number="dAmount" :disabled="!canWrite"
@@ -104,7 +104,7 @@ async function add(): Promise<void> {
       :title="canWrite ? '' : t('auth.noPerm')" /></div>
   </div>
   <p v-if="addError" class="autherr" role="alert">{{ addError }}</p>
-  <div class="mt"><button class="btn btn-primary" :disabled="!canWrite || addTxn.isPending.value"
+  <div class="mt-3"><button class="btn btn-primary w-auto" :disabled="!canWrite || addTxn.isPending.value"
     :title="canWrite ? '' : t('auth.noPerm')" @click="add">
     {{ addTxn.isPending.value ? t('common.loading') : 'Add transaction' }}</button></div>
 </template>

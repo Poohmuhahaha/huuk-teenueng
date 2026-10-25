@@ -116,8 +116,7 @@ function updatedLabel(row: ContentSummary): string {
     <p class="muted">{{ t('studio.signInHint') }}</p>
   </div>
 
-  <div v-else ref="root" class="studio-page">
-    <div class="grid grid-single gap-4 items-start">
+  <div v-else ref="root" class="studio-page h-full flex flex-col min-h-0">
     <DockBar label="Studio controls">
       <div class="flex items-center justify-between w-full gap-3">
         <div class="flex items-center gap-2">
@@ -128,6 +127,7 @@ function updatedLabel(row: ContentSummary): string {
               </button>
             </template>
           </DropdownMenu>
+          <span class="text-xs text-muted font-medium">{{ rows.length }} items</span>
         </div>
         <button type="button" class="btn btn-primary btn-icon w-auto" :title="t('studio.new')" :aria-label="t('studio.new')"
           :disabled="!canWrite || create.isPending.value" @click="newContent">
@@ -136,44 +136,62 @@ function updatedLabel(row: ContentSummary): string {
       </div>
     </DockBar>
 
-    <div class="studio-main">
-      <div v-if="listQ.isPending.value" class="muted">{{ t('studio.loading') }}</div>
-      <div v-else-if="listQ.isError.value" class="py-2 grid gap-2 justify-items-center">
-        <p class="muted">{{ listQ.error.value?.message }}</p>
-        <button class="btn" @click="() => listQ.refetch()">{{ t('common.tryAgain') }}</button>
-      </div>
-      <p v-else-if="!rows.length" class="muted">{{ t('studio.empty') }}</p>
-      <ul v-else class="list-none m-0 p-0 grid gap-1.5">
-        <li v-for="row in rows" :key="row.id">
-          <button class="w-full text-center justify-items-center bg-transparent border-0 border-b border-faint rounded-none py-2.5 px-1 cursor-pointer grid gap-tight hover:bg-wash transition"
-            :class="row.id === selectedId ? 'bg-wash shadow-selected-bar' : ''"
+    <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-0 border border-line rounded-2xl bg-surface overflow-hidden mt-2">
+      <!-- Left pane: Article List -->
+      <div class="md:col-span-5 border-r border-line flex flex-col min-h-0 overflow-y-auto p-3 gap-2">
+        <div v-if="listQ.isPending.value" class="muted p-4 text-center">{{ t('studio.loading') }}</div>
+        <div v-else-if="listQ.isError.value" class="py-4 grid gap-2 justify-items-center text-center">
+          <p class="muted">{{ listQ.error.value?.message }}</p>
+          <button class="btn w-auto" @click="() => listQ.refetch()">{{ t('common.tryAgain') }}</button>
+        </div>
+        <p v-else-if="!rows.length" class="muted p-6 text-center">{{ t('studio.empty') }}</p>
+        <template v-else>
+          <button v-for="row in rows" :key="row.id"
+            class="w-full text-left p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5"
+            :class="row.id === selectedId ? 'border-ink bg-wash/60 shadow-xs' : 'border-line/60 bg-surface hover:border-line hover:bg-wash/30'"
             @click="select(row.id)">
-            <span class="flex justify-center gap-2 items-baseline">
-              <strong>{{ row.title || t('studio.untitled') }}</strong>
-              <span class="statuschip" :class="`st-${row.status}`">{{ statusLabel(row.status) }}</span>
-            </span>
-            <span class="muted text-xs line-clamp-2">{{ row.excerpt || t('studio.noExcerpt') }}</span>
-            <span class="text-2xs text-muted">
-              {{ row.author }} · {{ updatedLabel(row) }} · {{ row.wordCount }} {{ t('studio.words') }}
-              <template v-if="row.tags.length"> · {{ row.tags.join(', ') }}</template>
-            </span>
+            <div class="flex items-start justify-between gap-2">
+              <strong class="text-sm font-bold text-ink leading-snug line-clamp-1">{{ row.title || t('studio.untitled') }}</strong>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider flex-none"
+                :class="row.status === 'published' ? 'bg-ink text-white' : row.status === 'scheduled' ? 'bg-wash text-ink border border-line' : 'bg-surface text-muted border border-line/60'">
+                {{ statusLabel(row.status) }}
+              </span>
+            </div>
+            <span class="muted text-xs line-clamp-2 leading-relaxed">{{ row.excerpt || t('studio.noExcerpt') }}</span>
+            <div class="text-[11px] text-muted flex items-center gap-1.5 mt-0.5">
+              <span>{{ row.author }}</span>
+              <span>·</span>
+              <span>{{ updatedLabel(row) }}</span>
+              <span>·</span>
+              <span>{{ row.wordCount }} {{ t('studio.words') }}</span>
+              <template v-if="row.tags.length">
+                <span>·</span>
+                <span class="truncate">{{ row.tags.join(', ') }}</span>
+              </template>
+            </div>
           </button>
-        </li>
-      </ul>
+        </template>
+      </div>
+
+      <!-- Right pane: Content Editor / Detail -->
+      <div class="md:col-span-7 flex flex-col min-h-0 overflow-y-auto p-4 md:p-6 bg-surface">
+        <ContentEditor v-if="selectedRow" :key="selectedRow.id" :id="selectedRow.id" />
+        <div v-else class="h-full flex flex-col items-center justify-center p-8 text-center text-muted gap-2 min-h-[300px]">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="opacity-30 mb-2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+          </svg>
+          <p class="font-bold text-ink text-sm">{{ t('studio.pick') }}</p>
+          <p class="text-xs max-w-xs">{{ t('studio.pickHint') }}</p>
+        </div>
+      </div>
     </div>
 
-    <section v-if="deckFull || wide" class="studio-detail">
-      <ContentEditor v-if="selectedId" :key="selectedId" :id="selectedId" />
-      <template v-else>
-        <p class="muted">{{ t('studio.pick') }}</p>
-        <p class="muted">{{ t('studio.pickHint') }}</p>
-      </template>
-    </section>
-    </div>
-
-    <Drawer v-if="!deckFull" v-model="editorOpen" side="bottom" contained
+    <Drawer v-if="!deckFull && !wide" v-model="editorOpen" side="bottom" contained
       :title="selectedRow?.title || t('studio.untitled')">
-      <ContentEditor v-if="selectedId" :key="selectedId" :id="selectedId" />
+      <ContentEditor v-if="selectedRow" :key="selectedRow.id" :id="selectedRow.id" />
     </Drawer>
   </div>
 </template>

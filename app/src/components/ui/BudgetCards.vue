@@ -9,7 +9,7 @@ function money(n: number, cur: string): string {
 </script>
 
 <template>
-  <div class="grid3 grid gap-3">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-2">
     <KpiCard label="Income (real)" :value="money(income, currency)" />
     <KpiCard label="Expense (real)" :value="money(expense, currency)" />
     <KpiCard label="Balance" :value="money(balance, currency)" :hint="balance < 0 ? 'over budget' : undefined"

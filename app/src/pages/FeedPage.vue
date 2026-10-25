@@ -105,11 +105,11 @@ const monthLabel = computed(() => {
         </span>
       </button>
     </div>
-    <div class="grid2 max-w-feed mt-2">
-      <div><label class="lbl" for="feed-upto">{{ t('feed.upto') }}</label>
-        <input id="feed-upto" class="field" type="date" v-model="upto" /></div>
-      <div><label class="lbl" for="feed-size">{{ t('feed.size') }}</label>
-        <select id="feed-size" class="field" v-model="variantIndex">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto my-3 text-left">
+      <div><label class="lbl block text-left text-xs font-semibold text-muted uppercase tracking-wider mb-1" for="feed-upto">{{ t('feed.upto') }}</label>
+        <input id="feed-upto" class="field text-left" type="date" v-model="upto" /></div>
+      <div><label class="lbl block text-left text-xs font-semibold text-muted uppercase tracking-wider mb-1" for="feed-size">{{ t('feed.size') }}</label>
+        <select id="feed-size" class="field text-left" v-model="variantIndex">
           <option :value="-1">{{ meta.feed.w }}×{{ meta.feed.h }} · {{ meta.feed.ratio }}</option>
           <option v-for="(v, i) in meta.feed.variants" :key="i" :value="i">
             {{ v.label }} · {{ v.w }}×{{ v.h }} · {{ v.ratio }}
