@@ -2859,44 +2859,89 @@ textarea.field, textarea {
   overflow: hidden;
 }
 
-/* Dashboard — sidebar (month / quick actions / alerts) + scrolling content,
-   mirroring the Studio pattern so the home screen behaves like the rest. */
-.card-scroll.dash-scroll {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 44px 32px 28px;
+/* Dashboard — zero top/bottom padding and margin so content scrolls smoothly edge-to-edge
+   without clipping or disjointed gaps inside the card. */
+.card-scroll.dash-scroll,
+.card-scroll:has(.dash-page),
+.deck.full .card-scroll.dash-scroll,
+.deck.full .card-scroll:has(.dash-page),
+.slide-card:has(.dash-page) .card-scroll {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 32px !important;
+  padding-right: 32px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
   text-align: left;
+  height: 100% !important;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
 }
-.card-scroll.dash-scroll > .dash-page {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  margin-bottom: 0;
+
+@media (max-width: 640px) {
+  .card-scroll.dash-scroll,
+  .card-scroll:has(.dash-page),
+  .deck.full .card-scroll.dash-scroll,
+  .deck.full .card-scroll:has(.dash-page),
+  .slide-card:has(.dash-page) .card-scroll {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
 }
+
+.card-scroll.dash-scroll > .dash-page,
+.card-scroll:has(.dash-page) > .dash-page,
+.slide-card:has(.dash-page) .dash-page {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  width: 100% !important;
+}
+
 .card-scroll.dash-scroll .dash-page > h1 {
-  text-align: left;
-  padding-right: 220px;
+  display: none !important;
 }
-.card-scroll.dash-scroll .dash-grid {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  gap: 28px;
-  align-items: stretch;
+
+.card-scroll.dash-scroll .dash-grid,
+.card-scroll:has(.dash-page) .dash-grid,
+.slide-card:has(.dash-page) .dash-grid {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  gap: 0 !important;
+  width: 100% !important;
 }
-.card-scroll.dash-scroll .dash-side {
-  align-content: start;
-  overflow: hidden;
-}
-.card-scroll.dash-scroll .dash-main {
-  overflow-y: auto;
-  min-height: 0;
-  max-height: 100%;
+
+.card-scroll.dash-scroll .dash-main,
+.card-scroll:has(.dash-page) .dash-main,
+.slide-card:has(.dash-page) .dash-main {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
   overscroll-behavior: contain;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  width: 100% !important;
 }
 
 
