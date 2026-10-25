@@ -84,13 +84,12 @@ const monthLabel = computed(() => {
 </script>
 
 <template>
-  <SocialMediaBar v-if="!isClient" />
   <div v-if="isError" class="card">
     <p class="muted">Could not load posts: {{ loadError?.message }}</p>
     <button class="btn" @click="() => refetch()">Try again</button>
   </div>
   <div v-if="setup" class="my-4 flex flex-col gap-3">
-    <!-- Platform switcher tabs -->
+    <!-- Platform switcher tabs + Social Channels Popup Button -->
     <div class="flex items-center justify-center flex-wrap gap-2" role="tablist" :aria-label="t('feed.platform')">
       <button v-for="tab in platformTabs" :key="tab.name" type="button"
         class="feed-tab inline-flex items-center gap-2 px-3.5 py-1.5 border rounded-full text-xs font-semibold cursor-pointer transition shadow-2xs"
@@ -106,6 +105,9 @@ const monthLabel = computed(() => {
           {{ tab.count }}
         </span>
       </button>
+
+      <!-- Manage Channels Button (Opens Popup Modal) -->
+      <SocialMediaBar v-if="!isClient" :popup="true" />
     </div>
 
     <!-- Controls & Settings Toolbar Bar -->
