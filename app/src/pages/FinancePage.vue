@@ -59,6 +59,9 @@ const financeSparks = computed(() => ({
   balance: monthlyIn.value.map((m, i) => m.value - (monthlyOut.value[i]?.value ?? 0)),
 }))
 
+const totalMonthlyIn = computed(() => monthlyIn.value.reduce((s, it) => s + it.value, 0))
+const totalMonthlyOut = computed(() => monthlyOut.value.reduce((s, it) => s + it.value, 0))
+
 async function add(): Promise<void> {
   if (!canWrite.value || addTxn.isPending.value) return
   addError.value = ''
@@ -85,13 +88,30 @@ async function add(): Promise<void> {
     <BudgetCards :income="income" :expense="expense" :balance="balance" :currency="CURRENCY" :sparks="financeSparks" />
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="p-4 bg-surface border border-line rounded-xl shadow-xs">
-        <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-3 m-0">Income by month</h2>
-        <BarChart :items="monthlyIn" />
+      <div class="card-fade p-4 sm:p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Income by month</h2>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
+              {{ monthlyIn.length }} mos
+            </span>
+          </div>
+          <span class="text-sm font-bold font-mono text-ink">฿{{ totalMonthlyIn.toLocaleString('en-US') }}</span>
+        </div>
+        <BarChart :items="monthlyIn" variant="towers" currency="฿" :card="false" />
       </div>
-      <div class="p-4 bg-surface border border-line rounded-xl shadow-xs">
-        <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-3 m-0">Expense by month</h2>
-        <BarChart :items="monthlyOut" />
+
+      <div class="card-fade p-4 sm:p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Expense by month</h2>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
+              {{ monthlyOut.length }} mos
+            </span>
+          </div>
+          <span class="text-sm font-bold font-mono text-ink">฿{{ totalMonthlyOut.toLocaleString('en-US') }}</span>
+        </div>
+        <BarChart :items="monthlyOut" variant="towers" currency="฿" :card="false" />
       </div>
     </div>
 

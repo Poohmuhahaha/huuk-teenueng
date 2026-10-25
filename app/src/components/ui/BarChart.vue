@@ -17,9 +17,21 @@ export interface BarItem {
   platform?: string
 }
 
-const props = defineProps<{
-  items: BarItem[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    items: BarItem[]
+    variant?: 'bars' | 'towers'
+    currency?: string
+    card?: boolean
+    rows?: number
+  }>(),
+  {
+    variant: 'bars',
+    currency: '',
+    card: true,
+    rows: 8,
+  },
+)
 
 function num(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) ? Math.max(0, v) : 0
@@ -33,6 +45,12 @@ function itemColor(i: number, custom?: string): string {
 }
 
 const totalValue = computed(() => props.items.reduce((acc, it) => acc + num(it.value), 0))
+const maxVal = computed(() => {
+  const vals = props.items.map((it) => num(it.value))
+  return Math.max(...vals, 1)
+})
+
+const numRows = computed(() => Math.max(3, Math.min(16, props.rows ?? 8)))
 
 const itemsWithShare = computed(() => {
   const sum = totalValue.value || 1
@@ -53,16 +71,114 @@ const itemsWithShare = computed(() => {
   })
 })
 
+const towersData = computed(() => {
+  const max = maxVal.value || 1
+  const sum = totalValue.value || 1
+  const rowCount = numRows.value
+
+  return props.items.map((it, colIdx) => {
+    const val = num(it.value)
+    const pct = totalValue.value > 0 ? Math.round((val / sum) * 100) : 0
+    const activeLevel = val > 0 ? Math.max(1, Math.min(rowCount, Math.round((val / max) * rowCount))) : 0
+
+    // Date formatting if label is YYYY-MM
+    const dateMatch = /^(\d{4})-(\d{2})$/.exec(it.label)
+    let primaryLabel = it.label
+    let secondaryLabel = ''
+    if (dateMatch) {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const mIdx = parseInt(dateMatch[2], 10) - 1
+      primaryLabel = monthNames[mIdx] ?? dateMatch[2]
+      secondaryLabel = `'${dateMatch[1].slice(2)}`
+    }
+
+    return {
+      ...it,
+      value: val,
+      pct,
+      activeLevel,
+      primaryLabel,
+      secondaryLabel,
+      color: itemColor(colIdx, it.color),
+    }
+  })
+})
+
+function formatTowerValue(v: number): string {
+  const cur = props.currency ? props.currency : ''
+  if (v >= 1_000_000) {
+    return `${cur}${(v / 1_000_000).toFixed(1)}M`
+  }
+  if (v >= 100_000) {
+    return `${cur}${(v / 1_000).toFixed(0)}k`
+  }
+  return `${cur}${v.toLocaleString('en-US')}`
+}
+
+function getTowerSquareOpacity(row: number, activeLevel: number): number {
+  if (row === activeLevel) return 1.0
+  return Math.max(0.5, 1.0 - (activeLevel - row) * 0.08)
+}
+
 const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)}`).join(', '))
 </script>
 
 <template>
   <div
-    class="border border-line rounded-xl bg-surface p-4 shadow-xs transition-all"
+    :class="card ? 'border border-line rounded-xl bg-surface p-4 shadow-xs transition-all' : 'w-full transition-all'"
     role="img"
     :aria-label="summary"
   >
     <div v-if="!items.length" class="text-muted text-sm py-8 text-center">No data yet.</div>
+
+    <!-- Variant: Towers (Vertical 1:1 Square Blocks Matrix) -->
+    <template v-else-if="variant === 'towers'">
+      <div class="w-full flex items-end justify-between gap-2 sm:gap-3 pt-2 pb-1">
+        <div
+          v-for="(col, ci) in towersData"
+          :key="col.label"
+          class="flex-1 min-w-0 flex flex-col items-center justify-end max-w-[64px] group/col cursor-default"
+          :title="`${col.label}: ${currency}${col.value.toLocaleString('en-US')} (${col.pct}% of total)`"
+        >
+          <!-- Top Metrics: Share Pill & Formatted Value -->
+          <div class="flex flex-col items-center mb-2.5 transition-transform duration-200 group-hover/col:-translate-y-0.5">
+            <span class="text-[10px] font-semibold text-muted bg-wash border border-line/60 px-1.5 py-0.5 rounded-full mb-1 transition-colors group-hover/col:bg-black group-hover/col:text-white">
+              {{ col.pct }}%
+            </span>
+            <span class="text-xs sm:text-[13px] font-bold font-mono text-ink tracking-tight whitespace-nowrap">
+              {{ formatTowerValue(col.value) }}
+            </span>
+          </div>
+
+          <!-- Vertical Stack of 1:1 Squares -->
+          <div class="w-full flex flex-col-reverse gap-1 sm:gap-1.5 items-center my-1 select-none">
+            <div
+              v-for="r in numRows"
+              :key="r"
+              class="w-full max-w-[34px] sm:max-w-[40px] aspect-square rounded-[2px] sm:rounded-[3px] transition-all duration-200"
+              :class="r <= col.activeLevel ? 'bg-ink tower-square-active group-hover/col:scale-105 group-hover/col:brightness-125' : 'bg-ink/[0.06] tower-square-ghost'"
+              :style="{
+                animationDelay: `${ci * 45 + (r - 1) * 20}ms`,
+                opacity: r <= col.activeLevel ? getTowerSquareOpacity(r, col.activeLevel) : undefined,
+                backgroundColor: r <= col.activeLevel && col.color && col.color !== '#0a0a0a' ? col.color : undefined,
+              }"
+            />
+          </div>
+
+          <!-- Bottom Label: Month / Category Name -->
+          <div class="flex flex-col items-center mt-2 text-center min-w-0 max-w-full">
+            <span class="text-xs font-bold text-ink truncate max-w-full group-hover/col:text-brand-600 transition-colors">
+              {{ col.primaryLabel }}
+            </span>
+            <span v-if="col.secondaryLabel" class="text-[10px] font-medium text-muted font-mono leading-none mt-0.5">
+              {{ col.secondaryLabel }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Variant: Bars (Horizontal Progress Rows) -->
     <template v-else>
       <div class="space-y-3">
         <!-- Segmented Distribution Track (when there are multiple items) -->
@@ -127,3 +243,36 @@ const summary = computed(() => props.items.map((i) => `${i.label}:${num(i.value)
     </template>
   </div>
 </template>
+
+<style scoped>
+.tower-square-active {
+  animation: squarePopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.tower-square-ghost {
+  animation: ghostFadeIn 0.4s ease-out both;
+}
+
+@keyframes squarePopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ghostFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+</style>
