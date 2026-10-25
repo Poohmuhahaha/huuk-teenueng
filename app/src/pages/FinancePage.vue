@@ -146,30 +146,33 @@ async function add(): Promise<void> {
       <TxnTable v-else :rows="txns ?? []" :currency="CURRENCY" />
     </div>
 
-    <div class="card-fade p-4 sm:p-5 flex flex-col gap-3.5">
-      <div class="flex items-center justify-between gap-2 flex-wrap">
+    <div class="card-fade p-4 sm:p-5 flex flex-col gap-4">
+      <div class="flex items-center justify-between gap-3">
         <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Log transaction</h2>
-        <!-- Kind Toggle Switch (Income vs Expense) -->
-        <div class="inline-flex items-center p-0.5 rounded-full bg-wash border border-line select-none">
-          <button
-            type="button"
-            class="px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer"
-            :class="dKind === 'IN' ? 'bg-emerald-600 text-white shadow-xs' : 'text-muted hover:text-ink'"
-            :disabled="!canWrite"
-            @click="dKind = 'IN'"
-          >
-            + Income (IN)
-          </button>
-          <button
-            type="button"
-            class="px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer"
-            :class="dKind === 'OUT' ? 'bg-black text-white shadow-xs' : 'text-muted hover:text-ink'"
-            :disabled="!canWrite"
-            @click="dKind = 'OUT'"
-          >
-            - Expense (OUT)
-          </button>
-        </div>
+      </div>
+
+      <!-- Segmented Toggle Switch: 50/50 Balanced Width, Red for Expense, Green for Income -->
+      <div class="w-full grid grid-cols-2 p-1 rounded-xl bg-wash border border-line select-none gap-1">
+        <button
+          type="button"
+          class="h-9 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+          :class="dKind === 'IN' ? 'bg-emerald-600 text-white shadow-xs' : 'text-muted hover:text-ink'"
+          :disabled="!canWrite"
+          @click="dKind = 'IN'"
+        >
+          <span class="text-sm font-bold leading-none">+</span>
+          <span>Income</span>
+        </button>
+        <button
+          type="button"
+          class="h-9 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+          :class="dKind === 'OUT' ? 'bg-rose-600 text-white shadow-xs' : 'text-muted hover:text-ink'"
+          :disabled="!canWrite"
+          @click="dKind = 'OUT'"
+        >
+          <span class="text-sm font-bold leading-none">-</span>
+          <span>Expense</span>
+        </button>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">

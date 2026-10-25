@@ -76,9 +76,9 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
               <template v-if="cell.column.id === 'kind'">
                 <span
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold font-mono tracking-tight"
-                  :class="row.original.kind === 'IN' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' : 'bg-zinc-500/10 text-zinc-700 dark:text-zinc-400 border border-zinc-500/20'"
+                  :class="row.original.kind === 'IN' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'"
                 >
-                  <span class="w-1.5 h-1.5 rounded-full" :class="row.original.kind === 'IN' ? 'bg-emerald-500' : 'bg-zinc-400'" />
+                  <span class="w-1.5 h-1.5 rounded-full" :class="row.original.kind === 'IN' ? 'bg-emerald-500' : 'bg-rose-500'" />
                   {{ row.original.kind }}
                 </span>
               </template>
@@ -87,7 +87,7 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
               <template v-else-if="cell.column.id === 'amount'">
                 <span
                   class="font-mono text-sm font-bold tabular-nums"
-                  :class="row.original.kind === 'IN' ? 'text-emerald-700 dark:text-emerald-400' : 'text-ink'"
+                  :class="row.original.kind === 'IN' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
                 >
                   <FlexRender :cell="cell" />
                 </span>
@@ -130,7 +130,7 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
         <div class="flex items-center gap-3 min-w-0">
           <div
             class="w-9 h-9 rounded-full flex items-center justify-center flex-none"
-            :class="row.original.kind === 'IN' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-zinc-500/10 text-zinc-700 dark:text-zinc-400'"
+            :class="row.original.kind === 'IN' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400'"
           >
             <!-- Inward arrow ↙ for IN -->
             <svg v-if="row.original.kind === 'IN'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -159,13 +159,13 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
         <div class="flex flex-col items-end flex-none text-right">
           <span
             class="text-[14.5px] font-bold font-mono tracking-tight leading-snug"
-            :class="row.original.kind === 'IN' ? 'text-emerald-700 dark:text-emerald-400' : 'text-ink'"
+            :class="row.original.kind === 'IN' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
           >
             {{ row.original.kind === 'IN' ? '+' : '-' }}{{ currency }}{{ row.original.amount.toLocaleString('en-US') }}
           </span>
           <span
             class="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold font-mono tracking-wide mt-0.5 uppercase"
-            :class="row.original.kind === 'IN' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400'"
+            :class="row.original.kind === 'IN' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400'"
           >
             {{ row.original.kind }}
           </span>
