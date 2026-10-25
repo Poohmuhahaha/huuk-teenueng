@@ -8,6 +8,7 @@ import MonthToggle from '@/components/ui/MonthToggle.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
 import DockBar from '@/components/ui/DockBar.vue'
 import LiveSection from '@/components/live/LiveSection.vue'
+import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import { useWidePane } from '@/composables/useWidePane'
 import { activeMonth, activeYear } from '@/core/navdate'
 
@@ -101,35 +102,51 @@ const growth = computed(() => {
           <p class="muted">Could not load posts: {{ loadError?.message }}</p>
           <button class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
         </div>
-        <h2>Platform goals</h2>
-        <TableFrame>
-          <thead><tr><th>Platform</th><th class="num">Start</th><th class="num">Goal</th><th class="num">Now</th><th class="num">Delta</th></tr></thead>
-          <tbody>
-            <tr v-for="g in goalRows" :key="g.platform" style="cursor: default;">
-              <td>{{ g.platform }}</td>
-              <td class="num">{{ g.start.toLocaleString('en-US') }}</td>
-              <td class="num">{{ g.goal.toLocaleString('en-US') }}</td>
-              <td class="num">{{ g.now.toLocaleString('en-US') }}</td>
-              <td class="num">{{ g.delta >= 0 ? '+' : '' }}{{ g.delta.toLocaleString('en-US') }}</td>
-            </tr>
-          </tbody>
-        </TableFrame>
-        <h2>Views by month</h2>
-        <BarChart :items="growth" />
-        <h2>Per-post +7 days</h2>
-        <p v-if="isEmpty && !isPending && !isError" class="muted">No posts recorded yet.</p>
-        <TableFrame v-else>
-          <thead><tr><th>Topic</th><th>Posted</th><th>+7 days</th><th class="num">Likes</th><th class="num">Views</th></tr></thead>
-          <tbody>
-            <tr v-for="r in byPost" :key="r.post.id" style="cursor: default;">
-              <td>{{ r.post.topic }}</td>
-              <td>{{ r.post.date ?? '—' }}</td>
-              <td>{{ r.post.date ? plus7(r.post.date) : '—' }}</td>
-              <td class="num">{{ r.likes.toLocaleString('en-US') }}</td>
-              <td class="num">{{ r.views.toLocaleString('en-US') }}</td>
-            </tr>
-          </tbody>
-        </TableFrame>
+        <div class="mb-6">
+          <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-2.5">Platform goals</h2>
+          <TableFrame>
+            <thead><tr><th>Platform</th><th class="num">Start</th><th class="num">Goal</th><th class="num">Now</th><th class="num">Delta</th></tr></thead>
+            <tbody>
+              <tr v-for="g in goalRows" :key="g.platform" style="cursor: default;">
+                <td class="font-medium text-ink flex items-center gap-2">
+                  <PlatformLogo :name="g.platform" :size="15" />
+                  <span>{{ g.platform }}</span>
+                </td>
+                <td class="num font-mono">{{ g.start.toLocaleString('en-US') }}</td>
+                <td class="num font-mono">{{ g.goal.toLocaleString('en-US') }}</td>
+                <td class="num font-mono font-bold">{{ g.now.toLocaleString('en-US') }}</td>
+                <td class="num font-mono">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums"
+                    :class="g.delta >= 0 ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-700 border border-rose-500/20'">
+                    {{ g.delta >= 0 ? '+' : '' }}{{ g.delta.toLocaleString('en-US') }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </TableFrame>
+        </div>
+
+        <div class="mb-6">
+          <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-2.5">Views by month</h2>
+          <BarChart :items="growth" />
+        </div>
+
+        <div class="mb-6">
+          <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-2.5">Per-post +7 days</h2>
+          <p v-if="isEmpty && !isPending && !isError" class="muted">No posts recorded yet.</p>
+          <TableFrame v-else>
+            <thead><tr><th>Topic</th><th>Posted</th><th>+7 days</th><th class="num">Likes</th><th class="num">Views</th></tr></thead>
+            <tbody>
+              <tr v-for="r in byPost" :key="r.post.id" style="cursor: default;">
+                <td class="font-semibold text-ink">{{ r.post.topic }}</td>
+                <td class="text-muted text-xs font-mono">{{ r.post.date ?? '—' }}</td>
+                <td class="text-muted text-xs font-mono">{{ r.post.date ? plus7(r.post.date) : '—' }}</td>
+                <td class="num font-mono font-bold">{{ r.likes.toLocaleString('en-US') }}</td>
+                <td class="num font-mono font-bold text-ink">{{ r.views.toLocaleString('en-US') }}</td>
+              </tr>
+            </tbody>
+          </TableFrame>
+        </div>
         <LiveSection variant="table" />
       </div>
     </div>

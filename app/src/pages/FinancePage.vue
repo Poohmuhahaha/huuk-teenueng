@@ -75,36 +75,67 @@ async function add(): Promise<void> {
 </script>
 
 <template>
-  <BudgetCards :income="income" :expense="expense" :balance="balance" :currency="CURRENCY" />
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-    <div><h2>Income by month</h2><BarChart :items="monthlyIn" /></div>
-    <div><h2>Expense by month</h2><BarChart :items="monthlyOut" /></div>
+  <div class="financepage text-left w-full flex flex-col gap-5">
+    <BudgetCards :income="income" :expense="expense" :balance="balance" :currency="CURRENCY" />
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="p-4 bg-surface border border-line rounded-xl shadow-xs">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-3 m-0">Income by month</h2>
+        <BarChart :items="monthlyIn" />
+      </div>
+      <div class="p-4 bg-surface border border-line rounded-xl shadow-xs">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-3 m-0">Expense by month</h2>
+        <BarChart :items="monthlyOut" />
+      </div>
+    </div>
+
+    <div>
+      <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-2.5">Transactions</h2>
+      <div v-if="isPending" class="muted">Loading ledger…</div>
+      <div v-else-if="isError" class="card" role="alert">
+        <p class="muted">Could not load ledger: {{ loadError?.message }}</p>
+        <button type="button" class="btn w-auto" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
+      </div>
+      <div v-else-if="isEmpty" class="empty-state">
+        <p class="muted">No transactions recorded yet.</p>
+        <TxnTable :rows="[]" :currency="CURRENCY" />
+      </div>
+      <TxnTable v-else :rows="txns ?? []" :currency="CURRENCY" />
+    </div>
+
+    <div>
+      <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-2.5">Log transaction</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-surface border border-line p-4 rounded-xl shadow-xs">
+        <div>
+          <label class="lbl block text-xs font-semibold text-muted mb-1.5">Date</label>
+          <input class="field w-full" type="date" v-model="dDate" :disabled="!canWrite"
+            :title="canWrite ? '' : t('auth.noPerm')" />
+        </div>
+        <div>
+          <label class="lbl block text-xs font-semibold text-muted mb-1.5">Amount</label>
+          <input class="field w-full font-mono" type="number" v-model.number="dAmount" :disabled="!canWrite"
+            :title="canWrite ? '' : t('auth.noPerm')" />
+        </div>
+        <div>
+          <label class="lbl block text-xs font-semibold text-muted mb-1.5">Kind</label>
+          <select class="field w-full" v-model="dKind" :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')">
+            <option value="IN">IN</option>
+            <option value="OUT">OUT</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl block text-xs font-semibold text-muted mb-1.5">Sub-category</label>
+          <input class="field w-full" v-model="dSub" :disabled="!canWrite"
+            :title="canWrite ? '' : t('auth.noPerm')" placeholder="e.g. Software, Ad spend" />
+        </div>
+      </div>
+      <p v-if="addError" class="autherr mt-2" role="alert">{{ addError }}</p>
+      <div class="mt-3">
+        <button class="btn btn-primary w-auto" :disabled="!canWrite || addTxn.isPending.value"
+          :title="canWrite ? '' : t('auth.noPerm')" @click="add">
+          {{ addTxn.isPending.value ? t('common.loading') : '+ Add transaction' }}
+        </button>
+      </div>
+    </div>
   </div>
-  <h2>Transactions</h2>
-  <div v-if="isPending" class="muted">Loading ledger…</div>
-  <div v-else-if="isError" class="card" role="alert">
-    <p class="muted">Could not load ledger: {{ loadError?.message }}</p>
-    <button type="button" class="btn w-auto" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
-  </div>
-  <div v-else-if="isEmpty" class="empty-state">
-    <p class="muted">No transactions recorded yet.</p>
-    <TxnTable :rows="[]" :currency="CURRENCY" />
-  </div>
-  <TxnTable v-else :rows="txns ?? []" :currency="CURRENCY" />
-  <h2>Log transaction</h2>
-  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-surface border border-line p-4 rounded-xl">
-    <div><label class="lbl">Date</label><input class="field" type="date" v-model="dDate" :disabled="!canWrite"
-      :title="canWrite ? '' : t('auth.noPerm')" /></div>
-    <div><label class="lbl">Amount</label><input class="field" type="number" v-model.number="dAmount" :disabled="!canWrite"
-      :title="canWrite ? '' : t('auth.noPerm')" /></div>
-    <div><label class="lbl">Kind</label>
-      <select class="field" v-model="dKind" :disabled="!canWrite" :title="canWrite ? '' : t('auth.noPerm')">
-        <option value="IN">IN</option><option value="OUT">OUT</option></select></div>
-    <div><label class="lbl">Sub-category</label><input class="field" v-model="dSub" :disabled="!canWrite"
-      :title="canWrite ? '' : t('auth.noPerm')" /></div>
-  </div>
-  <p v-if="addError" class="autherr" role="alert">{{ addError }}</p>
-  <div class="mt-3"><button class="btn btn-primary w-auto" :disabled="!canWrite || addTxn.isPending.value"
-    :title="canWrite ? '' : t('auth.noPerm')" @click="add">
-    {{ addTxn.isPending.value ? t('common.loading') : 'Add transaction' }}</button></div>
 </template>

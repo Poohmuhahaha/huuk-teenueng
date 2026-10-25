@@ -177,39 +177,39 @@
 
   /* semantic tokens — minimal monochrome (ink on paper) */
   --surface: #ffffff;
-  --surface-2: #ffffff;
+  --surface-2: #fafafa;
   --ink: #0a0a0a;
-  --muted: #6b6b6b;
-  --faint: #e4e4e4;
-  --wash: #f6f6f6;
-  --line: #e4e4e4;
+  --muted: #666666;
+  --faint: #e5e7eb;
+  --wash: #f8f9fa;
+  --line: #e5e7eb;
 
   --accent: #000000;
   --accent-hover: #222222;
   --accent-ink: #ffffff;
-  --accent-wash: #f2f2f2;
-  --accent-line: #d9d9d9;
+  --accent-wash: #f4f5f6;
+  --accent-line: #d1d5db;
   --focus: #000000;
-  --selected: #f2f2f2;
+  --selected: #f3f4f6;
 
   --success: #0a0a0a;
-  --success-wash: #f2f2f2;
+  --success-wash: #f0fdf4;
   --warning: #0a0a0a;
-  --warning-wash: #f2f2f2;
+  --warning-wash: #fefce8;
   --danger: #0a0a0a;
-  --danger-wash: #f2f2f2;
+  --danger-wash: #fef2f2;
 
   --backdrop: rgba(0, 0, 0, 0.4);
 
-  --radius: 0px;
-  --radius-sm: 0px;
-  --radius-lg: 0px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
 
-  --shadow-xs: none;
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: none;
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
 
   --font: "Inter", "Noto Sans Thai", "Segoe UI", system-ui, sans-serif;
   --font-display: "Tinos", "Times New Roman", Times, Georgia, "Noto Serif Thai", serif;
@@ -1572,20 +1572,20 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
 .camp-list { display: flex; flex-direction: column; }
 /* Borderless rows — the hub card is the only frame (no card-in-card). */
 .camp-item {
-  display: flex; flex-direction: column; gap: 3px; align-items: flex-start; text-align: left;
-  width: 100%; padding: 10px 4px; border: 0; border-bottom: 1px solid var(--faint);
-  border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: pointer;
-  align-items: center; text-align: center;
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left;
+  width: 100%; padding: 12px 14px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--surface); color: inherit; font: inherit; cursor: pointer;
+  margin-bottom: 8px; transition: all 0.15s ease; box-shadow: var(--shadow-xs);
 }
-.camp-item:hover { background: var(--wash); }
-.camp-item.active { background: var(--wash); box-shadow: inset 2px 0 0 var(--ink); }
-.camp-item-head { display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; }
+.camp-item:hover { background: var(--wash); border-color: var(--ink); }
+.camp-item.active { background: var(--surface); border-color: var(--ink); box-shadow: 0 0 0 1.5px var(--ink); }
+.camp-item-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; width: 100%; }
 .camp-status {
-  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
   border-radius: var(--radius-pill); padding: 2px 8px; border: 1px solid var(--line); color: var(--muted);
 }
-.camp-status.active { color: var(--success); border-color: var(--success); background: var(--success-wash); }
-.camp-status.paused { color: var(--warning); border-color: var(--warning); background: var(--warning-wash); }
+.camp-status.active { color: var(--ink); border-color: var(--ink); background: var(--wash); }
+.camp-status.paused { color: var(--muted); border-color: var(--line); background: var(--surface); }
 .camp-status.completed { color: var(--muted); background: var(--wash); }
 .camp-editor { min-width: 0; }
 .chiprow { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1610,287 +1610,129 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
 .pick-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; }
 
 /* =========================================================================
-   Minimal redesign — serif uppercase display · pill buttons · underline
-   fields · monochrome · whitespace. Overrides the skin only; layout intact.
+   Modern SaaS Design System (Linear / Vercel style)
+   Clean typography · tactile surfaces · refined boxed inputs · subtle depth
    ========================================================================= */
 body { background: var(--surface); color: var(--ink); }
 
 h1, h2, h3, h4, .modal h3, .lp-card h1, .guide-head strong, .plans-card h1 {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: -0.01em;
-  font-weight: 700;
+  font-family: var(--font);
+  color: var(--ink);
+  letter-spacing: -0.02em;
 }
-h1 { font-size: clamp(28px, 3.6vw, 44px); line-height: 1.05; }
-h2 { font-size: clamp(18px, 1.5vw, 22px); line-height: 1.12; margin: 28px 0 10px; }
-h3 { font-size: 16px; line-height: 1.2; }
-.modal h3 { font-size: 18px; }
+h1 { font-size: clamp(22px, 2.4vw, 30px); font-weight: 700; line-height: 1.15; }
+h2 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin: 24px 0 10px;
+}
+h3 { font-size: 15px; font-weight: 600; line-height: 1.25; }
+.modal h3 { font-size: 17px; font-weight: 700; }
 
-/* buttons → pill, uppercase */
+/* buttons → tactile, modern SaaS */
 .btn, a.btn, .menubtn, .tab, .toolbtn, .lp-submit, .switchlink, .chipbtn {
   font-family: var(--font);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   font-weight: 600;
   font-size: 12.5px;
-  border-radius: var(--radius-pill);
-  padding: 12px 22px;
-}
-.btn { background: transparent; border: 1.5px solid var(--ink); color: var(--ink); }
-.btn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
-.btn-primary, .lp-submit { background: var(--ink); border: 1.5px solid var(--ink); color: #fff; }
-.btn-primary:hover, .lp-submit:hover { background: #222; border-color: #222; color: #fff; }
-/* `a.btn { color: inherit }` out-specifies `.btn-primary`; keep link-buttons
-   that use the primary tone white-on-black like real buttons. */
-a.btn-primary, a.btn-primary:hover { color: #fff; }
-.btn:active { transform: none; }
-.menubtn { text-transform: none; letter-spacing: 0; border: 0; border-radius: 0; padding: 9px 10px; }
-.tab { padding: 8px 16px; }
-.toolbtn { padding: 6px 10px; letter-spacing: 0; }
-
-/* fields → underline only */
-.field, select.field, input.field, textarea.field, .ads-input, .palette-hex,
-input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="file"]),
-select {
-  background: transparent;
-  border: 0;
-  border-bottom: 1.5px solid var(--ink);
-  border-radius: 0;
-  padding: 10px 2px;
-  color: var(--ink);
-}
-.field::placeholder, input::placeholder, textarea::placeholder { color: var(--muted); }
-.field:focus, input.field:focus, select.field:focus, textarea.field:focus {
-  outline: none; box-shadow: none; border-bottom-color: var(--ink);
-}
-textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; padding: 12px; }
-
-/* surfaces → flat, hairline, square (deck cards keep their own 24px radius) */
-.card, .panel, .lp-card, .plans-card, .plogin-card, .modal, .guide-panel,
-.camp-editor, .camp-list, .camp-item, .plan-card, .style-panel,
-.linkitem, .member-row, .ads-stat, .livecard, .read-article {
-  border-radius: 0;
-  box-shadow: none;
-}
-.card, .panel, .slide-card { border: 1px solid var(--line); }
-.plans-card, .plogin-card, .modal, .guide-panel, .lp-card { border: 1px solid var(--line); }
-
-/* chips / badges → pill outline */
-.chip, .badge-success, .badge-warning, .badge-danger, .feature-tag, .statuschip,
-.plan-badge, .conn-btn, .socialmini { border-radius: var(--radius-pill); }
-
-/* navbar + nav */
-.topbar { background: rgba(255, 255, 255, 0.92); border-bottom: 1px solid var(--line); backdrop-filter: blur(10px); }
-.navlink { border-radius: var(--radius-pill); }
-.navlink.active { background: transparent; color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
-
-/* =========================================================================
-   Brand Identity card — minimal layout (match the reference):
-   centered narrow column · huge serif uppercase title · borderless sections ·
-   label + underline fields · generous whitespace · pill actions.
-   ========================================================================= */
-/* Brand Identity fills its card like every other hub: the fluid grid at the
-   top of this file owns the box (single column, gap, fit guards). */
-.brandpage .brand-head {
-  text-align: center;
-  margin: 0 0 24px;
-}
-.brandpage h1 {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  text-align: center;
-  font-size: clamp(36px, 7vw, 54px);
-  line-height: 1.02;
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-.brandpage .brand-note {
-  border: 1px solid var(--line);
-  padding: 12px 14px;
-  margin: 0 0 22px;
-  font-size: 14px;
-}
-/* Step 0 is one question + one field: everything centered, nothing else. */
-.brandpage .brand-hero { text-align: center; }
-.brandpage .brand-hero .lbl { text-align: center; }
-.brandpage .brand-hero .field { text-align: center; font-size: 22px; }
-.brandpage .brand-prompt {
-  font-family: var(--font-display);
-  font-size: clamp(17px, 4.4vw, 21px);
-  line-height: 1.3;
-  text-align: center;
-  color: var(--ink);
-  margin: 0 0 8px;
-}
-.brandpage .brand-body {
-  display: grid;
-  gap: 20px;
-  align-content: safe center;
-  min-width: 0;
-  flex: 1 0 auto;
-}
-.brandpage .brand-body .field {
-  width: 100%;
-}
-.brandpage .brand-nav {
-  margin-top: auto;
-  display: flex;
-  gap: 12px;
-  padding: 18px 0 calc(18px + env(safe-area-inset-bottom, 0px));
-  background: var(--surface);
-}
-.brandpage .brand-nav .btn {
-  flex: 1 1 auto;
-  width: 100%;
-}
-.brandpage h2 {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  text-align: center;
-  font-size: 20px;
-  letter-spacing: -0.01em;
-  font-weight: 700;
-  margin: 52px 0 18px;
-  border: 0;
-}
-.brandpage .grid2,
-.brandpage .grid3,
-.brandpage .grid4,
-.brandpage .grid6 {
-  gap: 26px;
-}
-.brandpage .lbl {
-  display: block;
-  font-size: 15px;
-  font-weight: 400;
-  color: var(--ink);
-  margin: 0 0 12px;
-  text-transform: none;
-  letter-spacing: 0;
-}
-.brandpage .field,
-.brandpage input.field {
-  width: 100%;
-  padding: 18px 2px;
-  margin-bottom: 26px;
-  font-size: 16px;
-}
-.brandpage .row { gap: 16px; }
-.brandpage .logo-preview,
-.brandpage .mood-item img {
-  border: 1px solid var(--line);
-}
-.brandpage .logo-remove {
-  background: var(--ink);
-  color: #fff;
-  border: 0;
-  border-radius: var(--radius-pill);
-  width: 24px;
-  height: 24px;
-  line-height: 1;
-}
-.brandpage .font-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-.brandpage .font-choice { border: 1px solid var(--line); border-radius: 0; padding: 14px; }
-.brandpage .font-choice.active { background: var(--ink); color: #fff; }
-.brandpage .font-choice.active .font-sample,
-.brandpage .font-choice.active .font-name { color: #fff; }
-.brandpage .style-segmented button { border-radius: 0; }
-.brandpage .style-segmented button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
-.brandpage .mood-add {
-  border: 1px dashed var(--line);
-  display: flex;
+  border-radius: var(--radius-sm, 8px);
+  padding: 8px 16px;
+  transition: all 0.15s ease;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 120px;
-  color: var(--muted);
+  gap: 6px;
 }
-.brandpage .btn,
-.brandpage label.btn {
-  justify-content: center;
+.btn {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-shadow: var(--shadow-xs);
 }
-
-/* =========================================================================
-   Minimal redesign — serif uppercase display · pill buttons · underline
-   fields · monochrome · whitespace. Overrides the skin only; layout intact.
-   ========================================================================= */
-body { background: var(--surface); color: var(--ink); }
-
-h1, h2, h3, h4, .modal h3, .lp-card h1, .guide-head strong, .plans-card h1 {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: -0.01em;
-  font-weight: 700;
+.btn:hover {
+  background: var(--wash);
+  border-color: #d1d5db;
+  color: var(--ink);
 }
-h1 { font-size: clamp(28px, 3.6vw, 44px); line-height: 1.05; }
-h2 { font-size: clamp(18px, 1.5vw, 22px); line-height: 1.12; margin: 28px 0 10px; }
-h3 { font-size: 16px; line-height: 1.2; }
-.modal h3 { font-size: 18px; }
-
-/* buttons → pill, uppercase */
-.btn, a.btn, .menubtn, .tab, .toolbtn, .lp-submit, .switchlink, .chipbtn {
-  font-family: var(--font);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-  font-size: 12.5px;
-  border-radius: var(--radius-pill);
-  padding: 12px 22px;
+.btn-primary, .lp-submit {
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  color: #fff;
+  box-shadow: var(--shadow-xs);
 }
-.btn { background: transparent; border: 1.5px solid var(--ink); color: var(--ink); }
-.btn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
-.btn-primary, .lp-submit { background: var(--ink); border: 1.5px solid var(--ink); color: #fff; }
-.btn-primary:hover, .lp-submit:hover { background: #222; border-color: #222; color: #fff; }
-/* `a.btn { color: inherit }` out-specifies `.btn-primary`; keep link-buttons
-   that use the primary tone white-on-black like real buttons. */
+.btn-primary:hover, .lp-submit:hover {
+  background: #262626;
+  border-color: #262626;
+  color: #fff;
+}
 a.btn-primary, a.btn-primary:hover { color: #fff; }
-.btn:active { transform: none; }
-.menubtn { text-transform: none; letter-spacing: 0; border: 0; border-radius: 0; padding: 9px 10px; }
-.tab { padding: 8px 16px; }
-.toolbtn { padding: 6px 10px; letter-spacing: 0; }
+.btn:active, .btn-primary:active { transform: translateY(1px); }
+.menubtn { text-transform: none; letter-spacing: 0; border: 0; border-radius: 6px; padding: 7px 10px; }
+.tab { padding: 6px 14px; border-radius: 6px; font-size: 13px; }
+.toolbtn { padding: 5px 9px; letter-spacing: 0; border-radius: 6px; }
 
-/* fields → underline only */
+/* fields → boxed, subtle borders, focus ring */
 .field, select.field, input.field, textarea.field, .ads-input, .palette-hex,
 input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="file"]),
 select {
-  background: transparent;
-  border: 0;
-  border-bottom: 1.5px solid var(--ink);
-  border-radius: 0;
-  padding: 10px 2px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 8px);
+  padding: 8px 12px;
   color: var(--ink);
+  font-size: 13.5px;
+  font-family: var(--font);
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
-.field::placeholder, input::placeholder, textarea::placeholder { color: var(--muted); }
-.field:focus, input.field:focus, select.field:focus, textarea.field:focus {
-  outline: none; box-shadow: none; border-bottom-color: var(--ink);
+.field::placeholder, input::placeholder, textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
 }
-textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; padding: 12px; }
+.field:hover, input:hover:not(:disabled), select:hover:not(:disabled), textarea:hover:not(:disabled) {
+  border-color: #d1d5db;
+}
+.field:focus, input.field:focus, select.field:focus, textarea.field:focus,
+input:focus:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="file"]),
+select:focus, textarea:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.08);
+}
+textarea.field, textarea {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 8px);
+  padding: 10px 12px;
+  box-shadow: var(--shadow-xs);
+}
 
-/* surfaces → flat, hairline, square (deck cards keep their own 24px radius) */
+/* surfaces → refined tactile cards with soft borders & elevation */
 .card, .panel, .lp-card, .plans-card, .plogin-card, .modal, .guide-panel,
-.camp-editor, .camp-list, .camp-item, .plan-card, .style-panel,
+.camp-editor, .camp-list, .plan-card, .style-panel,
 .linkitem, .member-row, .ads-stat, .livecard, .read-article {
-  border-radius: 0;
-  box-shadow: none;
+  border-radius: var(--radius, 12px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-xs);
 }
 .card, .panel, .slide-card { border: 1px solid var(--line); }
 .plans-card, .plogin-card, .modal, .guide-panel, .lp-card { border: 1px solid var(--line); }
 
-/* chips / badges → pill outline */
+/* chips / badges → modern subtle pills */
 .chip, .badge-success, .badge-warning, .badge-danger, .feature-tag, .statuschip,
 .plan-badge, .conn-btn, .socialmini { border-radius: var(--radius-pill); }
 
 /* navbar + nav */
-.topbar { background: rgba(255, 255, 255, 0.92); border-bottom: 1px solid var(--line); backdrop-filter: blur(10px); }
+.topbar { background: rgba(255, 255, 255, 0.95); border-bottom: 1px solid var(--line); backdrop-filter: blur(12px); }
 .navlink { border-radius: var(--radius-pill); }
-.navlink.active { background: transparent; color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
+.navlink.active { background: var(--wash); color: var(--ink); font-weight: 700; text-decoration: none; }
 
 /* =========================================================================
-   Brand Identity card — minimal layout (match the reference):
-   centered narrow column · huge serif uppercase title · borderless sections ·
-   label + underline fields · generous whitespace · pill actions.
+   Brand Identity card layout
    ========================================================================= */
-/* Brand Identity fills its card like every other hub: the fluid grid at the
-   top of this file owns the box (single column, gap, fit guards). */
 .brandpage .brand-head {
   text-align: center;
   margin: 0 0 24px;
@@ -1910,7 +1752,6 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   margin: 0 0 22px;
   font-size: 14px;
 }
-/* Step 0 is one question + one field: everything centered, nothing else. */
 .brandpage .brand-hero { text-align: center; }
 .brandpage .brand-hero .lbl { text-align: center; }
 .brandpage .brand-hero .field { text-align: center; font-size: 22px; }
@@ -1971,9 +1812,9 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 .brandpage .field,
 .brandpage input.field {
   width: 100%;
-  padding: 18px 2px;
-  margin-bottom: 26px;
-  font-size: 16px;
+  padding: 14px 12px;
+  margin-bottom: 24px;
+  font-size: 15px;
 }
 .brandpage .row { gap: 16px; }
 .brandpage .logo-preview,
@@ -1990,11 +1831,11 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
   line-height: 1;
 }
 .brandpage .font-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-.brandpage .font-choice { border: 1px solid var(--line); border-radius: 0; padding: 14px; }
+.brandpage .font-choice { border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
 .brandpage .font-choice.active { background: var(--ink); color: #fff; }
 .brandpage .font-choice.active .font-sample,
 .brandpage .font-choice.active .font-name { color: #fff; }
-.brandpage .style-segmented button { border-radius: 0; }
+.brandpage .style-segmented button { border-radius: 6px; }
 .brandpage .style-segmented button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 .brandpage .mood-add {
   border: 1px dashed var(--line);
@@ -2342,20 +2183,23 @@ textarea.field, textarea { border: 1.5px solid var(--line); border-radius: 0; pa
 }
 
 /* =========================================================================
-   Center-first alignment — every element inside hub cards/pages sits on the
-   centre axis (headings, toggles, metrics, panels, tables).
+   Content Alignment — Clean natural left alignment with right-aligned numbers
    ========================================================================= */
 .card-scroll,
 .hubpage {
-  text-align: center;
+  text-align: left;
 }
 .card-scroll .tbl th,
 .card-scroll .tbl td,
 .hubpage .tbl th,
-.hubpage .tbl td,
+.hubpage .tbl td {
+  text-align: left;
+}
 .card-scroll .tbl .num,
-.hubpage .tbl .num {
-  text-align: center;
+.hubpage .tbl .num,
+.tbl th.num,
+.tbl td.num {
+  text-align: right;
 }
 
 /* =========================================================================
