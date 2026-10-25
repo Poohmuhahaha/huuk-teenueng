@@ -15,9 +15,23 @@ const size = computed(() => {
   const feed = (FEED_META[props.platform] ?? FEED_META.meta).feed
   return props.variant >= 0 && props.variant < feed.variants.length ? feed.variants[props.variant] : feed
 })
-const wide = computed(() => size.value.w > size.value.h)
+
 const platformName = computed(() => (FEED_META[props.platform] ?? FEED_META.meta).name)
 const tileStyle = computed(() => ({ aspectRatio: `${size.value.w} / ${size.value.h}` }))
+
+// Consistent, balanced grid layout based on aspect ratio
+const gridClass = computed(() => {
+  // Vertical 9:16 (TikTok, Shorts, Reels)
+  if (size.value.h > size.value.w) {
+    return 'grid gap-4 sm:gap-5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
+  }
+  // Square 1:1 (Instagram)
+  if (size.value.h === size.value.w) {
+    return 'grid gap-4 sm:gap-5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+  }
+  // Landscape / Wide (Meta 1.91:1, YouTube 16:9)
+  return 'grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+})
 
 // Interactive Post Simulator Modal
 const activePost = ref<Post | null>(null)
@@ -52,39 +66,16 @@ async function copyCaption(text: string): Promise<void> {
   }
 }
 
-// Visual helpers for the canvas cards
-function getCardGradient(p: Post): string {
-  if (p.pillar === 'Pillar I') {
-    return 'linear-gradient(135deg, #1e1b4b 0%, #0f172a 50%, #020617 100%)'
-  }
-  if (p.pillar === 'Pillar II') {
-    return 'linear-gradient(135deg, #2a1608 0%, #1c1917 50%, #0c0a09 100%)'
-  }
-  if (p.pillar === 'Pillar III') {
-    return 'linear-gradient(135deg, #052e16 0%, #092015 50%, #020805 100%)'
-  }
-  return 'linear-gradient(135deg, #18181b 0%, #09090b 50%, #000000 100%)'
-}
-
-function formatIcon(format?: string): string {
-  const f = (format || '').toLowerCase()
-  if (f.includes('short') || f.includes('reel') || f.includes('tiktok')) return '▶'
-  if (f.includes('video') || f.includes('long')) return '🎬'
-  if (f.includes('carousel') || f.includes('album')) return '🗂'
-  if (f.includes('photo') || f.includes('image')) return '📷'
-  return '✦'
-}
-
 function statusBadgeClass(status?: string): string {
   switch (status) {
     case 'Done':
-      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200'
     case 'Dev':
-      return 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+      return 'bg-sky-50 text-sky-700 border-sky-200'
     case 'Design':
-      return 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+      return 'bg-amber-50 text-amber-700 border-amber-200'
     default:
-      return 'bg-white/10 text-white/70 border-white/20'
+      return 'bg-wash text-muted border-line'
   }
 }
 
@@ -100,11 +91,8 @@ function simComments(p: Post): string {
 </script>
 
 <template>
-  <div class="feed" :class="{ wide }">
-    <div
-      class="grid gap-3.5 sm:gap-4.5 grid-cols-[repeat(auto-fill,minmax(200px,1fr))] [grid-auto-flow:dense]"
-      role="list"
-    >
+  <div class="feed">
+    <div :class="gridClass" role="list">
       <div
         v-for="p in posts"
         :key="p.id"
@@ -112,137 +100,96 @@ function simComments(p: Post): string {
         tabindex="0"
         :aria-label="p.topic"
         :title="p.topic"
-        class="cell group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-line/80 bg-surface shadow-xs hover:shadow-2xl hover:border-accent/80 transition-all duration-300 cursor-pointer select-none"
-        :class="wide ? 'col-span-2' : ''"
+        class="cell group relative flex flex-col justify-between overflow-hidden rounded-xl border border-line bg-surface p-3.5 sm:p-4 text-left shadow-2xs hover:shadow-md hover:border-ink/30 transition-all duration-200 cursor-pointer select-none"
         :style="tileStyle"
         @click="openPreview(p)"
         @keydown.enter="openPreview(p)"
       >
-        <!-- Background Media or Editorial Canvas Poster -->
-        <div class="absolute inset-0 w-full h-full overflow-hidden">
+        <!-- Optional Cover Image Background -->
+        <template v-if="p.imageUrl">
           <img
-            v-if="p.imageUrl"
             :src="p.imageUrl"
             :alt="p.topic"
-            class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
-          <div
-            v-else
-            class="w-full h-full relative p-3 sm:p-4 flex flex-col justify-between overflow-hidden"
-            :style="{ background: getCardGradient(p) }"
-          >
-            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent pointer-events-none" />
-            <div class="absolute -right-8 -bottom-8 w-36 h-36 rounded-full border border-white/5 pointer-events-none" />
-            
-            <!-- Platform watermark -->
-            <div class="absolute right-2 bottom-10 opacity-5 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none scale-150">
-              <PlatformLogo :id="platform" :size="72" :color="false" />
-            </div>
-          </div>
-        </div>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50 pointer-events-none" />
+        </template>
+        <div v-else class="absolute inset-0 bg-wash/30 pointer-events-none" />
 
-        <!-- Top Gradient Overlay -->
-        <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none z-10" />
-
-        <!-- Bottom Gradient Overlay -->
-        <div class="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none z-10" />
-
-        <!-- Card Header: Platform Tag, Format, Status -->
-        <div class="relative z-20 flex items-center justify-between gap-1.5 p-3">
+        <!-- Card Top Bar: Platform + Format + Status -->
+        <div class="relative z-10 flex items-center justify-between gap-2">
           <div class="flex items-center gap-1.5 min-w-0">
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white text-[11px] font-semibold tracking-wide shadow-xs">
-              <PlatformLogo :id="platform" :size="12" :color="true" />
-              <span class="truncate">{{ platformName }}</span>
+            <PlatformLogo :id="platform" :size="15" :tile="true" />
+            <span
+              class="text-xs font-semibold truncate"
+              :class="p.imageUrl ? 'text-white' : 'text-ink'"
+            >
+              {{ platformName }}
             </span>
-            <span v-if="p.format" class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white/90 text-[10px] font-medium">
-              <span>{{ formatIcon(p.format) }}</span>
-              <span>{{ p.format }}</span>
+            <span
+              v-if="p.format"
+              class="text-[10px] px-1.5 py-0.5 rounded border truncate"
+              :class="p.imageUrl ? 'bg-black/50 text-white/90 border-white/20' : 'bg-wash text-muted border-line/60'"
+            >
+              {{ p.format }}
             </span>
           </div>
 
-          <div class="flex items-center gap-1 shrink-0">
-            <span
-              v-if="p.status"
-              class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border"
-              :class="statusBadgeClass(p.status)"
-            >
-              {{ p.status }}
-            </span>
-          </div>
+          <span
+            v-if="p.status"
+            class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shrink-0"
+            :class="p.imageUrl ? 'bg-black/60 text-white border-white/20' : statusBadgeClass(p.status)"
+          >
+            {{ p.status }}
+          </span>
         </div>
 
-        <!-- Card Center Visual & Title -->
-        <div class="relative z-20 flex-1 flex flex-col justify-center items-center text-center px-3 py-1 my-auto">
-          <!-- Play icon indicator for videos -->
-          <div
-            v-if="p.format?.toLowerCase().includes('video') || platform === 'tiktok' || platform === 'youtube'"
-            class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white mb-1.5 shadow-md group-hover:scale-110 group-hover:bg-white/30 transition-all duration-300"
+        <!-- Card Center / Body: Topic & Hook -->
+        <div class="relative z-10 my-auto py-1">
+          <span
+            v-if="p.pillar"
+            class="text-[9.5px] uppercase font-bold tracking-wider block mb-0.5"
+            :class="p.imageUrl ? 'text-white/70' : 'text-muted/70'"
           >
-            <svg class="w-4 h-4 fill-white translate-x-0.5" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          </div>
-
-          <span v-if="p.pillar" class="text-[9.5px] uppercase font-bold tracking-widest text-white/70 mb-0.5 drop-shadow-sm">
             {{ p.pillar }}
           </span>
 
-          <h3 class="font-bold text-sm sm:text-base text-white drop-shadow-md line-clamp-2 leading-snug tracking-tight px-1 group-hover:text-accent-wash transition-colors">
-            {{ p.topic }}
-          </h3>
+          <div
+            class="font-bold text-sm sm:text-base line-clamp-2 leading-snug tracking-tight group-hover:text-accent transition-colors"
+            :class="p.imageUrl ? 'text-white' : 'text-ink'"
+          >
+            {{ p.topic || 'Untitled topic' }}
+          </div>
 
-          <p v-if="p.hook" class="text-[11px] text-white/80 line-clamp-2 italic drop-shadow-sm mt-1 px-1 font-normal">
+          <p
+            v-if="p.hook"
+            class="text-xs line-clamp-1 italic mt-0.5"
+            :class="p.imageUrl ? 'text-white/80' : 'text-muted'"
+          >
             “{{ p.hook }}”
           </p>
-
-          <!-- Hover Preview Badge -->
-          <div class="mt-2 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-ink text-[11px] font-semibold shadow-lg hover:bg-wash transition">
-              <span>Preview</span>
-              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </span>
-          </div>
         </div>
 
-        <!-- Card Bottom Overlay -->
-        <div class="relative z-20 p-2.5 sm:p-3 flex flex-col gap-1.5">
-          <!-- Hashtags -->
-          <div v-if="p.hashtags?.length" class="flex flex-wrap gap-1">
-            <span
-              v-for="tag in p.hashtags.slice(0, 3)"
-              :key="tag"
-              class="text-[9.5px] text-white/75 font-mono"
-            >
-              #{{ tag }}
-            </span>
-            <span v-if="p.hashtags.length > 3" class="text-[9.5px] text-white/50">
-              +{{ p.hashtags.length - 3 }}
+        <!-- Card Bottom Bar: Date, Engagement, Dimension -->
+        <div
+          class="relative z-10 flex items-center justify-between gap-2 pt-1 border-t"
+          :class="p.imageUrl ? 'border-white/15 text-white/85' : 'border-line/60 text-muted'"
+        >
+          <div class="flex items-center gap-2 text-xs">
+            <span v-if="p.date" class="font-mono text-[11px]">{{ p.date }}</span>
+            <span class="inline-flex items-center gap-1 font-mono text-[10px]">
+              <svg class="w-3 h-3 fill-current opacity-60" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              {{ simLikes(p) }}
             </span>
           </div>
 
-          <!-- Bottom Row: Simulated Engagements, Date, Dimension -->
-          <div class="flex items-center justify-between gap-1.5 pt-1 border-t border-white/10 text-white/90">
-            <!-- Social Metrics -->
-            <div class="flex items-center gap-2 text-[11px] text-white/80">
-              <span class="flex items-center gap-1 hover:text-red-400 transition-colors">
-                <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                <span class="font-mono text-[10px]">{{ simLikes(p) }}</span>
-              </span>
-              <span class="flex items-center gap-1 hover:text-sky-400 transition-colors">
-                <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span class="font-mono text-[10px]">{{ simComments(p) }}</span>
-              </span>
-            </div>
-
-            <!-- Date & Canvas Spec -->
-            <div class="flex items-center gap-1.5 shrink-0">
-              <span v-if="p.date" class="text-[10px] font-mono font-medium text-white/85">
-                {{ p.date }}
-              </span>
-              <span class="px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-white/90 text-[10px] font-mono font-semibold border border-white/15">
-                {{ size.w }}×{{ size.h }}
-              </span>
-            </div>
-          </div>
+          <span
+            class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium border shrink-0"
+            :class="p.imageUrl ? 'bg-black/60 text-white/90 border-white/20' : 'bg-wash text-muted border-line/60'"
+          >
+            {{ size.w }}×{{ size.h }}
+          </span>
         </div>
       </div>
     </div>
@@ -253,11 +200,11 @@ function simComments(p: Post): string {
   <!-- Interactive Social Post Simulator Modal -->
   <div
     v-if="activePost"
-    class="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+    class="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
     @click.self="closePreview"
   >
     <div
-      class="w-full max-w-xl bg-surface border border-line rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      class="w-full max-w-lg bg-surface border border-line rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
       role="dialog"
       aria-modal="true"
     >
@@ -266,13 +213,13 @@ function simComments(p: Post): string {
         <div class="flex items-center gap-2">
           <PlatformLogo :id="platform" :size="20" :tile="true" />
           <div>
-            <h4 class="font-bold text-sm text-ink leading-tight">{{ platformName }} Post Preview</h4>
+            <h4 class="font-bold text-sm text-ink leading-tight m-0">{{ platformName }} Post Preview</h4>
             <span class="text-xs text-muted font-mono">{{ size.w }}×{{ size.h }} · {{ size.ratio }}</span>
           </div>
         </div>
         <button
           type="button"
-          class="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-wash transition cursor-pointer"
+          class="w-7 h-7 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-wash transition cursor-pointer"
           aria-label="Close preview"
           @click="closePreview"
         >
@@ -285,7 +232,7 @@ function simComments(p: Post): string {
         <!-- Post Header -->
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center font-bold text-ink text-sm">
+            <div class="w-10 h-10 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center font-bold text-ink text-sm">
               {{ (activePost.topic || 'S').slice(0, 1).toUpperCase() }}
             </div>
             <div>
@@ -316,7 +263,7 @@ function simComments(p: Post): string {
 
         <!-- Post Artwork Canvas -->
         <div
-          class="w-full relative rounded-xl overflow-hidden border border-line/60 shadow-inner flex items-center justify-center"
+          class="w-full relative rounded-xl overflow-hidden border border-line shadow-xs flex items-center justify-center bg-wash/50"
           :style="tileStyle"
         >
           <img
@@ -327,34 +274,27 @@ function simComments(p: Post): string {
           />
           <div
             v-else
-            class="w-full h-full p-6 flex flex-col justify-between text-white relative"
-            :style="{ background: getCardGradient(activePost) }"
+            class="w-full h-full p-6 flex flex-col justify-between text-ink relative"
           >
             <div class="flex items-center justify-between z-10">
-              <span class="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-xs font-semibold border border-white/10">
+              <span class="px-2.5 py-1 rounded-full bg-surface border border-line text-xs font-semibold text-ink shadow-2xs">
                 {{ platformName }}
               </span>
-              <span class="text-xs font-mono px-2 py-0.5 rounded bg-white/10 backdrop-blur-md">
+              <span class="text-xs font-mono px-2 py-0.5 rounded bg-surface border border-line text-muted">
                 {{ size.w }}×{{ size.h }}
               </span>
             </div>
 
             <div class="flex flex-col items-center justify-center my-auto text-center z-10 px-4">
-              <div
-                v-if="activePost.format?.toLowerCase().includes('video')"
-                class="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white mb-3 shadow-lg"
-              >
-                <svg class="w-6 h-6 fill-white translate-x-0.5" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              </div>
-              <h2 class="text-xl sm:text-2xl font-bold tracking-tight mb-2 drop-shadow-md">
+              <div class="font-bold text-lg sm:text-xl text-ink tracking-tight mb-1">
                 {{ activePost.topic }}
-              </h2>
-              <p v-if="activePost.hook" class="text-sm text-white/85 italic max-w-md drop-shadow-sm">
+              </div>
+              <p v-if="activePost.hook" class="text-sm text-muted italic max-w-md m-0">
                 “{{ activePost.hook }}”
               </p>
             </div>
 
-            <div class="flex items-center justify-between text-xs text-white/70 z-10">
+            <div class="flex items-center justify-between text-xs text-muted z-10">
               <span>{{ activePost.date }}</span>
               <span>{{ activePost.time || '12:00' }}</span>
             </div>
@@ -406,7 +346,7 @@ function simComments(p: Post): string {
         <!-- Post Caption & Details -->
         <div class="flex flex-col gap-2 text-sm bg-wash/40 p-4 rounded-xl border border-line/60">
           <div class="flex items-start justify-between gap-3">
-            <p class="text-ink leading-relaxed font-normal">
+            <p class="text-ink leading-relaxed font-normal m-0">
               <strong class="font-bold text-ink mr-1">studio.channel</strong>
               {{ activePost.caption || activePost.hook || activePost.topic }}
             </p>

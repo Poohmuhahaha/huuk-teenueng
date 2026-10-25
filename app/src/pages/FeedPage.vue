@@ -89,65 +89,79 @@ const monthLabel = computed(() => {
     <p class="muted">Could not load posts: {{ loadError?.message }}</p>
     <button class="btn" @click="() => refetch()">Try again</button>
   </div>
-  <div v-if="setup" class="mb-2.5">
-    <div class="row flex-wrap justify-center gap-1.5" role="tablist" :aria-label="t('feed.platform')">
+  <div v-if="setup" class="my-4 flex flex-col gap-3">
+    <!-- Platform switcher tabs -->
+    <div class="flex items-center justify-center flex-wrap gap-2" role="tablist" :aria-label="t('feed.platform')">
       <button v-for="tab in platformTabs" :key="tab.name" type="button"
-        class="feed-tab inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm-minus font-semibold cursor-pointer transition"
+        class="feed-tab inline-flex items-center gap-2 px-3.5 py-1.5 border rounded-full text-xs font-semibold cursor-pointer transition shadow-2xs"
         :class="platform === tab.name
-          ? 'active bg-accent border-accent text-accent-ink'
+          ? 'active bg-ink border-ink text-surface'
           : 'bg-surface border-line text-muted hover:bg-wash hover:text-ink'"
         role="tab" :aria-selected="platform === tab.name"
         @click="choosePlatform(tab.name)">
         <PlatformLogo :name="tab.name" :size="14" />
-        {{ tab.name }}
-        <span class="feed-tab-count px-1.5 rounded-full text-2xs-plus font-bold"
-          :class="platform === tab.name ? 'bg-white/25 text-inherit' : 'bg-wash text-muted'">
+        <span>{{ tab.name }}</span>
+        <span class="feed-tab-count px-1.5 py-0.2 rounded-full text-[10px] font-bold"
+          :class="platform === tab.name ? 'bg-white/20 text-surface' : 'bg-wash text-muted'">
           {{ tab.count }}
         </span>
       </button>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto my-3 text-left">
-      <div><label class="lbl block text-left text-xs font-semibold text-muted uppercase tracking-wider mb-1" for="feed-upto">{{ t('feed.upto') }}</label>
-        <input id="feed-upto" class="field text-left" type="date" v-model="upto" /></div>
-      <div><label class="lbl block text-left text-xs font-semibold text-muted uppercase tracking-wider mb-1" for="feed-size">{{ t('feed.size') }}</label>
-        <select id="feed-size" class="field text-left" v-model="variantIndex">
-          <option :value="-1">{{ meta.feed.w }}×{{ meta.feed.h }} · {{ meta.feed.ratio }}</option>
-          <option v-for="(v, i) in meta.feed.variants" :key="i" :value="i">
-            {{ v.label }} · {{ v.w }}×{{ v.h }} · {{ v.ratio }}
-          </option>
-        </select></div>
+
+    <!-- Controls & Settings Toolbar Bar -->
+    <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-surface border border-line rounded-xl shadow-2xs">
+      <!-- Filter inputs -->
+      <div class="flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-2">
+          <label class="lbl text-[11px] font-semibold text-muted uppercase tracking-wider whitespace-nowrap" for="feed-upto">
+            {{ t('feed.upto') }}
+          </label>
+          <input id="feed-upto" class="field text-xs py-1 px-2.5 h-8 w-auto rounded-lg" type="date" v-model="upto" />
+        </div>
+
+        <div class="flex items-center gap-2">
+          <label class="lbl text-[11px] font-semibold text-muted uppercase tracking-wider whitespace-nowrap" for="feed-size">
+            {{ t('feed.size') }}
+          </label>
+          <select id="feed-size" class="field text-xs py-1 px-2.5 h-8 w-auto rounded-lg" v-model="variantIndex">
+            <option :value="-1">{{ meta.feed.w }}×{{ meta.feed.h }} · {{ meta.feed.ratio }}</option>
+            <option v-for="(v, i) in meta.feed.variants" :key="i" :value="i">
+              {{ v.label }} · {{ v.w }}×{{ v.h }} · {{ v.ratio }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- View Switcher -->
+      <div class="inline-flex items-center p-0.5 rounded-lg bg-wash border border-line/80">
+        <button
+          type="button"
+          class="px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+          :class="viewMode === 'grid' ? 'bg-surface text-ink shadow-2xs' : 'text-muted hover:text-ink'"
+          @click="viewMode = 'grid'"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Canvas Board</span>
+        </button>
+
+        <button
+          type="button"
+          class="px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+          :class="viewMode === 'phone' ? 'bg-surface text-ink shadow-2xs' : 'text-muted hover:text-ink'"
+          @click="viewMode = 'phone'"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          <span>Mobile Simulator</span>
+        </button>
+      </div>
     </div>
   </div>
-  <div class="flex items-center justify-between flex-wrap gap-3 my-3">
-    <p class="muted m-0 text-xs sm:text-sm">
-      {{ t('feed.canvas') }} {{ size.w }} × {{ size.h }} px · {{ size.ratio }} · {{ meta.name }}
-      <span v-if="monthLabel"> · {{ t('feed.uptoMonth') }} {{ monthLabel }}</span>
-      <span> · {{ preview.length }} {{ t('feed.posts') }}</span>
-    </p>
 
-    <!-- View Switcher -->
-    <div class="inline-flex items-center p-1 rounded-xl bg-wash border border-line">
-      <button
-        type="button"
-        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
-        :class="viewMode === 'grid' ? 'bg-surface text-ink shadow-xs' : 'text-muted hover:text-ink'"
-        @click="viewMode = 'grid'"
-      >
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        <span>Canvas Board</span>
-      </button>
-
-      <button
-        type="button"
-        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
-        :class="viewMode === 'phone' ? 'bg-surface text-ink shadow-xs' : 'text-muted hover:text-ink'"
-        @click="viewMode = 'phone'"
-      >
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-        <span>Mobile Simulator</span>
-      </button>
-    </div>
-  </div>
+  <p class="muted text-xs text-left my-2 px-1">
+    {{ t('feed.canvas') }} {{ size.w }} × {{ size.h }} px · {{ size.ratio }} · {{ meta.name }}
+    <span v-if="monthLabel"> · {{ t('feed.uptoMonth') }} {{ monthLabel }}</span>
+    <span> · {{ preview.length }} {{ t('feed.posts') }}</span>
+  </p>
 
   <div class="mt-4" v-if="!isPending">
     <!-- Canvas Grid View -->
