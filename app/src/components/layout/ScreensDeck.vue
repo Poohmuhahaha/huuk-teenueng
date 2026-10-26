@@ -48,6 +48,23 @@ const track = ref<HTMLElement | null>(null)
 const index = ref(notFound.value ? 0 : visibleIndexOf(route.path))
 const full = ref(false)
 
+// Performance optimization: only mount active and adjacent slides, and keep visited
+// slides alive so initial load is fast and doesn't run all 6 hub setups simultaneously.
+const visited = ref<Set<number>>(new Set([index.value]))
+watch(
+  index,
+  (i) => {
+    visited.value.add(i)
+    if (i > 0) visited.value.add(i - 1)
+    if (i < visible.value.length - 1) visited.value.add(i + 1)
+  },
+  { immediate: true },
+)
+
+function shouldRender(i: number): boolean {
+  return visited.value.has(i) || Math.abs(i - index.value) <= 1
+}
+
 // Publish the full-page state so pages can reflow (e.g. calendar 2 columns).
 watch(full, (value) => { deckFull.value = value }, { immediate: true })
 let syncing = false
@@ -331,11 +348,17 @@ function onKeyGlobal(e: KeyboardEvent): void {
   if (e.key === 'Escape' && full.value) void setFull(false)
 }
 
+let resizeRaf: number | null = null
 function onResize(): void {
-  scrollToIndex(index.value, false)
+  if (resizeRaf) return
+  resizeRaf = requestAnimationFrame(() => {
+    resizeRaf = null
+    scrollToIndex(index.value, false)
+  })
 }
 
 onBeforeUnmount(() => {
+  if (resizeRaf) cancelAnimationFrame(resizeRaf)
   track.value?.removeEventListener('wheel', onWheel)
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onKeyGlobal)
@@ -411,7 +434,9 @@ function onKey(e: KeyboardEvent): void {
         :class="{ active: i === index }" :aria-label="`${i + 1} of ${visible.length}`"
         @click="onSlideClick(i)">
         <div class="slide-card">
-          <div class="card-scroll" :class="{ 'card-scroll-brand': s.path === '/branding' }"><component :is="s.component" v-bind="pageProps(s)" /></div>
+          <div class="card-scroll" :class="{ 'card-scroll-brand': s.path === '/branding' }">
+            <component v-if="shouldRender(i)" :is="s.component" v-bind="pageProps(s)" />
+          </div>
         </div>
         <div class="slide-dock" />
       </section>

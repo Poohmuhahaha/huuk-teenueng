@@ -11,25 +11,38 @@ export function useWidePane(
 ): { wide: Ref<boolean> } {
   const wide = ref(false)
   let observer: ResizeObserver | undefined
+  let rafId: number | null = null
 
   function sync(): void {
     const card = root.value?.closest<HTMLElement>('.slide-card')
     const pane = root.value?.closest<HTMLElement>('.card-scroll')
     if (!card || !pane) return
-    wide.value = card.clientWidth >= at
-    pane.classList.toggle(cls, wide.value)
+    const isWide = card.clientWidth >= at
+    if (wide.value !== isWide) {
+      wide.value = isWide
+      pane.classList.toggle(cls, isWide)
+    }
+  }
+
+  function debouncedSync(): void {
+    if (rafId) return
+    rafId = requestAnimationFrame(() => {
+      rafId = null
+      sync()
+    })
   }
 
   onMounted(() => {
     sync()
     const card = root.value?.closest<HTMLElement>('.slide-card')
     if (card && typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(sync)
+      observer = new ResizeObserver(debouncedSync)
       observer.observe(card)
     }
   })
 
   onBeforeUnmount(() => {
+    if (rafId) cancelAnimationFrame(rafId)
     observer?.disconnect()
     root.value?.closest<HTMLElement>('.card-scroll')?.classList.remove(cls)
   })

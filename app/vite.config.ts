@@ -24,8 +24,15 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules/zod')) return 'validation'
-          if (id.includes('node_modules/vue') || id.includes('node_modules/@tanstack/vue-query')) {
+          if (
+            id.includes('node_modules/vue') ||
+            id.includes('node_modules/@tanstack/vue-query') ||
+            id.includes('node_modules/@tanstack/vue-table')
+          ) {
             return 'vendor'
+          }
+          if (id.includes('node_modules/motion-v')) {
+            return 'motion'
           }
         },
       },

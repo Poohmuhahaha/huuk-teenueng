@@ -2,13 +2,16 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { screens } from '@/core/screens'
 import { currentUser } from '@/core/auth'
-import NotFoundPage from '@/pages/NotFoundPage.vue'
-import ReadPage from '@/pages/ReadPage.vue'
 import LoginPage from '@/pages/LoginPage.vue'
 import RegisterPage from '@/pages/RegisterPage.vue'
 import PlansPage from '@/pages/PlansPage.vue'
 import WorkspaceSetupPage from '@/pages/WorkspaceSetupPage.vue'
-import ComponentsPage from '@/pages/ComponentsPage.vue'
+
+// Heavy dev-reference and public reader pages are code-split dynamically so
+// the main application bundle stays lean and fast.
+const ComponentsPage = () => import('@/pages/ComponentsPage.vue')
+const ReadPage = () => import('@/pages/ReadPage.vue')
+const NotFoundPage = () => import('@/pages/NotFoundPage.vue')
 
 // One sheet, one route — routes derived from the hub registry (compact IA).
 // Legacy deep links (the old per-feature paths) redirect into the owning hub

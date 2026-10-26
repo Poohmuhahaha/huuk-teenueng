@@ -33,14 +33,19 @@ const root = ref<HTMLElement | null>(null)
 useWidePane(root, 'dash-scroll')
 
 const isMobile = ref(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
-function updateMobile(): void {
-  isMobile.value = window.innerWidth < 768
+let mql: MediaQueryList | null = null
+const onMql = (e: MediaQueryListEvent | MediaQueryList): void => {
+  isMobile.value = e.matches
 }
 onMounted(() => {
-  window.addEventListener('resize', updateMobile)
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    mql = window.matchMedia('(max-width: 767px)')
+    isMobile.value = mql.matches
+    mql.addEventListener('change', onMql)
+  }
 })
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateMobile)
+  mql?.removeEventListener('change', onMql)
 })
 
 interface BreakdownContext {
