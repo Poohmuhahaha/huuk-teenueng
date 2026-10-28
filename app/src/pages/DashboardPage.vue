@@ -19,6 +19,8 @@ import StatusChip from '@/components/ui/StatusChip.vue'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
 import ProtectedModal from '@/components/overlays/ProtectedModal.vue'
 import Drawer from '@/components/overlays/Drawer.vue'
+import PerformancePage from '@/pages/PerformancePage.vue'
+import FinancePage from '@/pages/FinancePage.vue'
 import type { Post } from '@/mock/db'
 
 const router = useRouter()
@@ -105,6 +107,8 @@ const { active: section } = useHubTab('/dashboard')
 const sectionLabel = computed(() => {
   if (section.value === 'ads') return 'Meta Ads'
   if (section.value === 'top') return 'Top Posts'
+  if (section.value === 'performance') return 'Performance'
+  if (section.value === 'finance') return 'Finance'
   return 'Overview'
 })
 
@@ -345,7 +349,7 @@ function goMaster(): void {
 <template>
   <div class="dash-page" ref="root">
     <div class="dash-grid">
-      <DockBar label="Dashboard controls">
+      <DockBar v-if="section !== 'performance'" label="Dashboard controls">
         <div class="flex items-center justify-between w-full gap-3">
           <div class="flex items-center gap-2">
             <MonthToggle v-model="month" v-model:year="year" />
@@ -353,7 +357,7 @@ function goMaster(): void {
             <span class="text-xs font-semibold text-muted tracking-wider uppercase">{{ sectionLabel }}</span>
           </div>
           <div class="flex items-center gap-2 ml-auto">
-            <RouterLink class="btn btn-icon w-auto" to="/analyze?tab=performance" title="Import metrics" aria-label="Import metrics">
+            <RouterLink class="btn btn-icon w-auto" to="/dashboard?tab=performance" title="Import metrics" aria-label="Import metrics">
               <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
                 stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M8 2.5v7.5m0 0L5.2 7.2M8 10l2.8-2.8M3 13.5h10" />
@@ -365,60 +369,22 @@ function goMaster(): void {
       </DockBar>
 
       <div class="dash-main">
-        <div v-if="postsQ.isError.value || metricsQ.isError.value" class="card">
-          <p class="muted">Could not load dashboard data: {{ (postsQ.error.value ?? metricsQ.error.value)?.message }}</p>
-        </div>
-        <div v-else-if="!stats" class="muted">Computing…</div>
+        <template v-if="section === 'performance'">
+          <PerformancePage />
+        </template>
+
+        <template v-else-if="section === 'finance'">
+          <FinancePage />
+        </template>
+
         <template v-else>
-          <template v-if="section === 'overview'">
-            <div class="grid6 dash-kpi-grid grid grid-cols-2 md:grid-cols-3 gap-3">
-              <KpiCard label="Total" :value="stats.total" hint="topics this month" :spark="trendData.sparks.total" to="/plan?tab=monthly" />
-              <KpiCard label="Posted" :value="stats.posted" :hint="`${postedPct}% of all`" :trend="`${postedPct}%`" :spark="trendData.sparks.posted" to="/plan?tab=monthly" />
-              <KpiCard label="Pending" :value="stats.pending" hint="to start" :spark="trendData.sparks.pending" to="/plan?tab=monthly" />
-              <KpiCard label="WIP" :value="stats.wip" hint="in design or dev" :spark="trendData.sparks.wip" to="/plan?tab=monthly" />
-              <KpiCard label="Views" :value="stats.views.toLocaleString('en-US')" hint="this month" :trend="trendData.trends.views" :spark="trendData.sparks.views" to="/analyze?tab=performance" />
-              <KpiCard label="Likes" :value="stats.likes.toLocaleString('en-US')" hint="this month" :trend="trendData.trends.likes" :spark="trendData.sparks.likes" to="/analyze?tab=performance" />
-            </div>
-
-            <!-- Views & Engagement Line Chart -->
-            <div class="mt-6">
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Views & Engagement Growth</h2>
-              </div>
-              <LineChart :labels="trendData.labels" :series="trendData.series" :height="160" />
-            </div>
-
-            <div class="mt-6">
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Planned vs posted · by pillar</h2>
-                <RouterLink class="text-xs font-semibold text-muted hover:text-ink transition-colors flex items-center gap-1" :to="`/plan?tab=monthly&m=${month}`">
-                  <span>View in Planner</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M7 17L17 7M17 7H7M17 7V17" />
-                  </svg>
-                </RouterLink>
-              </div>
-              <BarChart :items="pillarBars" @select-item="(it) => openBreakdown('pillar', it)" />
-            </div>
-
-            <div class="grid2 mt-5">
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By platform</h2>
-                </div>
-                <BarChart :items="platformBars" @select-item="(it) => openBreakdown('platform', it)" />
-              </div>
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By status</h2>
-                </div>
-                <BarChart :items="statusBars" @select-item="(it) => openBreakdown('status', it)" />
-              </div>
-            </div>
-          </template>
-
-          <template v-else-if="section === 'ads'">
-            <section class="ads-glance flex flex-col gap-6 text-left">
+          <div v-if="postsQ.isError.value || metricsQ.isError.value" class="card">
+            <p class="muted">Could not load dashboard data: {{ (postsQ.error.value ?? metricsQ.error.value)?.message }}</p>
+          </div>
+          <div v-else-if="!stats" class="muted">Computing…</div>
+          <template v-else>
+            <template v-if="section === 'ads'">
+              <section class="ads-glance flex flex-col gap-6 text-left">
               <!-- Header with Action -->
               <div class="flex items-center justify-between flex-wrap gap-4">
                 <div>
@@ -563,7 +529,7 @@ function goMaster(): void {
             </section>
           </template>
 
-          <template v-else>
+          <template v-else-if="section === 'top'">
             <section class="top-posts-glance flex flex-col gap-6 text-left">
               <!-- Header with Action -->
               <div class="flex items-center justify-between flex-wrap gap-4">
@@ -704,7 +670,55 @@ function goMaster(): void {
               </div>
             </section>
           </template>
+
+          <template v-else>
+            <div class="grid6 dash-kpi-grid grid grid-cols-2 md:grid-cols-3 gap-3">
+              <KpiCard label="Total" :value="stats.total" hint="topics this month" :spark="trendData.sparks.total" to="/plan?tab=monthly" />
+              <KpiCard label="Posted" :value="stats.posted" :hint="`${postedPct}% of all`" :trend="`${postedPct}%`" :spark="trendData.sparks.posted" to="/plan?tab=monthly" />
+              <KpiCard label="Pending" :value="stats.pending" hint="to start" :spark="trendData.sparks.pending" to="/plan?tab=monthly" />
+              <KpiCard label="WIP" :value="stats.wip" hint="in design or dev" :spark="trendData.sparks.wip" to="/plan?tab=monthly" />
+              <KpiCard label="Views" :value="stats.views.toLocaleString('en-US')" hint="this month" :trend="trendData.trends.views" :spark="trendData.sparks.views" to="/dashboard?tab=performance" />
+              <KpiCard label="Likes" :value="stats.likes.toLocaleString('en-US')" hint="this month" :trend="trendData.trends.likes" :spark="trendData.sparks.likes" to="/dashboard?tab=performance" />
+            </div>
+
+            <!-- Views & Engagement Line Chart -->
+            <div class="mt-6">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Views & Engagement Growth</h2>
+              </div>
+              <LineChart :labels="trendData.labels" :series="trendData.series" :height="160" />
+            </div>
+
+            <div class="mt-6">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Planned vs posted · by pillar</h2>
+                <RouterLink class="text-xs font-semibold text-muted hover:text-ink transition-colors flex items-center gap-1" :to="`/plan?tab=monthly&m=${month}`">
+                  <span>View in Planner</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7 17L17 7M17 7H7M17 7V17" />
+                  </svg>
+                </RouterLink>
+              </div>
+              <BarChart :items="pillarBars" @select-item="(it) => openBreakdown('pillar', it)" />
+            </div>
+
+            <div class="grid2 mt-5">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By platform</h2>
+                </div>
+                <BarChart :items="platformBars" @select-item="(it) => openBreakdown('platform', it)" />
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By status</h2>
+                </div>
+                <BarChart :items="statusBars" @select-item="(it) => openBreakdown('status', it)" />
+              </div>
+            </div>
+          </template>
         </template>
+      </template>
       </div>
     </div>
 

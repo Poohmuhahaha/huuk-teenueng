@@ -91,6 +91,8 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
           <div class="flex items-center gap-2">
             <MonthToggle v-model="month" v-model:year="year" />
             <span class="dock-sep" aria-hidden="true" />
+            <span class="text-xs font-semibold text-muted tracking-wider uppercase">Performance</span>
+            <span class="dock-sep" aria-hidden="true" />
             <label class="sr-only" for="perf-platform">Platform</label>
             <select id="perf-platform" class="field h-10 min-w-28 m-0 rounded-full" v-model="platform" aria-label="Platform">
               <option v-for="o in setup?.platforms ?? []" :key="o" :value="o">{{ o }}</option>

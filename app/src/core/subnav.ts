@@ -15,6 +15,8 @@ export const HUB_TABS: Record<string, HubTab[]> = {
     { id: 'overview', label: 'Overview' },
     { id: 'ads', label: 'Ads' },
     { id: 'top', label: 'Top posts' },
+    { id: 'performance', label: 'Performance' },
+    { id: 'finance', label: 'Finance' },
   ],
   '/plan': [
     { id: 'monthly', label: 'Monthly' },
