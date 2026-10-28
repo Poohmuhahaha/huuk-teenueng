@@ -1621,13 +1621,47 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
 .camp-list { display: flex; flex-direction: column; }
 /* Borderless rows — the hub card is the only frame (no card-in-card). */
 .camp-item {
-  display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left;
-  width: 100%; padding: 12px 14px; border: 1px solid var(--line);
-  border-radius: 12px; background: var(--surface); color: inherit; font: inherit; cursor: pointer;
-  margin-bottom: 8px; transition: all 0.15s ease; box-shadow: var(--shadow-xs);
+  position: relative;
+  overflow: hidden;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-start; text-align: left;
+  width: 100%; padding: 16px 18px; border: none !important;
+  border-radius: 1.25rem;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.02) 25%,
+    #ffffff 45%,
+    #ffffff 72%,
+    rgba(0, 0, 0, 0.06) 100%
+  ), #ffffff;
+  color: inherit; font: inherit; cursor: pointer;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.camp-item:hover { background: var(--wash); border-color: var(--ink); }
-.camp-item.active { background: var(--surface); border-color: var(--ink); box-shadow: 0 0 0 1.5px var(--ink); }
+.camp-item:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(0, 0, 0, 0.03) 25%,
+    #ffffff 45%,
+    #ffffff 72%,
+    rgba(0, 0, 0, 0.09) 100%
+  ), #ffffff;
+  box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.06);
+}
+.camp-item.active {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.11) 0%,
+    rgba(0, 0, 0, 0.03) 25%,
+    #ffffff 45%,
+    #ffffff 72%,
+    rgba(0, 0, 0, 0.08) 100%
+  ), #ffffff;
+  box-shadow: 0 0 0 1.75px var(--ink, #0a0a0a), 0 6px 16px -4px rgba(0, 0, 0, 0.08);
+}
 .camp-item-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; width: 100%; }
 .camp-status {
   font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;

@@ -285,21 +285,38 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
           {{ t('campaign.empty') }}
         </div>
         <template v-else>
-          <button v-for="c in visible" :key="c.id" type="button" class="camp-item"
+          <button v-for="c in visible" :key="c.id" type="button" class="camp-item card-fade group"
             :class="{ active: c.id === selectedId }" @click="select(c.id)">
             <div class="camp-item-head">
-              <strong class="text-sm font-bold text-ink truncate">{{ c.name }}</strong>
+              <div class="min-w-0 flex-1 pr-2">
+                <strong class="block text-[14px] font-bold text-ink tracking-tight truncate">{{ c.name }}</strong>
+                <p v-if="c.objective" class="text-[11px] text-muted truncate m-0 mt-0.5">{{ c.objective }}</p>
+              </div>
               <span class="camp-status flex-none" :class="c.status">{{ statusLabel(c.status) }}</span>
             </div>
-            <div class="flex items-center gap-1.5 text-xs text-muted">
+
+            <div class="flex items-center gap-1.5 text-[11.5px] text-ink-soft font-mono mt-0.5">
+              <svg class="w-3.5 h-3.5 text-muted flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
               <span>{{ c.startDate || '—' }} → {{ c.endDate || '—' }}</span>
             </div>
-            <div class="flex items-center justify-between text-xs text-muted mt-1 w-full pt-1.5 border-t border-line/30">
-              <span class="font-mono text-[11px]">{{ c.contentIds.length }} {{ t('campaign.linked') }}</span>
-              <span class="font-mono font-semibold text-ink text-[11px]">{{ c.budget ? `฿${c.budget.toLocaleString()}` : t('campaign.noBudget') }}</span>
-            </div>
-            <div v-if="c.platforms && c.platforms.length" class="flex items-center gap-1 mt-0.5">
-              <PlatformLogo v-for="p in c.platforms" :key="p" :name="p" :size="13" />
+
+            <div class="flex items-center justify-between gap-2 text-xs text-muted mt-1.5 w-full pt-2.5 border-t border-black/[0.06]">
+              <div class="flex items-center gap-2 min-w-0">
+                <div v-if="c.platforms && c.platforms.length" class="flex items-center gap-1.5 pr-2 border-r border-black/[0.08]">
+                  <PlatformLogo v-for="p in c.platforms" :key="p" :name="p" :size="13" />
+                </div>
+                <span class="inline-flex items-center gap-1 font-mono text-[11px] text-muted">
+                  {{ c.contentIds.length }} {{ t('campaign.linked') }}
+                </span>
+              </div>
+              <span class="font-mono font-bold text-ink text-[13px] tracking-tight tabular-nums">
+                {{ c.budget ? `฿${c.budget.toLocaleString()}` : t('campaign.noBudget') }}
+              </span>
             </div>
           </button>
         </template>
@@ -307,13 +324,13 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
 
       <!-- Right Pane Overview when not in editing mode -->
       <div v-if="(deckFull || wide) && !editorOpen" class="camp-detail camp-overview flex-1 flex flex-col gap-5 py-2">
-        <div class="flex items-center justify-between pb-3.5 border-b border-line/60">
+        <div class="flex items-center justify-between pb-3.5 border-b border-black/[0.06]">
           <div>
             <h2 class="text-base font-bold text-ink tracking-tight m-0">{{ t('campaign.title') }} Overview</h2>
             <p class="text-xs text-muted mt-0.5 m-0">Schedules, platform targets, and budgets across campaigns</p>
           </div>
           <div class="flex items-center gap-2.5">
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-wash text-ink border border-line/50 font-mono">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-wash text-ink font-mono">
               {{ (visible ?? []).length }} Total
             </span>
             <button type="button" class="btn btn-primary text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5"
@@ -325,32 +342,38 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
         </div>
 
         <!-- KPI Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div class="p-3.5 bg-surface rounded-xl border border-line/60 shadow-2xs">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-2xs font-bold uppercase tracking-wider text-muted">Active Campaigns</span>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div class="card-fade p-4 sm:p-5 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[12.5px] font-medium text-ink-soft tracking-tight">Active Campaigns</span>
               <span class="w-2 h-2 rounded-full bg-ink"></span>
             </div>
-            <div class="text-2xl font-black text-ink font-mono">{{ activeCount }}</div>
-            <span class="text-[11px] text-muted">{{ (visible ?? []).length - activeCount }} draft or paused</span>
-          </div>
-
-          <div class="p-3.5 bg-surface rounded-xl border border-line/60 shadow-2xs">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-2xs font-bold uppercase tracking-wider text-muted">Total Budget</span>
-              <span class="text-xs text-muted font-mono">THB</span>
+            <div class="flex items-baseline justify-between gap-2 mt-1">
+              <div class="text-[25px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono tabular-nums">{{ activeCount }}</div>
+              <span class="text-[11px] font-medium text-muted truncate">{{ (visible ?? []).length - activeCount }} draft or paused</span>
             </div>
-            <div class="text-2xl font-black text-ink font-mono">฿{{ totalBudget.toLocaleString('en-US') }}</div>
-            <span class="text-[11px] text-muted">Allocated for this window</span>
           </div>
 
-          <div class="p-3.5 bg-surface rounded-xl border border-line/60 shadow-2xs">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-2xs font-bold uppercase tracking-wider text-muted">Linked Content</span>
+          <div class="card-fade p-4 sm:p-5 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[12.5px] font-medium text-ink-soft tracking-tight">Total Budget</span>
+              <span class="text-[11px] font-semibold text-muted font-mono">THB</span>
+            </div>
+            <div class="flex items-baseline justify-between gap-2 mt-1">
+              <div class="text-[25px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono tabular-nums">฿{{ totalBudget.toLocaleString('en-US') }}</div>
+              <span class="text-[11px] font-medium text-muted truncate">this window</span>
+            </div>
+          </div>
+
+          <div class="card-fade p-4 sm:p-5 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[12.5px] font-medium text-ink-soft tracking-tight">Linked Content</span>
               <svg class="w-3.5 h-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
             </div>
-            <div class="text-2xl font-black text-ink font-mono">{{ totalLinked }}</div>
-            <span class="text-[11px] text-muted">Posts attached to campaigns</span>
+            <div class="flex items-baseline justify-between gap-2 mt-1">
+              <div class="text-[25px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono tabular-nums">{{ totalLinked }}</div>
+              <span class="text-[11px] font-medium text-muted truncate">attached posts</span>
+            </div>
           </div>
         </div>
 
