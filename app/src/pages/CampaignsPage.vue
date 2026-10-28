@@ -121,12 +121,18 @@ function select(id: string | null): void {
   void router.replace(id ? `/campaigns/${id}` : '/campaigns')
 }
 
-// Auto-select first campaign on desktop when loaded
+// Auto-select first campaign on desktop when loaded or when month filter changes
 watch(
-  () => visible.value,
-  (list) => {
-    if ((deckFull.value || wide.value) && !selectedId.value && list && list.length > 0) {
-      select(list[0].id)
+  [() => visible.value, () => wide.value, () => deckFull.value],
+  ([list, isWide, isFull]) => {
+    if ((isWide || isFull) && list && list.length > 0) {
+      if (!selectedId.value || !list.some((c) => c.id === selectedId.value)) {
+        selectedId.value = list[0].id
+        editorOpen.value = true
+        if (props.embedded) {
+          emit('update:id', list[0].id)
+        }
+      }
     }
   },
   { immediate: true },
@@ -238,10 +244,6 @@ async function destroy(): Promise<void> {
     error.value = e instanceof Error ? e.message : String(e)
   }
 }
-
-const totalBudget = computed(() => (visible.value ?? []).reduce((acc, c) => acc + (c.budget || 0), 0))
-const activeCount = computed(() => (visible.value ?? []).filter((c) => c.status === 'active').length)
-const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc + (c.contentIds?.length || 0), 0))
 </script>
 
 <template>
@@ -322,125 +324,9 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
         </template>
       </div>
 
-      <!-- Right Pane Overview when not in editing mode -->
-      <div v-if="(deckFull || wide) && !editorOpen" class="camp-detail camp-overview flex-1 flex flex-col gap-5 py-2">
-        <div class="flex items-center justify-between pb-3.5 border-b border-black/[0.06]">
-          <div>
-            <h2 class="text-base font-bold text-ink tracking-tight m-0">{{ t('campaign.title') }} Overview</h2>
-            <p class="text-xs text-muted mt-0.5 m-0">Schedules, platform targets, and budgets across campaigns</p>
-          </div>
-          <div class="flex items-center gap-2.5">
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-wash text-ink font-mono whitespace-nowrap">
-              {{ (visible ?? []).length }} Total
-            </span>
-            <button type="button" class="btn btn-primary w-auto text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 whitespace-nowrap"
-              :disabled="!canWrite" @click="newCampaign">
-              <span class="text-sm leading-none">+</span>
-              <span>New campaign</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- KPI Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          <div class="card-fade p-4 sm:p-5 flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[12.5px] font-medium text-ink-soft tracking-tight">Active Campaigns</span>
-              <span class="w-2 h-2 rounded-full bg-ink"></span>
-            </div>
-            <div class="flex items-baseline justify-between gap-2 mt-1">
-              <div class="text-[25px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono tabular-nums">{{ activeCount }}</div>
-              <span class="text-[11px] font-medium text-muted truncate">{{ (visible ?? []).length - activeCount }} draft or paused</span>
-            </div>
-          </div>
-
-          <div class="card-fade p-4 sm:p-5 flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[12.5px] font-medium text-ink-soft tracking-tight">Total Budget</span>
-              <span class="text-[11px] font-semibold text-muted font-mono">THB</span>
-            </div>
-            <div class="flex items-baseline justify-between gap-2 mt-1">
-              <div class="text-[25px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono tabular-nums">฿{{ totalBudget.toLocaleString('en-US') }}</div>
-              <span class="text-[11px] font-medium text-muted truncate">this window</span>
-            </div>
-          </div>
-
-          <div class="card-fade p-4 sm:p-5 flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[12.5px] font-medium text-ink-soft tracking-tight">Linked Content</span>
-              <svg class="w-3.5 h-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-            </div>
-            <div class="flex items-baseline justify-between gap-2 mt-1">
-              <div class="text-[25px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono tabular-nums">{{ totalLinked }}</div>
-              <span class="text-[11px] font-medium text-muted truncate">attached posts</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Campaign Roster Table -->
-        <div class="flex-1 flex flex-col gap-2 mt-1 min-h-0">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-muted m-0">Campaign Roster</h3>
-            <span class="text-xs text-muted">{{ t('campaign.pickHint') }}</span>
-          </div>
-
-          <div class="rounded-xl border border-line/60 bg-surface shadow-2xs overflow-hidden">
-            <table class="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr class="border-b border-line/60 bg-wash/50 text-muted font-bold text-2xs uppercase tracking-wider">
-                  <th class="py-2.5 px-3.5">Campaign</th>
-                  <th class="py-2.5 px-3">Status</th>
-                  <th class="py-2.5 px-3">Window</th>
-                  <th class="py-2.5 px-3">Platforms</th>
-                  <th class="py-2.5 px-3 text-right">Budget</th>
-                  <th class="py-2.5 px-3 text-center">Linked</th>
-                  <th class="py-2.5 px-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-line/40">
-                <tr v-for="c in visible" :key="c.id"
-                  class="hover:bg-wash/40 cursor-pointer transition-colors group"
-                  @click="select(c.id)">
-                  <td class="py-3 px-3.5 font-medium text-ink">
-                    <div class="font-bold text-sm leading-snug">{{ c.name }}</div>
-                    <div v-if="c.objective" class="text-muted text-[11px] truncate max-w-[220px]">{{ c.objective }}</div>
-                  </td>
-                  <td class="py-3 px-3">
-                    <span class="camp-status" :class="c.status">{{ statusLabel(c.status) }}</span>
-                  </td>
-                  <td class="py-3 px-3 text-muted font-mono text-[11px] whitespace-nowrap">
-                    {{ c.startDate || '—' }} → {{ c.endDate || '—' }}
-                  </td>
-                  <td class="py-3 px-3">
-                    <div v-if="c.platforms && c.platforms.length" class="flex items-center gap-1.5">
-                      <PlatformLogo v-for="p in c.platforms" :key="p" :name="p" :size="14" />
-                    </div>
-                    <span v-else class="text-muted text-[11px]">—</span>
-                  </td>
-                  <td class="py-3 px-3 text-right font-mono font-semibold text-ink whitespace-nowrap">
-                    {{ c.budget ? `฿${c.budget.toLocaleString()}` : '—' }}
-                  </td>
-                  <td class="py-3 px-3 text-center font-mono">
-                    <span class="px-2 py-0.5 rounded-full bg-wash text-[11px] font-semibold">{{ c.contentIds.length }}</span>
-                  </td>
-                  <td class="py-3 px-3 text-right whitespace-nowrap">
-                    <button type="button" class="btn w-auto text-[11px] py-1 px-2.5 opacity-80 group-hover:opacity-100 hover:border-ink transition-all cursor-pointer">
-                      Edit ↗
-                    </button>
-                  </td>
-                </tr>
-                <tr v-if="!visible || visible.length === 0">
-                  <td colspan="7" class="py-8 text-center text-muted">
-                    {{ t('campaign.empty') }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <Drawer v-model="editorOpen" :inline="deckFull || wide"
+      <Drawer :model-value="editorOpen || ((deckFull || wide) && Boolean(draft))"
+        @update:model-value="editorOpen = $event"
+        :inline="deckFull || wide"
         :side="deckFull ? 'right' : 'bottom'" :width="'100%'" contained
         :title="draft?.name || t('campaign.new')">
     <template v-if="draft">
