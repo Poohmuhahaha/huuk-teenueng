@@ -389,23 +389,38 @@ async function destroy(): Promise<void> {
         </div>
       </div>
 
-      <div class="grid3">
-        <div>
-          <label class="lbl" for="camp-budget">{{ t('campaign.budget') }}</label>
-          <input id="camp-budget" class="field" type="number" min="0" step="100" v-model.number="draft.budget"
-            :disabled="!canWrite" />
-        </div>
-        <div>
-          <label class="lbl" for="camp-metric">{{ t('campaign.metric') }}</label>
-          <select id="camp-metric" class="field" v-model="draft.goalMetric" :disabled="!canWrite">
-            <option v-for="m in METRICS" :key="m" :value="m">{{ t(`campaign.metric.${m}`) }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="lbl" for="camp-target">{{ t('campaign.target') }}</label>
-          <input id="camp-target" class="field" type="number" min="0" step="1000" v-model.number="draft.goalTarget"
-            :disabled="!canWrite" />
-        </div>
+      <div class="grid3 camp-kpi-grid">
+        <label class="camp-kpi-tile aspect-square rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111]" for="camp-budget">
+          <div class="w-full flex items-center justify-between gap-1.5">
+            <span class="lbl !m-0">{{ t('campaign.budget') }}</span>
+            <span class="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/[0.05] text-muted">THB</span>
+          </div>
+          <div class="w-full mt-auto">
+            <input id="camp-budget" class="field camp-kpi-input" type="number" min="0" step="100" v-model.number="draft.budget"
+              :disabled="!canWrite" />
+          </div>
+        </label>
+        <label class="camp-kpi-tile aspect-square rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111]" for="camp-metric">
+          <div class="w-full flex items-center justify-between gap-1.5">
+            <span class="lbl !m-0">{{ t('campaign.metric') }}</span>
+            <span class="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/[0.05] text-muted">KPI</span>
+          </div>
+          <div class="w-full mt-auto">
+            <select id="camp-metric" class="field camp-kpi-select" v-model="draft.goalMetric" :disabled="!canWrite">
+              <option v-for="m in METRICS" :key="m" :value="m">{{ t(`campaign.metric.${m}`) }}</option>
+            </select>
+          </div>
+        </label>
+        <label class="camp-kpi-tile aspect-square rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111]" for="camp-target">
+          <div class="w-full flex items-center justify-between gap-1.5">
+            <span class="lbl !m-0">{{ t('campaign.target') }}</span>
+            <span class="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/[0.05] text-muted">Goal</span>
+          </div>
+          <div class="w-full mt-auto">
+            <input id="camp-target" class="field camp-kpi-input" type="number" min="0" step="1000" v-model.number="draft.goalTarget"
+              :disabled="!canWrite" />
+          </div>
+        </label>
       </div>
 
       <label class="lbl" for="camp-hashtags">{{ t('campaign.hashtags') }}</label>
