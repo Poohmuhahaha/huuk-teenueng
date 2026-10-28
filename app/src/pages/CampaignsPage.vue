@@ -8,6 +8,7 @@ import {
 } from '@/core/queries'
 import type { Campaign, CampaignMetric, CampaignStatus } from '@/mock/db'
 import DatePickerPopup from '@/components/ui/DatePickerPopup.vue'
+import DateRangeCalendar from '@/components/ui/DateRangeCalendar.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
 import InfoTip from '@/components/ui/InfoTip.vue'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
@@ -356,6 +357,12 @@ async function destroy(): Promise<void> {
           <DatePickerPopup id="camp-end" v-model="draft.endDate" :disabled="!canWrite" :title="t('campaign.end')" />
         </div>
       </div>
+
+      <DateRangeCalendar
+        v-model:start-date="draft.startDate"
+        v-model:end-date="draft.endDate"
+        :disabled="!canWrite"
+      />
 
       <div class="grid2">
         <div>

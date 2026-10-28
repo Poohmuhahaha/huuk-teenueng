@@ -1690,6 +1690,19 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   padding: 6px 8px 16px !important;
 }
 .camp-editor { min-width: 0; }
+.camp-range-cal {
+  border: 1px solid #ded9d1 !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+}
+.camp-range-cal .cal-nav-btn {
+  border: 1px solid #ded9d1 !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+}
+.camp-range-cal .cal-nav-btn:hover:not(:disabled) {
+  border-color: #111111 !important;
+}
 .chiprow { display: flex; flex-wrap: wrap; gap: 10px; }
 .chipbtn {
   display: inline-flex !important;
