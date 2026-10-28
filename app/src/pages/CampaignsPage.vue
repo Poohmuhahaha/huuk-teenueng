@@ -261,10 +261,6 @@ async function destroy(): Promise<void> {
             <span class="text-xs font-bold uppercase tracking-wider text-muted">Campaigns</span>
             <span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-wash text-ink">{{ (visible ?? []).length }}</span>
           </div>
-          <button type="button" class="w-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-ink bg-wash hover:bg-ink hover:text-white transition-colors cursor-pointer border-0"
-            :disabled="!canWrite" @click="newCampaign">
-            <span>+ New</span>
-          </button>
         </div>
 
         <span v-if="saved" class="muted">{{ t('campaign.saved') }}</span>
