@@ -329,7 +329,7 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
           <div class="p-3.5 bg-surface rounded-xl border border-line/60 shadow-2xs">
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-2xs font-bold uppercase tracking-wider text-muted">Active Campaigns</span>
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span class="w-2 h-2 rounded-full bg-ink"></span>
             </div>
             <div class="text-2xl font-black text-ink font-mono">{{ activeCount }}</div>
             <span class="text-[11px] text-muted">{{ (visible ?? []).length - activeCount }} draft or paused</span>

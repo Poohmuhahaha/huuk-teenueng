@@ -69,11 +69,10 @@ async function copyCaption(text: string): Promise<void> {
 function statusBadgeClass(status?: string): string {
   switch (status) {
     case 'Done':
-      return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      return 'bg-ink text-white border-ink'
     case 'Dev':
-      return 'bg-sky-50 text-sky-700 border-sky-200'
     case 'Design':
-      return 'bg-amber-50 text-amber-700 border-amber-200'
+      return 'bg-wash text-ink border-line'
     default:
       return 'bg-wash text-muted border-line'
   }
