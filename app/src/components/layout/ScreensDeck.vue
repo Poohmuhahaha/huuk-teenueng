@@ -48,21 +48,10 @@ const track = ref<HTMLElement | null>(null)
 const index = ref(notFound.value ? 0 : visibleIndexOf(route.path))
 const full = ref(false)
 
-// Performance optimization: only mount active and adjacent slides, and keep visited
-// slides alive so initial load is fast and doesn't run all 6 hub setups simultaneously.
-const visited = ref<Set<number>>(new Set([index.value]))
-watch(
-  index,
-  (i) => {
-    visited.value.add(i)
-    if (i > 0) visited.value.add(i - 1)
-    if (i < visible.value.length - 1) visited.value.add(i + 1)
-  },
-  { immediate: true },
-)
-
+// Performance optimization: only mount the active slide so inactive hubs
+// never keep thousands of DOM nodes, SVG charts, and GPU layers alive at once.
 function shouldRender(i: number): boolean {
-  return visited.value.has(i) || Math.abs(i - index.value) <= 1
+  return i === index.value
 }
 
 // Publish the full-page state so pages can reflow (e.g. calendar 2 columns).

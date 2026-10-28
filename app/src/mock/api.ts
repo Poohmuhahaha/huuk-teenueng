@@ -23,7 +23,7 @@ import type { BrandImageKind } from '@/core/images'
 
 export type { OptionList, AuthResult, ImportResult, OauthMode, OauthStatus, OauthStart, OauthPending, AccountInfo }
 
-const wait = (ms = 120): Promise<void> => new Promise((r) => setTimeout(r, ms))
+const wait = (ms = 12): Promise<void> => new Promise((r) => setTimeout(r, Math.min(ms, 15)))
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 
 const MAX_TEXT = 200
