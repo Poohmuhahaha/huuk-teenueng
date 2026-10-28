@@ -3253,11 +3253,12 @@ header.topbar .in-topbar .tabselect-item.active {
      row-gap is 0: the collapsed links row must not add phantom height to
      the bar (it pushed the picker 4px high); the open menu brings its own
      8px top margin instead. */
-  header.topbar { flex-wrap: wrap; width: calc(100% - 24px); row-gap: 0; transition: border-radius 0.2s ease 0.22s; }
+  header.topbar { flex-wrap: wrap; width: calc(100% - 24px); padding: 8px 10px; row-gap: 0; justify-content: center; transition: border-radius 0.2s ease 0.22s; }
   header.topbar.open { border-radius: 30px; transition: border-radius 0.12s ease 0s; }
   header.topbar .nav-burger { display: block; order: 2; }
   /* Phones: the hub picker replaces the ≡ burger on every page. */
-  header.topbar .in-topbar { display: flex; flex: 1 1 auto; min-width: 0; order: 2; }
+  header.topbar .in-topbar { display: flex; justify-content: center; align-items: center; flex: 1 1 100%; width: 100%; min-width: 0; order: 2; }
+  header.topbar .in-topbar .tabselect-btn { width: 100%; justify-content: center; margin: 0 auto; text-align: center; }
   /* Phones have no logo — the picker owns the topbar on every page. */
   header.topbar .brand { display: none; }
   /* …and it expands the pill in place (Framer "Phone Open") — never a
@@ -3267,7 +3268,7 @@ header.topbar .in-topbar .tabselect-item.active {
   /* Phones: the account cluster floats top-right, out of the flex flow,
      so the long button truly centers on the bar (not on leftover space).
      It stacks above the full-width button so the avatar stays tappable. */
-  header.topbar .side { order: 3; position: absolute; right: 10px; top: 12px; z-index: 2; margin: 0; }
+  header.topbar .side { order: 3; position: absolute; right: 10px; top: 8px; height: 37px; display: flex; align-items: center; z-index: 2; margin: 0; min-width: 0; }
   header.topbar .links {
     order: 4; flex-basis: 100%; display: flex;
     max-height: 0; opacity: 0; transform: translateY(-8px);
