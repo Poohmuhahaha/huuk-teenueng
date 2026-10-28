@@ -206,7 +206,7 @@ async function add(): Promise<void> {
             <button
               type="button"
               class="h-9 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
-              :class="dKind === 'IN' ? 'bg-emerald-600 text-white shadow-xs' : 'text-muted hover:text-ink'"
+              :class="dKind === 'IN' ? 'bg-ink text-surface shadow-xs' : 'text-muted hover:text-ink'"
               :disabled="!canWrite"
               @click="dKind = 'IN'"
             >
@@ -216,7 +216,7 @@ async function add(): Promise<void> {
             <button
               type="button"
               class="h-9 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
-              :class="dKind === 'OUT' ? 'bg-rose-600 text-white shadow-xs' : 'text-muted hover:text-ink'"
+              :class="dKind === 'OUT' ? 'bg-ink text-surface shadow-xs' : 'text-muted hover:text-ink'"
               :disabled="!canWrite"
               @click="dKind = 'OUT'"
             >
