@@ -1690,12 +1690,31 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   padding: 6px 8px 16px !important;
 }
 .camp-editor { min-width: 0; }
-.chiprow { display: flex; flex-wrap: wrap; gap: 6px; }
+.chiprow { display: flex; flex-wrap: wrap; gap: 8px; }
 .chipbtn {
-  font: inherit; font-size: 12.5px; padding: 4px 10px; border-radius: var(--radius-pill);
-  border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 550; padding: 8px 15px;
+  border-radius: 20px !important;
+  border: 1px solid #ded9d1 !important;
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.chipbtn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; }
+.chipbtn:hover:not(:disabled) {
+  border-color: #111111 !important;
+  color: #111111 !important;
+  background: #ffffff !important;
+}
+.chipbtn.on,
+.chipbtn.on:hover:not(:disabled) {
+  background: #111111 !important;
+  border-color: #111111 !important;
+  color: #ffffff !important;
+  font-weight: 650;
+}
+.chipbtn.on svg[fill="#101010"] {
+  fill: #ffffff !important;
+}
 .chipbtn:disabled { opacity: 0.5; cursor: default; }
 .linkgrid { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); }
 .linkitem {
