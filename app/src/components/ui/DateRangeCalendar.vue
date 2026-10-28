@@ -19,6 +19,13 @@ const now = new Date()
 const viewY = ref(now.getFullYear())
 const viewM = ref(now.getMonth() + 1)
 
+// Drag & Click state (declared before immediate watchers to avoid TDZ ReferenceError)
+const isDragging = ref(false)
+const dragAnchor = ref<string | null>(null)
+const dragCurrent = ref<string | null>(null)
+const didDragMove = ref(false)
+const pickingStep = ref<'start' | 'end'>('start')
+
 function parseYMD(value: string | null): { y: number; m: number; d: number } | null {
   if (!value) return null
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
@@ -149,13 +156,6 @@ function isInRange(key: string): boolean {
   if (!start || !end) return false
   return key > start && key < end
 }
-
-// Drag & Click state
-const isDragging = ref(false)
-const dragAnchor = ref<string | null>(null)
-const dragCurrent = ref<string | null>(null)
-const didDragMove = ref(false)
-const pickingStep = ref<'start' | 'end'>('start')
 
 function applyRange(a: string, b: string): void {
   const [start, end] = a <= b ? [a, b] : [b, a]
