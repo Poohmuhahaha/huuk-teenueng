@@ -1703,6 +1703,98 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
 .camp-range-cal .cal-nav-btn:hover:not(:disabled) {
   border-color: #111111 !important;
 }
+/* Draggable Calendar Range Animations */
+.camp-range-cal .cal-range-track {
+  position: absolute;
+  inset: 2px 0;
+  background: rgba(17, 17, 17, 0.08);
+  opacity: 0;
+  transform: scaleX(0.35) scaleY(0.75);
+  transition:
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.18s ease,
+    background-color 0.2s ease,
+    border-radius 0.2s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+.camp-range-cal .cal-cell.dir-fwd .cal-range-track {
+  transform-origin: left center;
+}
+.camp-range-cal .cal-cell.dir-back .cal-range-track {
+  transform-origin: right center;
+}
+.camp-range-cal .cal-cell.in-range .cal-range-track {
+  opacity: 1;
+  transform: scaleX(1) scaleY(1);
+}
+.camp-range-cal .cal-cell.is-start:not(.is-end) .cal-range-track {
+  left: 50%;
+  opacity: 1;
+  transform: scaleX(1) scaleY(1);
+}
+.camp-range-cal .cal-cell.is-end:not(.is-start) .cal-range-track {
+  right: 50%;
+  opacity: 1;
+  transform: scaleX(1) scaleY(1);
+}
+.camp-range-cal .cal-cell.col-start.in-range .cal-range-track {
+  border-top-left-radius: 9999px;
+  border-bottom-left-radius: 9999px;
+}
+.camp-range-cal .cal-cell.col-end.in-range .cal-range-track {
+  border-top-right-radius: 9999px;
+  border-bottom-right-radius: 9999px;
+}
+.camp-range-cal .is-dragging-cal .cal-cell.in-range .cal-range-track,
+.camp-range-cal .is-dragging-cal .cal-cell.is-start:not(.is-end) .cal-range-track,
+.camp-range-cal .is-dragging-cal .cal-cell.is-end:not(.is-start) .cal-range-track {
+  background: rgba(17, 17, 17, 0.13);
+}
+.camp-range-cal .cal-day-btn {
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.22s ease;
+}
+.camp-range-cal .cal-day-btn.is-endpoint {
+  transform: scale(1.06);
+  box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.25);
+}
+.camp-range-cal .is-dragging-cal .cal-day-btn.is-mid {
+  transform: translateY(-1px) scale(1.04);
+}
+.camp-range-cal .cal-day-btn.is-active-drag {
+  transform: scale(1.2) !important;
+  box-shadow: 0 0 0 5px rgba(17, 17, 17, 0.15), 0 8px 18px -4px rgba(0, 0, 0, 0.35) !important;
+}
+.camp-range-cal .cal-drag-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111111;
+  color: #ffffff;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  box-shadow: 0 6px 16px -3px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  z-index: 30;
+}
+.cal-tip-enter-active,
+.cal-tip-leave-active {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
+}
+.cal-tip-enter-from,
+.cal-tip-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px) scale(0.85);
+}
 .chiprow { display: flex; flex-wrap: wrap; gap: 10px; }
 .chipbtn {
   display: inline-flex !important;

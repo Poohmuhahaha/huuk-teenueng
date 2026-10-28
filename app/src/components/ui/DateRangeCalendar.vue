@@ -23,6 +23,7 @@ const viewM = ref(now.getMonth() + 1)
 const isDragging = ref(false)
 const dragAnchor = ref<string | null>(null)
 const dragCurrent = ref<string | null>(null)
+const dragDir = ref<'forward' | 'backward'>('forward')
 const didDragMove = ref(false)
 const pickingStep = ref<'start' | 'end'>('start')
 
@@ -197,6 +198,9 @@ function onWindowPointerMove(e: PointerEvent): void {
   const targetKey = cellEl?.dataset.calDate
   if (!targetKey || targetKey === dragCurrent.value) return
 
+  if (dragCurrent.value) {
+    dragDir.value = targetKey >= dragCurrent.value ? 'forward' : 'backward'
+  }
   didDragMove.value = true
   dragCurrent.value = targetKey
   applyRange(dragAnchor.value, targetKey)
@@ -327,34 +331,55 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Draggable Calendar Grid -->
-    <div class="grid grid-cols-7 gap-y-1 touch-none" role="grid" aria-label="Campaign schedule calendar">
+    <div
+      class="grid grid-cols-7 gap-y-1.5 touch-none pt-1"
+      :class="{ 'is-dragging-cal': isDragging }"
+      role="grid"
+      aria-label="Campaign schedule calendar"
+    >
       <div
         v-for="cell in cells"
         :key="cell.key"
         :data-cal-date="cell.key"
-        class="relative h-9 flex items-center justify-center cursor-ew-resize"
+        class="cal-cell relative h-9 flex items-center justify-center cursor-ew-resize"
         :class="[
-          isInRange(cell.key) ? 'bg-black/[0.08]' : '',
-          isStart(cell.key) && !isEnd(cell.key) ? 'bg-gradient-to-r from-transparent from-50% to-black/[0.08] to-50%' : '',
-          isEnd(cell.key) && !isStart(cell.key) ? 'bg-gradient-to-l from-transparent from-50% to-black/[0.08] to-50%' : '',
-          cell.col === 0 && isInRange(cell.key) ? 'rounded-l-full' : '',
-          cell.col === 6 && isInRange(cell.key) ? 'rounded-r-full' : '',
+          isInRange(cell.key) ? 'in-range' : '',
+          isStart(cell.key) ? 'is-start' : '',
+          isEnd(cell.key) ? 'is-end' : '',
+          cell.col === 0 ? 'col-start' : '',
+          cell.col === 6 ? 'col-end' : '',
+          dragDir === 'backward' ? 'dir-back' : 'dir-fwd',
         ]"
         @pointerdown="onCellPointerDown(cell.key, $event)"
       >
+        <!-- Animated continuous range track -->
+        <span class="cal-range-track" aria-hidden="true" />
+
+        <!-- Floating live drag badge on active cursor cell -->
+        <Transition name="cal-tip">
+          <span
+            v-if="isDragging && dragCurrent === cell.key"
+            class="cal-drag-tip"
+            aria-hidden="true"
+          >
+            {{ cell.key.slice(5) }} · {{ dayCount }}d
+          </span>
+        </Transition>
+
         <button
           type="button"
           tabindex="-1"
           :disabled="disabled"
-          class="w-8 h-8 rounded-full inline-flex items-center justify-center text-xs font-mono transition-transform p-0 border-0 cursor-pointer relative z-10"
+          class="cal-day-btn w-8 h-8 rounded-full inline-flex items-center justify-center text-xs font-mono p-0 border-0 cursor-pointer relative z-10"
           :class="[
             isStart(cell.key) || isEnd(cell.key)
-              ? 'bg-[#111] text-white font-bold shadow-xs scale-105'
+              ? 'is-endpoint bg-[#111] text-white font-bold'
               : isInRange(cell.key)
-                ? 'bg-transparent text-ink font-semibold hover:bg-black/10'
+                ? 'is-mid bg-transparent text-ink font-semibold hover:bg-black/10'
                 : cell.inMonth
                   ? 'bg-transparent text-black/80 hover:bg-black/[0.06] font-medium'
                   : 'bg-transparent text-black/30 hover:bg-black/[0.04]',
+            isDragging && dragCurrent === cell.key ? 'is-active-drag' : '',
             cell.isToday && !isStart(cell.key) && !isEnd(cell.key)
               ? 'ring-1 ring-[#111]/40 font-bold'
               : '',
