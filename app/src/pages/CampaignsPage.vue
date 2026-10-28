@@ -476,10 +476,10 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
           <label class="lbl">{{ t('campaign.platforms') }}</label>
           <div class="chiprow">
             <button v-for="p in setup?.platforms ?? []" :key="p" type="button"
-              class="chipbtn inline-flex items-center justify-center gap-2 rounded-[20px] transition bg-white border border-[#ded9d1] hover:border-[#111] text-black/80"
+              class="chipbtn flex flex-col items-center justify-center w-[88px] h-[88px] aspect-square gap-2 rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111] text-black/80"
               :class="{ on: draft.platforms.includes(p) }" :disabled="!canWrite" @click="toggleIn('platforms', p)">
-              <PlatformLogo :name="p" :size="14" />
-              <span>{{ p }}</span>
+              <PlatformLogo :name="p" :size="24" />
+              <span class="text-xs font-semibold tracking-tight leading-none">{{ p }}</span>
             </button>
           </div>
         </div>
@@ -487,9 +487,9 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
           <label class="lbl">{{ t('campaign.pillars') }}</label>
           <div class="chiprow">
             <button v-for="p in setup?.pillars ?? []" :key="p" type="button"
-              class="chipbtn inline-flex items-center justify-center rounded-[20px] transition bg-white border border-[#ded9d1] hover:border-[#111] text-black/80"
+              class="chipbtn flex flex-col items-center justify-center w-[88px] h-[88px] aspect-square rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111] text-black/80"
               :class="{ on: draft.pillars.includes(p) }" :disabled="!canWrite" @click="toggleIn('pillars', p)">
-              <span>{{ p }}</span>
+              <span class="text-xs font-semibold tracking-tight leading-tight">{{ p }}</span>
             </button>
           </div>
         </div>

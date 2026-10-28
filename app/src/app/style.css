@@ -1690,10 +1690,23 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   padding: 6px 8px 16px !important;
 }
 .camp-editor { min-width: 0; }
-.chiprow { display: flex; flex-wrap: wrap; gap: 8px; }
+.chiprow { display: flex; flex-wrap: wrap; gap: 10px; }
 .chipbtn {
-  font: inherit; font-size: 13px; font-weight: 550; padding: 8px 15px;
-  border-radius: 20px !important;
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: 88px !important;
+  height: 88px !important;
+  aspect-ratio: 1 / 1 !important;
+  padding: 10px !important;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  border-radius: 22px !important;
   border: 1px solid #ded9d1 !important;
   background: #ffffff !important;
   color: rgba(0, 0, 0, 0.8) !important;
@@ -1704,6 +1717,7 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   border-color: #111111 !important;
   color: #111111 !important;
   background: #ffffff !important;
+  transform: translateY(-1px);
 }
 .chipbtn.on,
 .chipbtn.on:hover:not(:disabled) {
@@ -1754,7 +1768,7 @@ h3 { font-size: 15px; font-weight: 600; line-height: 1.25; }
 .modal h3 { font-size: 17px; font-weight: 700; }
 
 /* buttons → tactile, modern SaaS */
-.btn, a.btn, .menubtn, .tab, .toolbtn, .lp-submit, .switchlink, .chipbtn {
+.btn, a.btn, .menubtn, .tab, .toolbtn, .lp-submit, .switchlink {
   font-family: var(--font);
   font-weight: 600;
   font-size: 12.5px;
