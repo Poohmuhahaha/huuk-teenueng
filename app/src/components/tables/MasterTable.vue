@@ -20,7 +20,7 @@ const props = withDefaults(
   {
     loading: false,
     selectedId: null,
-    pageSize: 10,
+    pageSize: 15,
   }
 )
 const emit = defineEmits<{ select: [post: Post] }>()
@@ -210,14 +210,14 @@ function onRowKeydown(e: KeyboardEvent, post: Post): void {
       <!-- Right: Per-page selector & Page stepper -->
       <div class="flex items-center gap-3.5 flex-none ml-auto">
         <!-- Page size selector -->
-        <div v-if="totalRows > 10" class="hidden sm:flex items-center gap-1.5 text-xs">
+        <div v-if="totalRows > 15" class="hidden sm:flex items-center gap-1.5 text-xs">
           <span class="text-muted/70 font-medium">Show:</span>
           <div class="inline-flex rounded-lg p-0.5 bg-wash border border-line/60">
             <button
-              v-for="size in [10, 25, 50]"
+              v-for="size in [15, 25, 50]"
               :key="size"
               type="button"
-              class="px-2.5 py-1 rounded-md text-xs font-mono transition-all cursor-pointer"
+              class="w-auto px-2.5 py-1 rounded-md text-xs font-mono transition-all cursor-pointer"
               :class="pageSize === size ? 'bg-surface text-ink font-bold shadow-2xs' : 'text-muted hover:text-ink'"
               @click="setPageSize(size)"
             >
