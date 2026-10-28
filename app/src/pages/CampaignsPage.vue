@@ -263,14 +263,14 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
 
       <div class="camp-main camp-list">
         <!-- List Header -->
-        <div class="flex items-center justify-between pb-3 mb-2 border-b border-line/60">
+        <div class="flex items-center justify-between pb-3 mb-2.5 px-1 border-b border-black/[0.06]">
           <div class="flex items-center gap-2">
             <span class="text-xs font-bold uppercase tracking-wider text-muted">Campaigns</span>
             <span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-wash text-ink">{{ (visible ?? []).length }}</span>
           </div>
-          <button type="button" class="text-xs font-semibold text-accent hover:underline cursor-pointer bg-transparent border-0 p-0"
+          <button type="button" class="w-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-ink bg-wash hover:bg-ink hover:text-white transition-colors cursor-pointer border-0"
             :disabled="!canWrite" @click="newCampaign">
-            + New
+            <span>+ New</span>
           </button>
         </div>
 
@@ -330,10 +330,10 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
             <p class="text-xs text-muted mt-0.5 m-0">Schedules, platform targets, and budgets across campaigns</p>
           </div>
           <div class="flex items-center gap-2.5">
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-wash text-ink font-mono">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-wash text-ink font-mono whitespace-nowrap">
               {{ (visible ?? []).length }} Total
             </span>
-            <button type="button" class="btn btn-primary text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5"
+            <button type="button" class="btn btn-primary w-auto text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 whitespace-nowrap"
               :disabled="!canWrite" @click="newCampaign">
               <span class="text-sm leading-none">+</span>
               <span>New campaign</span>
@@ -424,7 +424,7 @@ const totalLinked = computed(() => (visible.value ?? []).reduce((acc, c) => acc 
                     <span class="px-2 py-0.5 rounded-full bg-wash text-[11px] font-semibold">{{ c.contentIds.length }}</span>
                   </td>
                   <td class="py-3 px-3 text-right whitespace-nowrap">
-                    <button type="button" class="btn text-[11px] py-1 px-2.5 opacity-80 group-hover:opacity-100 hover:border-ink transition-all cursor-pointer">
+                    <button type="button" class="btn w-auto text-[11px] py-1 px-2.5 opacity-80 group-hover:opacity-100 hover:border-ink transition-all cursor-pointer">
                       Edit ↗
                     </button>
                   </td>

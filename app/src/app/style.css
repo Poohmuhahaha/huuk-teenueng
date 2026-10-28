@@ -1624,7 +1624,7 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   position: relative;
   overflow: hidden;
   display: flex; flex-direction: column; gap: 8px; align-items: flex-start; text-align: left;
-  width: 100%; padding: 16px 18px; border: none !important;
+  width: 100%; padding: 18px 20px; border: none !important; outline: none !important;
   border-radius: 1.25rem;
   background: linear-gradient(
     180deg,
@@ -1635,11 +1635,16 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
     rgba(0, 0, 0, 0.06) 100%
   ), #ffffff;
   color: inherit; font: inherit; cursor: pointer;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.camp-item:hover {
+.camp-item:focus,
+.camp-item:focus-visible {
+  outline: none !important;
+}
+.camp-item:hover,
+.camp-item.card-fade:hover {
   transform: translateY(-2px);
   background: linear-gradient(
     180deg,
@@ -1651,7 +1656,8 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   ), #ffffff;
   box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.06);
 }
-.camp-item.active {
+.camp-item.active,
+.camp-item.card-fade.active {
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.11) 0%,
@@ -1660,12 +1666,12 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
     #ffffff 72%,
     rgba(0, 0, 0, 0.08) 100%
   ), #ffffff;
-  box-shadow: 0 0 0 1.75px var(--ink, #0a0a0a), 0 6px 16px -4px rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 0 0 1.75px var(--ink, #0a0a0a), 0 6px 16px -4px rgba(0, 0, 0, 0.08) !important;
 }
-.camp-item-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; width: 100%; }
+.camp-item-head { display: flex; align-items: flex-start; gap: 10px; justify-content: space-between; width: 100%; }
 .camp-status {
   font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-  border-radius: var(--radius-pill); padding: 2px 8px;
+  border-radius: var(--radius-pill); padding: 3px 9px;
   border: 1px solid var(--ink, #0a0a0a); color: var(--surface, #ffffff); background: var(--ink, #0a0a0a);
 }
 .camp-status.active,
@@ -1681,7 +1687,7 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   background: transparent !important;
   box-shadow: none !important;
   border: none !important;
-  padding: 0 !important;
+  padding: 6px 8px 16px !important;
 }
 .camp-editor { min-width: 0; }
 .chiprow { display: flex; flex-wrap: wrap; gap: 6px; }
