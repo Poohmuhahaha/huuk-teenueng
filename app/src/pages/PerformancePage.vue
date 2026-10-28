@@ -128,7 +128,8 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
                 <td class="num font-mono">{{ g.goal.toLocaleString('en-US') }}</td>
                 <td class="num font-mono font-bold">{{ g.now.toLocaleString('en-US') }}</td>
                 <td class="num font-mono">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-ink text-surface border border-ink">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums"
+                    :class="g.delta >= 0 ? 'bg-emerald-600 text-white border border-emerald-600' : 'bg-rose-600 text-white border border-rose-600'">
                     {{ g.delta >= 0 ? '+' : '' }}{{ g.delta.toLocaleString('en-US') }}
                   </span>
                 </td>
