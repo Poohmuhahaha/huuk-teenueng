@@ -48,10 +48,10 @@ const track = ref<HTMLElement | null>(null)
 const index = ref(notFound.value ? 0 : visibleIndexOf(route.path))
 const full = ref(false)
 
-// Performance optimization: only mount the active slide so inactive hubs
-// never keep thousands of DOM nodes, SVG charts, and GPU layers alive at once.
+// Performance optimization: mount the active slide plus its immediate left/right
+// neighbors so side-peeking cards are always visible while off-screen cards stay unmounted.
 function shouldRender(i: number): boolean {
-  return i === index.value
+  return Math.abs(i - index.value) <= 1
 }
 
 // Publish the full-page state so pages can reflow (e.g. calendar 2 columns).

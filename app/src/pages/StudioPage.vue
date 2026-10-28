@@ -97,15 +97,8 @@ function statusLabel(s: ContentStatus): string {
   return t(`studio.status.${s}`)
 }
 
-function statusBadgeClass(s: ContentStatus): string {
-  switch (s) {
-    case 'published':
-      return 'bg-ink text-white'
-    case 'scheduled':
-      return 'bg-wash text-ink border border-line'
-    default:
-      return 'bg-surface text-muted border border-line/60'
-  }
+function statusBadgeClass(_s: ContentStatus): string {
+  return 'bg-ink text-white'
 }
 
 // Status filter as a toggle button: press to open the status menu.

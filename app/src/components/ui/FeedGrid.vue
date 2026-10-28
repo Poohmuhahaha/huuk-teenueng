@@ -66,16 +66,8 @@ async function copyCaption(text: string): Promise<void> {
   }
 }
 
-function statusBadgeClass(status?: string): string {
-  switch (status) {
-    case 'Done':
-      return 'bg-ink text-white border-ink'
-    case 'Dev':
-    case 'Design':
-      return 'bg-wash text-ink border-line'
-    default:
-      return 'bg-wash text-muted border-line'
-  }
+function statusBadgeClass(_status?: string): string {
+  return 'bg-ink text-white border-ink'
 }
 
 function simLikes(p: Post): string {
