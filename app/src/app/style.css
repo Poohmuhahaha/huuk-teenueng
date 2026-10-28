@@ -1687,7 +1687,8 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   background: transparent !important;
   box-shadow: none !important;
   border: none !important;
-  padding: 6px 8px 16px !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 .camp-editor { min-width: 0; }
 .camp-range-cal {
@@ -1950,7 +1951,22 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   box-shadow: none !important;
   background: transparent !important;
 }
-@media (max-width: 860px) { .camp-grid { grid-template-columns: 1fr; } }
+@media (max-width: 860px) {
+  .camp-grid,
+  .card-scroll.camp-scroll .camp-grid,
+  .card-scroll:has(.camp-page) .camp-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .card-scroll.camp-scroll .camp-grid > .p-drawer,
+  .card-scroll:has(.camp-page) .camp-grid > .p-drawer,
+  .camp-grid > aside.p-drawer,
+  .camp-grid > .p-drawer {
+    border-left: none !important;
+    padding-left: 0 !important;
+    border-top: 1px solid var(--line) !important;
+    padding-top: 20px !important;
+  }
+}
 
 /* OAuth page picker: one row per connectable Page. */
 .pick-list { display: grid; gap: 8px; margin-top: 12px; }
@@ -2855,7 +2871,6 @@ textarea.field, textarea {
    scrolls. The classes are set by the pages themselves, keyed to the card's
    real width, so the layout aligns while the card expands.
    ========================================================================= */
-.card-scroll.camp-scroll,
 .card-scroll.perf-scroll {
   display: flex;
   flex-direction: column;
@@ -3161,13 +3176,18 @@ textarea.field, textarea {
   overflow-y: auto;
 }
 
-/* Dashboard — matches Finance pattern (natural card-scroll overflow, comfortable breathing room
-   at top and bottom, seamless single-container scroll). */
+/* Dashboard & Campaigns — matches Finance pattern (natural card-scroll overflow, comfortable breathing room
+   at top and bottom, seamless single-container scroll, consistent padding & margin). */
 .card-scroll.dash-scroll,
 .card-scroll:has(.dash-page),
 .deck.full .card-scroll.dash-scroll,
 .deck.full .card-scroll:has(.dash-page),
-.slide-card:has(.dash-page) .card-scroll {
+.slide-card:has(.dash-page) .card-scroll,
+.card-scroll.camp-scroll,
+.card-scroll:has(.camp-page),
+.deck.full .card-scroll.camp-scroll,
+.deck.full .card-scroll:has(.camp-page),
+.slide-card:has(.camp-page) .card-scroll {
   display: flex !important;
   flex-direction: column !important;
   overflow-y: auto !important;
@@ -3184,23 +3204,37 @@ textarea.field, textarea {
   .card-scroll:has(.dash-page),
   .deck.full .card-scroll.dash-scroll,
   .deck.full .card-scroll:has(.dash-page),
-  .slide-card:has(.dash-page) .card-scroll {
+  .slide-card:has(.dash-page) .card-scroll,
+  .card-scroll.camp-scroll,
+  .card-scroll:has(.camp-page),
+  .deck.full .card-scroll.camp-scroll,
+  .deck.full .card-scroll:has(.camp-page),
+  .slide-card:has(.camp-page) .card-scroll {
     padding: 20px 16px 24px !important;
   }
 }
 
 .card-scroll.dash-scroll > .dash-page,
 .card-scroll:has(.dash-page) > .dash-page,
-.slide-card:has(.dash-page) .dash-page {
+.slide-card:has(.dash-page) .dash-page,
+.card-scroll.camp-scroll > .hubpage,
+.card-scroll:has(.camp-page) > .hubpage,
+.slide-card:has(.camp-page) .hubpage,
+.card-scroll.camp-scroll .camp-page,
+.card-scroll:has(.camp-page) .camp-page,
+.slide-card:has(.camp-page) .camp-page {
   display: flex !important;
   flex-direction: column !important;
   flex: 1 0 auto !important;
   width: 100% !important;
+  max-width: none !important;
   margin: 0 !important;
   padding: 0 !important;
 }
 
-.card-scroll.dash-scroll .dash-page > h1 {
+.card-scroll.dash-scroll .dash-page > h1,
+.card-scroll.camp-scroll .camp-page > h1,
+.card-scroll:has(.camp-page) .camp-page > h1 {
   display: none !important;
 }
 
@@ -3216,17 +3250,27 @@ textarea.field, textarea {
   gap: 0 !important;
 }
 
+.card-scroll.camp-scroll .camp-grid,
+.card-scroll:has(.camp-page) .camp-grid,
+.slide-card:has(.camp-page) .camp-grid {
+  display: grid !important;
+  flex: 1 0 auto !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 .card-scroll.dash-scroll .dash-main,
 .card-scroll:has(.dash-page) .dash-main,
-.slide-card:has(.dash-page) .dash-main {
+.slide-card:has(.dash-page) .dash-main,
+.card-scroll.camp-scroll .camp-main,
+.card-scroll:has(.camp-page) .camp-main,
+.slide-card:has(.camp-page) .camp-main {
   display: flex !important;
   flex-direction: column !important;
   flex: 1 0 auto !important;
   width: 100% !important;
-  overflow: visible !important;
   min-height: auto !important;
-  height: auto !important;
-  max-height: none !important;
   margin: 0 !important;
   padding: 0 !important;
 }
