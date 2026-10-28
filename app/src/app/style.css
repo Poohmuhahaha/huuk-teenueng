@@ -1835,14 +1835,63 @@ label.btn.disabled { opacity: 0.5; cursor: default; }
   fill: #ffffff !important;
 }
 .chipbtn:disabled { opacity: 0.5; cursor: default; }
-.linkgrid { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); }
-.linkitem {
-  display: flex; align-items: center; gap: 8px; font-size: 13.5px;
-  border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--surface);
-  width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; cursor: pointer;
+.linkgrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 150px));
 }
-.linkitem > span:first-of-type { min-width: 0; overflow-wrap: anywhere; }
-.linkitem .muted { margin-left: auto; font-size: 12px; }
+.linkitem {
+  position: relative;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 8px;
+  width: 100%;
+  aspect-ratio: 1 / 1 !important;
+  padding: 14px !important;
+  font-size: 13px;
+  border-radius: 22px !important;
+  border: 1px solid #ded9d1 !important;
+  background: #ffffff !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.linkitem:hover {
+  border-color: #111111 !important;
+  color: #111111 !important;
+  transform: translateY(-2px);
+}
+.linkitem.on,
+.linkitem:has(input:checked) {
+  background: #111111 !important;
+  border-color: #111111 !important;
+  color: #ffffff !important;
+}
+.linkitem > span:first-of-type {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.linkitem .muted {
+  margin-left: 0;
+  margin-top: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.linkitem.on .muted,
+.linkitem:has(input:checked) .muted {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
 @media (max-width: 860px) { .camp-grid { grid-template-columns: 1fr; } }
 
 /* OAuth page picker: one row per connectable Page. */
@@ -1952,7 +2001,7 @@ textarea.field, textarea {
 /* surfaces → refined tactile cards with soft borders & elevation */
 .card, .panel, .lp-card, .plans-card, .plogin-card, .modal, .guide-panel,
 .camp-editor, .camp-list, .plan-card, .style-panel,
-.linkitem, .member-row, .ads-stat, .livecard, .read-article {
+.member-row, .ads-stat, .livecard, .read-article {
   border-radius: var(--radius, 12px);
   background: var(--surface);
   border: none !important;

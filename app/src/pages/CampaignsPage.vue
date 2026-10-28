@@ -180,7 +180,8 @@ const schedule = computed(() =>
 )
 
 function contentDate(c: { scheduledFor: string | null; publishedAt: string | null }): string {
-  return c.scheduledFor ?? c.publishedAt ?? '—'
+  const raw = c.scheduledFor ?? c.publishedAt
+  return raw ? raw.slice(0, 10) : '—'
 }
 
 function statusLabel(status: CampaignStatus): string {
@@ -434,9 +435,27 @@ async function destroy(): Promise<void> {
 
       <h3>{{ t('campaign.linkContent') }}</h3>
       <div class="linkgrid">
-        <label v-for="c in contentRows ?? []" :key="c.id" class="linkitem">
-          <input type="checkbox" :checked="draft.contentIds.includes(c.id)" :disabled="!canWrite"
-            @change="toggleContent(c.id)" />
+        <label
+          v-for="c in contentRows ?? []"
+          :key="c.id"
+          class="linkitem aspect-square rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111]"
+          :class="{ on: draft.contentIds.includes(c.id) }"
+        >
+          <div class="w-full flex items-center justify-between gap-2">
+            <input
+              type="checkbox"
+              class="w-4 h-4 accent-[#111] cursor-pointer m-0"
+              :checked="draft.contentIds.includes(c.id)"
+              :disabled="!canWrite"
+              @change="toggleContent(c.id)"
+            />
+            <span
+              class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full"
+              :class="draft.contentIds.includes(c.id) ? 'bg-white/15 text-white' : 'bg-black/[0.05] text-muted'"
+            >
+              {{ c.status }}
+            </span>
+          </div>
           <span>{{ c.title }}</span>
           <span class="muted">{{ contentDate(c) }}</span>
         </label>
