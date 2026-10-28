@@ -9,8 +9,6 @@ import {
 import type { Campaign, CampaignMetric, CampaignStatus } from '@/mock/db'
 import DatePickerPopup from '@/components/ui/DatePickerPopup.vue'
 import DateRangeCalendar from '@/components/ui/DateRangeCalendar.vue'
-import TableFrame from '@/components/tables/TableFrame.vue'
-import InfoTip from '@/components/ui/InfoTip.vue'
 import MonthToggle from '@/components/ui/MonthToggle.vue'
 import DockBar from '@/components/ui/DockBar.vue'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
@@ -169,15 +167,6 @@ const dirty = computed(() => {
   if (!current || !draft.value) return false
   return JSON.stringify(fromCampaign(current)) !== JSON.stringify(draft.value)
 })
-
-const linked = computed(() => {
-  const ids = new Set(draft.value?.contentIds ?? [])
-  return (contentRows.value ?? []).filter((c) => ids.has(c.id))
-})
-
-const schedule = computed(() =>
-  [...linked.value].sort((a, b) => (a.scheduledFor ?? a.publishedAt ?? '9999').localeCompare(b.scheduledFor ?? b.publishedAt ?? '9999')),
-)
 
 function contentDate(c: { scheduledFor: string | null; publishedAt: string | null }): string {
   const raw = c.scheduledFor ?? c.publishedAt
@@ -432,21 +421,6 @@ async function destroy(): Promise<void> {
 
       <label class="lbl" for="camp-notes">{{ t('campaign.notes') }}</label>
       <textarea id="camp-notes" class="field" rows="3" v-model="draft.notes" :disabled="!canWrite"></textarea>
-
-      <h3>{{ t('campaign.schedule') }}<InfoTip :text="t('campaign.scheduleHint')" /></h3>
-      <TableFrame v-if="schedule.length">
-        <thead>
-          <tr><th>{{ t('campaign.content') }}</th><th>{{ t('campaign.date') }}</th><th>{{ t('campaign.status') }}</th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="c in schedule" :key="c.id" style="cursor: default;">
-            <td>{{ c.title }}</td>
-            <td>{{ contentDate(c) }}</td>
-            <td>{{ c.status }}</td>
-          </tr>
-        </tbody>
-      </TableFrame>
-      <p v-else class="muted">{{ t('campaign.noContent') }}</p>
 
       <h3>{{ t('campaign.linkContent') }}</h3>
       <div class="linkgrid">
