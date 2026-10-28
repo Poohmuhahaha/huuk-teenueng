@@ -264,23 +264,23 @@ onBeforeUnmount(() => {
     :class="{ 'opacity-60 pointer-events-none': disabled }"
   >
     <!-- Calendar Header -->
-    <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-2.5 border-b border-black/[0.06]">
+    <div class="flex flex-wrap items-center justify-between gap-2.5 pb-3.5 mb-3 border-b border-black/[0.06]">
       <div class="flex items-center gap-2">
         <button
           type="button"
-          class="cal-nav-btn w-7 h-7 inline-flex items-center justify-center rounded-full border border-[#ded9d1] bg-white text-ink hover:border-[#111] transition cursor-pointer p-0 text-sm leading-none"
+          class="cal-nav-btn w-9 h-9 inline-flex items-center justify-center rounded-full border border-[#ded9d1] bg-white text-ink hover:border-[#111] transition cursor-pointer p-0 text-base leading-none"
           aria-label="Previous month"
           :disabled="disabled"
           @click="stepMonth(-1)"
         >
           ‹
         </button>
-        <strong class="text-sm font-bold text-ink tracking-tight min-w-[116px] text-center">
+        <strong class="text-sm sm:text-[15px] font-bold text-ink tracking-tight min-w-[124px] text-center">
           {{ monthName(viewM) }} {{ viewY }}
         </strong>
         <button
           type="button"
-          class="cal-nav-btn w-7 h-7 inline-flex items-center justify-center rounded-full border border-[#ded9d1] bg-white text-ink hover:border-[#111] transition cursor-pointer p-0 text-sm leading-none"
+          class="cal-nav-btn w-9 h-9 inline-flex items-center justify-center rounded-full border border-[#ded9d1] bg-white text-ink hover:border-[#111] transition cursor-pointer p-0 text-base leading-none"
           aria-label="Next month"
           :disabled="disabled"
           @click="stepMonth(1)"
@@ -289,19 +289,19 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <div class="flex items-center gap-1.5 ml-auto">
+      <div class="flex items-center gap-2 ml-auto">
         <span
           v-if="dayCount > 0"
-          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#111] text-white"
+          class="inline-flex items-center justify-center h-9 px-3.5 rounded-full text-xs font-mono font-bold bg-[#111] text-white"
         >
           {{ dayCount }} {{ dayCount === 1 ? 'day' : 'days' }}
         </span>
-        <span v-else class="text-[11px] text-muted hidden sm:inline">
+        <span v-else class="text-xs text-muted hidden sm:inline mr-1">
           Drag across days to select range
         </span>
         <button
           type="button"
-          class="cal-nav-btn w-auto px-2.5 py-1 rounded-full text-[11px] font-semibold border border-[#ded9d1] bg-white text-black/80 hover:border-[#111] hover:text-black transition cursor-pointer"
+          class="cal-nav-btn w-auto h-9 inline-flex items-center justify-center px-4 rounded-full text-xs sm:text-[13px] font-semibold border border-[#ded9d1] bg-white text-black/80 hover:border-[#111] hover:text-black transition cursor-pointer"
           :disabled="disabled"
           @click="selectToday"
         >
@@ -310,7 +310,7 @@ onBeforeUnmount(() => {
         <button
           v-if="startDate || endDate"
           type="button"
-          class="cal-nav-btn w-auto px-2.5 py-1 rounded-full text-[11px] font-semibold border border-[#ded9d1] bg-white text-black/80 hover:border-[#111] hover:text-black transition cursor-pointer"
+          class="cal-nav-btn w-auto h-9 inline-flex items-center justify-center px-4 rounded-full text-xs sm:text-[13px] font-semibold border border-[#ded9d1] bg-white text-black/80 hover:border-[#111] hover:text-black transition cursor-pointer"
           :disabled="disabled"
           @click="clearDates"
         >
