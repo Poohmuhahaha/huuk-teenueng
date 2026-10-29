@@ -8,7 +8,6 @@ import DashboardPage from '@/pages/DashboardPage.vue'
 import PlanPage from '@/pages/PlanPage.vue'
 import ContentPage from '@/pages/ContentPage.vue'
 import PromotePage from '@/pages/PromotePage.vue'
-import AnalyzePage from '@/pages/AnalyzePage.vue'
 import SettingsPage from '@/pages/SettingsPage.vue'
 import { HUB_TABS } from '@/core/subnav'
 import type { HubTab } from '@/core/subnav'
@@ -32,7 +31,6 @@ export const screens: Screen[] = [
   { path: '/plan', to: '/plan', label: 'Plan', match: ['/plan'], component: PlanPage, sheet: 'Plan', access: 'WRITE master', tabs: HUB_TABS['/plan'] },
   { path: '/content', to: '/content', label: 'Content', match: ['/content'], component: ContentPage, sheet: 'Content', access: 'WRITE master', tabs: HUB_TABS['/content'] },
   { path: '/promote', to: '/promote', label: 'Promote', match: ['/promote'], component: PromotePage, sheet: 'Promote', access: 'WRITE master', tabs: HUB_TABS['/promote'] },
-  { path: '/analyze', to: '/analyze', label: 'Analyze', match: ['/analyze'], component: AnalyzePage, sheet: 'Analyze', access: 'semi-computed', tabs: HUB_TABS['/analyze'] },
 ]
 
 /** Segment match: '/plan' matches '/plan' and '/plan/…', never '/plans'. */

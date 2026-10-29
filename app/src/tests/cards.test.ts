@@ -1,4 +1,4 @@
-// Compact IA: the app is 6 hub screens (Home, Plan, Content, Promote, Analyze,
+// Compact IA: the app is 6 hub screens (Home, Plan, Content, Promote,
 // Settings). Related features live as tabs inside a hub; legacy deep links
 // redirect into the owning hub + tab.
 // @vitest-environment happy-dom
@@ -13,20 +13,18 @@ import DashboardPage from '@/pages/DashboardPage.vue'
 import PlanPage from '@/pages/PlanPage.vue'
 import ContentPage from '@/pages/ContentPage.vue'
 import PromotePage from '@/pages/PromotePage.vue'
-import AnalyzePage from '@/pages/AnalyzePage.vue'
 import SettingsPage from '@/pages/SettingsPage.vue'
 import { login, logout } from '@/core/auth'
 
 describe('hub registry', () => {
-  it('lists the six hub screens', () => {
+  it('lists the five hub screens', () => {
     const byTo = new Map(screens.map((s) => [s.to, s]))
     expect(byTo.get('/dashboard')?.component).toBe(DashboardPage)
     expect(byTo.get('/plan')?.component).toBe(PlanPage)
     expect(byTo.get('/content')?.component).toBe(ContentPage)
     expect(byTo.get('/promote')?.component).toBe(PromotePage)
-    expect(byTo.get('/analyze')?.component).toBe(AnalyzePage)
     expect(byTo.get('/branding')?.component).toBe(SettingsPage)
-    expect(screens).toHaveLength(6)
+    expect(screens).toHaveLength(5)
   })
 
   it('resolves each hub path to its card', () => {
@@ -34,7 +32,6 @@ describe('hub registry', () => {
     expect(screenIndexOf('/plan')).toBe(screens.findIndex((s) => s.to === '/plan'))
     expect(screenIndexOf('/content')).toBe(screens.findIndex((s) => s.to === '/content'))
     expect(screenIndexOf('/promote')).toBe(screens.findIndex((s) => s.to === '/promote'))
-    expect(screenIndexOf('/analyze')).toBe(screens.findIndex((s) => s.to === '/analyze'))
     expect(screenIndexOf('/branding')).toBe(screens.findIndex((s) => s.to === '/branding'))
   })
 
@@ -54,8 +51,9 @@ describe('hub registry', () => {
       ['/live', '/dashboard', undefined],
       ['/campaigns', '/promote', 'campaigns'],
       ['/ads', '/promote', 'ads'],
-      ['/performance', '/analyze', 'performance'],
-      ['/finance', '/analyze', 'finance'],
+      ['/performance', '/dashboard', 'performance'],
+      ['/finance', '/dashboard', 'finance'],
+      ['/analyze', '/dashboard', undefined],
     ] as const) {
       await appRouter.push(path)
       expect(appRouter.currentRoute.value.path).toBe(target)
@@ -91,7 +89,7 @@ describe('compact navbar', () => {
     const w = mountShell()
     try {
       const labels = w.findAll('.navlink').map((l) => l.text())
-      for (const name of ['Branding', 'Dashboard', 'Plan', 'Content', 'Promote', 'Analyze']) {
+      for (const name of ['Branding', 'Dashboard', 'Plan', 'Content', 'Promote']) {
         expect(labels).toContain(name)
       }
       expect(labels[0]).toBe('Branding')

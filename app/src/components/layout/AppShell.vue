@@ -194,7 +194,6 @@ const navLinks = computed<NavLink[]>(() =>
         { to: '/plan', label: t('nav.plan') },
         { to: '/content', label: t('nav.content') },
         { to: '/promote', label: t('nav.promote') },
-        { to: '/analyze', label: t('nav.analyze') },
       ],
 )
 

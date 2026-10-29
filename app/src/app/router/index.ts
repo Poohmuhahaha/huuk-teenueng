@@ -45,8 +45,16 @@ const legacy: RouteRecordRaw[] = [
     }),
   },
   { path: '/ads', redirect: (to) => ({ path: '/promote', query: { ...to.query, tab: 'ads' } }) },
-  { path: '/performance', redirect: (to) => ({ path: '/analyze', query: { ...to.query, tab: 'performance' } }) },
-  { path: '/finance', redirect: (to) => ({ path: '/analyze', query: { ...to.query, tab: 'finance' } }) },
+  { path: '/performance', redirect: (to) => ({ path: '/dashboard', query: { ...to.query, tab: 'performance' } }) },
+  { path: '/finance', redirect: (to) => ({ path: '/dashboard', query: { ...to.query, tab: 'finance' } }) },
+  // The Analyze hub was folded into Dashboard (Performance / Finance tabs).
+  {
+    path: '/analyze',
+    redirect: (to) => {
+      const tab = to.query.tab === 'finance' ? 'finance' : to.query.tab === 'performance' ? 'performance' : undefined
+      return { path: '/dashboard', query: tab ? { tab } : {} }
+    },
+  },
   { path: '/members', redirect: (to) => ({ path: '/branding', query: { ...to.query, tab: 'members' } }) },
 ]
 

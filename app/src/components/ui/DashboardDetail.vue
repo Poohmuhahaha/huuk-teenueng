@@ -146,7 +146,7 @@ const kpiRows = computed(() => {
 const showMetrics = computed(() => props.kpi === 'views' || props.kpi === 'likes')
 const crossLink = computed(() =>
   showMetrics.value
-    ? { to: '/analyze?tab=performance', label: t('dash.openPerf') }
+    ? { to: '/dashboard?tab=performance', label: t('dash.openPerf') }
     : { to: '/plan?tab=monthly', label: t('dash.openPlanner') },
 )
 </script>

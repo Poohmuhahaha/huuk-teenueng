@@ -20,7 +20,6 @@ function mountLanding() {
       { path: '/plan', component: { template: '<div />' } },
       { path: '/content', component: { template: '<div />' } },
       { path: '/promote', component: { template: '<div />' } },
-      { path: '/analyze', component: { template: '<div />' } },
       { path: '/branding', component: { template: '<div />' } },
     ],
   })
@@ -38,10 +37,10 @@ describe('landing page', () => {
     w.unmount()
   })
 
-  it('lists all six hubs', () => {
+  it('lists all five hubs', () => {
     const w = mountLanding()
     const heads = w.findAll('h3').map((h) => h.text())
-    for (const hub of ['Home', 'Plan', 'Content', 'Promote', 'Analyze', 'Settings']) {
+    for (const hub of ['Home', 'Plan', 'Content', 'Promote', 'Settings']) {
       expect(heads).toContain(hub)
     }
     w.unmount()

@@ -20,11 +20,10 @@ interface Hub {
 }
 
 const hubs: Hub[] = [
-  { to: '/dashboard', name: 'landing.hubHome', tagline: 'landing.hubHomeTag', tabs: 'Overview · Live · Ads · Top posts', access: 'computed' },
+  { to: '/dashboard', name: 'landing.hubHome', tagline: 'landing.hubHomeTag', tabs: 'Overview · Ads · Top posts · Performance · Finance', access: 'computed' },
   { to: '/plan', name: 'landing.hubPlan', tagline: 'landing.hubPlanTag', tabs: 'Monthly · Calendar · Ideas', access: 'WRITE master' },
   { to: '/content', name: 'landing.hubContent', tagline: 'landing.hubContentTag', tabs: 'Studio · Feed preview · Hashtags', access: 'WRITE master' },
   { to: '/promote', name: 'landing.hubPromote', tagline: 'landing.hubPromoteTag', tabs: 'Campaigns · Meta Ads', access: 'WRITE master' },
-  { to: '/analyze', name: 'landing.hubAnalyze', tagline: 'landing.hubAnalyzeTag', tabs: 'Performance · Finance', access: 'semi-computed' },
   { to: '/branding', name: 'landing.hubSettings', tagline: 'landing.hubSettingsTag', tabs: 'Brand · Members · Connections', access: 'owner' },
 ]
 
