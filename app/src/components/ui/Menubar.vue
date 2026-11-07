@@ -29,7 +29,7 @@ function pick(menuId: string, item: MenuItem): void {
     <div v-for="m in menus" :key="m.id" class="relative border-l border-line first:border-l-0">
       <button
         type="button"
-        class="w-auto bg-transparent border-0 text-ink font-sans text-[13px] font-semibold py-1.5 px-3 cursor-pointer rounded-none transition-colors hover:bg-wash"
+        class="w-auto bg-transparent border-0 text-ink font-sans text-[15.6px] font-semibold py-1.5 px-3 cursor-pointer rounded-none transition-colors hover:bg-wash"
         :class="{ 'bg-wash': openId === m.id }"
         :aria-expanded="openId === m.id"
         @click="toggle(m.id)"
@@ -46,7 +46,7 @@ function pick(menuId: string, item: MenuItem): void {
           v-for="item in m.items"
           :key="item.id"
           type="button"
-          class="block w-full bg-transparent border-0 text-ink font-sans text-[13px] p-2 px-2.5 text-left cursor-pointer rounded-none hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed"
+          class="block w-full bg-transparent border-0 text-ink font-sans text-[15.6px] p-2 px-2.5 text-left cursor-pointer rounded-none hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed"
           role="menuitem"
           :disabled="item.disabled"
           @click="pick(m.id, item)"

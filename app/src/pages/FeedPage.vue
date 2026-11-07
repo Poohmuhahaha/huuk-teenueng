@@ -124,7 +124,7 @@ function setYear(y: number): void {
       <div class="flex items-center justify-between flex-wrap gap-2.5">
         <div class="flex items-center gap-2 flex-wrap">
           <h2 class="text-xs font-bold uppercase tracking-widest text-muted m-0">Feed Preview</h2>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[13.2px] font-semibold bg-black text-white font-mono">
             {{ preview.length }} posts
           </span>
           <span class="text-xs text-muted font-mono hidden sm:inline">
@@ -193,7 +193,7 @@ function setYear(y: number): void {
           @click="choosePlatform(tab.name)">
           <PlatformLogo :name="tab.name" :size="14" />
           <span>{{ tab.name }}</span>
-          <span class="feed-tab-count px-1.5 py-0.2 rounded-full text-[10px] font-bold"
+          <span class="feed-tab-count px-1.5 py-0.2 rounded-full text-[12px] font-bold"
             :class="platform === tab.name ? 'bg-white/20 text-surface' : 'bg-wash text-muted'">
             {{ tab.count }}
           </span>
@@ -215,7 +215,7 @@ function setYear(y: number): void {
       <div v-show="viewMode === 'phone'" class="py-4 flex flex-col items-center justify-center">
         <div class="w-[360px] sm:w-[380px] h-[720px] bg-surface rounded-[44px] border-[10px] border-neutral-950 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] ring-1 ring-white/15 overflow-hidden flex flex-col relative select-none">
           <!-- Top Status Bar & Dynamic Island -->
-          <div class="pt-2 px-6 flex items-center justify-between text-[11px] font-semibold text-ink shrink-0 z-30">
+          <div class="pt-2 px-6 flex items-center justify-between text-[13.2px] font-semibold text-ink shrink-0 z-30">
             <span>9:41</span>
             <div class="w-24 h-5 rounded-full bg-black flex items-center justify-end px-2">
               <div class="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
@@ -253,7 +253,7 @@ function setYear(y: number): void {
                   </div>
                   <div>
                     <div class="font-bold text-xs text-ink leading-tight">Studio Channel</div>
-                    <div class="text-[10px] text-muted">{{ p.date || 'Upcoming' }} · {{ p.time || '12:00' }}</div>
+                    <div class="text-[12px] text-muted">{{ p.date || 'Upcoming' }} · {{ p.time || '12:00' }}</div>
                   </div>
                 </div>
                 <span class="text-xs text-muted">•••</span>
@@ -263,12 +263,12 @@ function setYear(y: number): void {
               <div class="w-full rounded-xl overflow-hidden border border-line shadow-xs relative bg-wash" :style="{ aspectRatio: `${size.w} / ${size.h}` }">
                 <img v-if="p.imageUrl" :src="p.imageUrl" :alt="p.topic" class="w-full h-full object-cover" />
                 <div v-else class="w-full h-full p-4 flex flex-col justify-between text-ink bg-wash/50">
-                  <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-surface border border-line self-start">{{ size.w }}×{{ size.h }}</span>
+                  <span class="text-[12px] font-mono px-2 py-0.5 rounded bg-surface border border-line self-start">{{ size.w }}×{{ size.h }}</span>
                   <div class="text-center my-auto px-2">
                     <h4 class="font-bold text-sm leading-snug text-ink m-0">{{ p.topic }}</h4>
                     <p v-if="p.hook" class="text-xs text-muted italic mt-1 line-clamp-2 m-0">“{{ p.hook }}”</p>
                   </div>
-                  <div class="flex items-center justify-between text-[10px] text-muted">
+                  <div class="flex items-center justify-between text-[12px] text-muted">
                     <span>{{ p.pillar }}</span>
                     <span>{{ p.format }}</span>
                   </div>

@@ -259,7 +259,7 @@ async function destroy(): Promise<void> {
         <div class="flex items-center justify-between pb-3 mb-2.5 px-1 border-b border-black/[0.06]">
           <div class="flex items-center gap-2">
             <span class="text-xs font-bold uppercase tracking-wider text-muted">Campaigns</span>
-            <span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-wash text-ink">{{ (visible ?? []).length }}</span>
+            <span class="px-2 py-0.5 rounded-full text-[13.2px] font-mono font-bold bg-wash text-ink">{{ (visible ?? []).length }}</span>
           </div>
         </div>
 
@@ -278,13 +278,13 @@ async function destroy(): Promise<void> {
             :class="{ active: c.id === selectedId }" @click="select(c.id)">
             <div class="camp-item-head">
               <div class="min-w-0 flex-1 pr-2">
-                <strong class="block text-[14px] font-bold text-ink tracking-tight truncate">{{ c.name }}</strong>
-                <p v-if="c.objective" class="text-[11px] text-muted truncate m-0 mt-0.5">{{ c.objective }}</p>
+                <strong class="block text-[16.8px] font-bold text-ink tracking-tight truncate">{{ c.name }}</strong>
+                <p v-if="c.objective" class="text-[13.2px] text-muted truncate m-0 mt-0.5">{{ c.objective }}</p>
               </div>
               <span class="camp-status flex-none" :class="c.status">{{ statusLabel(c.status) }}</span>
             </div>
 
-            <div class="flex items-center gap-1.5 text-[11.5px] text-ink-soft font-mono mt-0.5">
+            <div class="flex items-center gap-1.5 text-[13.8px] text-ink-soft font-mono mt-0.5">
               <svg class="w-3.5 h-3.5 text-muted flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -299,11 +299,11 @@ async function destroy(): Promise<void> {
                 <div v-if="c.platforms && c.platforms.length" class="flex items-center gap-1.5 pr-2 border-r border-black/[0.08]">
                   <PlatformLogo v-for="p in c.platforms" :key="p" :name="p" :size="13" />
                 </div>
-                <span class="inline-flex items-center gap-1 font-mono text-[11px] text-muted">
+                <span class="inline-flex items-center gap-1 font-mono text-[13.2px] text-muted">
                   {{ c.contentIds.length }} {{ t('campaign.linked') }}
                 </span>
               </div>
-              <span class="font-mono font-bold text-ink text-[13px] tracking-tight tabular-nums">
+              <span class="font-mono font-bold text-ink text-[15.6px] tracking-tight tabular-nums">
                 {{ c.budget ? `฿${c.budget.toLocaleString()}` : t('campaign.noBudget') }}
               </span>
             </div>
@@ -314,6 +314,7 @@ async function destroy(): Promise<void> {
       <Drawer :model-value="editorOpen || ((deckFull || wide) && Boolean(draft))"
         @update:model-value="editorOpen = $event"
         :inline="deckFull || wide"
+        :closable="false"
         :side="deckFull ? 'right' : 'bottom'" :width="'100%'" contained
         :title="draft?.name || t('campaign.new')">
     <template v-if="draft">
@@ -355,9 +356,9 @@ async function destroy(): Promise<void> {
           <label class="lbl">{{ t('campaign.platforms') }}</label>
           <div class="chiprow">
             <button v-for="p in setup?.platforms ?? []" :key="p" type="button"
-              class="chipbtn flex flex-col items-center justify-center w-[88px] h-[88px] aspect-square gap-2 rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111] text-black/80"
+              class="chipbtn flex flex-col items-center justify-center w-[100px] h-[100px] aspect-square gap-2 rounded-[24px] lg:rounded-[28px] transition bg-white border border-[#ded9d1] hover:border-[#111] text-black/80"
               :class="{ on: draft.platforms.includes(p) }" :disabled="!canWrite" @click="toggleIn('platforms', p)">
-              <PlatformLogo :name="p" :size="24" />
+              <PlatformLogo :name="p" :size="28" />
               <span class="text-xs font-semibold tracking-tight leading-none">{{ p }}</span>
             </button>
           </div>
@@ -366,7 +367,7 @@ async function destroy(): Promise<void> {
           <label class="lbl">{{ t('campaign.pillars') }}</label>
           <div class="chiprow">
             <button v-for="p in setup?.pillars ?? []" :key="p" type="button"
-              class="chipbtn flex flex-col items-center justify-center w-[88px] h-[88px] aspect-square rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111] text-black/80"
+              class="chipbtn flex flex-col items-center justify-center w-[100px] h-[100px] aspect-square rounded-[24px] lg:rounded-[28px] transition bg-white border border-[#ded9d1] hover:border-[#111] text-black/80"
               :class="{ on: draft.pillars.includes(p) }" :disabled="!canWrite" @click="toggleIn('pillars', p)">
               <span class="text-xs font-semibold tracking-tight leading-tight">{{ p }}</span>
             </button>
@@ -378,7 +379,7 @@ async function destroy(): Promise<void> {
         <label class="camp-kpi-tile aspect-square rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111]" for="camp-budget">
           <div class="w-full flex items-center justify-between gap-1.5">
             <span class="lbl !m-0">{{ t('campaign.budget') }}</span>
-            <span class="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/[0.05] text-muted">THB</span>
+            <span class="text-[12px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/[0.05] text-muted">THB</span>
           </div>
           <div class="w-full mt-auto">
             <input id="camp-budget" class="field camp-kpi-input" type="number" min="0" step="100" v-model.number="draft.budget"
@@ -388,7 +389,7 @@ async function destroy(): Promise<void> {
         <label class="camp-kpi-tile aspect-square rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111]" for="camp-metric">
           <div class="w-full flex items-center justify-between gap-1.5">
             <span class="lbl !m-0">{{ t('campaign.metric') }}</span>
-            <span class="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/[0.05] text-muted">KPI</span>
+            <span class="text-[12px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/[0.05] text-muted">KPI</span>
           </div>
           <div class="w-full mt-auto">
             <select id="camp-metric" class="field camp-kpi-select" v-model="draft.goalMetric" :disabled="!canWrite">
@@ -399,7 +400,7 @@ async function destroy(): Promise<void> {
         <label class="camp-kpi-tile aspect-square rounded-[20px] lg:rounded-[24px] transition bg-white border border-[#ded9d1] hover:border-[#111]" for="camp-target">
           <div class="w-full flex items-center justify-between gap-1.5">
             <span class="lbl !m-0">{{ t('campaign.target') }}</span>
-            <span class="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/[0.05] text-muted">Goal</span>
+            <span class="text-[12px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/[0.05] text-muted">Goal</span>
           </div>
           <div class="w-full mt-auto">
             <input id="camp-target" class="field camp-kpi-input" type="number" min="0" step="1000" v-model.number="draft.goalTarget"
@@ -435,7 +436,7 @@ async function destroy(): Promise<void> {
               @change="toggleContent(c.id)"
             />
             <span
-              class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full"
+              class="text-[12px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full"
               :class="draft.contentIds.includes(c.id) ? 'bg-white/15 text-white' : 'bg-black/[0.05] text-muted'"
             >
               {{ c.status }}

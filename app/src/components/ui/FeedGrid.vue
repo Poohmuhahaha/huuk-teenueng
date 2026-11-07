@@ -120,7 +120,7 @@ function simComments(p: Post): string {
             </span>
             <span
               v-if="p.format"
-              class="text-[10px] px-1.5 py-0.5 rounded border truncate"
+              class="text-[12px] px-1.5 py-0.5 rounded border truncate"
               :class="p.imageUrl ? 'bg-black/50 text-white/90 border-white/20' : 'bg-wash text-muted border-line/60'"
             >
               {{ p.format }}
@@ -129,7 +129,7 @@ function simComments(p: Post): string {
 
           <span
             v-if="p.status"
-            class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shrink-0"
+            class="px-2 py-0.5 rounded-full text-[12px] font-bold uppercase tracking-wider border shrink-0"
             :class="p.imageUrl ? 'bg-black/60 text-white border-white/20' : statusBadgeClass(p.status)"
           >
             {{ p.status }}
@@ -140,7 +140,7 @@ function simComments(p: Post): string {
         <div class="relative z-10 my-auto py-1">
           <span
             v-if="p.pillar"
-            class="text-[9.5px] uppercase font-bold tracking-wider block mb-0.5"
+            class="text-[11.4px] uppercase font-bold tracking-wider block mb-0.5"
             :class="p.imageUrl ? 'text-white/70' : 'text-muted/70'"
           >
             {{ p.pillar }}
@@ -168,15 +168,15 @@ function simComments(p: Post): string {
           :class="p.imageUrl ? 'border-white/15 text-white/85' : 'border-line/60 text-muted'"
         >
           <div class="flex items-center gap-2 text-xs">
-            <span v-if="p.date" class="font-mono text-[11px]">{{ p.date }}</span>
-            <span class="inline-flex items-center gap-1 font-mono text-[10px]">
+            <span v-if="p.date" class="font-mono text-[13.2px]">{{ p.date }}</span>
+            <span class="inline-flex items-center gap-1 font-mono text-[12px]">
               <svg class="w-3 h-3 fill-current opacity-60" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {{ simLikes(p) }}
             </span>
           </div>
 
           <span
-            class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium border shrink-0"
+            class="px-1.5 py-0.5 rounded text-[12px] font-mono font-medium border shrink-0"
             :class="p.imageUrl ? 'bg-black/60 text-white/90 border-white/20' : 'bg-wash text-muted border-line/60'"
           >
             {{ size.w }}×{{ size.h }}
@@ -234,13 +234,13 @@ function simComments(p: Post): string {
                 <span class="text-xs text-muted">{{ activePost.date || 'Scheduled' }}</span>
               </div>
               <div class="flex items-center gap-2 mt-0.5">
-                <span v-if="activePost.pillar" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-wash border border-line text-muted">
+                <span v-if="activePost.pillar" class="text-[12px] font-semibold px-2 py-0.5 rounded bg-wash border border-line text-muted">
                   {{ activePost.pillar }}
                 </span>
-                <span v-if="activePost.format" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-wash border border-line text-muted">
+                <span v-if="activePost.format" class="text-[12px] font-semibold px-2 py-0.5 rounded bg-wash border border-line text-muted">
                   {{ activePost.format }}
                 </span>
-                <span v-if="activePost.status" class="text-[10px] font-bold px-2 py-0.5 rounded uppercase" :class="statusBadgeClass(activePost.status)">
+                <span v-if="activePost.status" class="text-[12px] font-bold px-2 py-0.5 rounded uppercase" :class="statusBadgeClass(activePost.status)">
                   {{ activePost.status }}
                 </span>
               </div>

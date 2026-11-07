@@ -319,10 +319,21 @@ watch(
         <button class="btn" @click="() => refetch()">{{ t('common.tryAgain') }}</button>
       </div>
       <MasterTable v-else-if="(posts ?? []).length" :rows="posts ?? []" :selected-id="selectedId" @select="pick" />
-      <div v-else class="card planner-empty flex flex-col items-start gap-2.5">
-        <p class="muted">{{ t('planner.empty') }}</p>
-        <button class="btn btn-primary" :disabled="!canWrite || busy"
-          :title="canWrite ? '' : t('auth.noPerm')" @click="addRow">{{ t('planner.addTopic') }}</button>
+      <div v-else class="planner-empty">
+        <div class="planner-empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
+            stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
+            <path d="M7.5 2.8v3.4M16.5 2.8v3.4M3 9h18" />
+            <path d="M9.2 14.6h5.6M12 11.8v5.6" />
+          </svg>
+        </div>
+        <div class="planner-empty-copy">
+          <strong>{{ t('planner.emptyTitle') }}</strong>
+          <p>{{ t('planner.empty') }}</p>
+        </div>
+        <button class="btn btn-primary w-auto planner-empty-add" :disabled="!canWrite || busy"
+          :title="canWrite ? '' : t('auth.noPerm')" @click="addRow">{{ t('planner.emptyAction') }}</button>
       </div>
 
       <p v-if="!selected && actionError" class="autherr" role="alert">{{ actionError }}</p>

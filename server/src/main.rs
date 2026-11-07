@@ -107,6 +107,7 @@ async fn main() {
     };
     store.db = db_pool.clone();
     store.apply_env();
+    warn_about_risky_configuration(&store);
 
     if !store.demo_mode && store.accounts.is_empty() {
         eprintln!(
@@ -230,6 +231,34 @@ async fn main() {
         }
     }
     println!("Server stopped");
+}
+
+/// Non-fatal warnings for configurations that are legal but commonly accidental.
+fn warn_about_risky_configuration(store: &Store) {
+    if store.demo_mode && store.setup.auth_required {
+        eprintln!(
+            "warning: DEMO_MODE=1 seeds well-known demo accounts while AUTH_REQUIRED=1 — \
+             use DEMO_MODE=0 for production deployments"
+        );
+    }
+
+    for (provider, id_var, secret_var) in [
+        ("Meta", "META_APP_ID", "META_APP_SECRET"),
+        ("Google", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
+        ("TikTok", "TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"),
+    ] {
+        let present = |key: &str| {
+            std::env::var(key)
+                .map(|value| !value.trim().is_empty())
+                .unwrap_or(false)
+        };
+        if present(id_var) != present(secret_var) {
+            eprintln!(
+                "warning: {provider} OAuth is partially configured — set both {id_var} and \
+                 {secret_var} (or neither)"
+            );
+        }
+    }
 }
 
 /// Periodically persists the store when its content changed, and prunes

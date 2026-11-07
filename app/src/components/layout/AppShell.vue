@@ -20,6 +20,7 @@ import MonthToggle from '@/components/ui/MonthToggle.vue'
 import { activeMonth, activeYear } from '@/core/navdate'
 import { deckPeek } from '@/core/deck'
 import { getRememberedTab } from '@/core/subnav'
+import { useRealtimeUpdates } from '@/core/realtime'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,6 +32,7 @@ const onBrand = computed(
     && !['members', 'connections'].includes((route.query.tab as string) || getRememberedTab('/branding') || ''),
 )
 const qc = useQueryClient()
+useRealtimeUpdates()
 
 // OAuth callback landing: /#/setup?oauth=meta&status=ok (redirects to /profile)
 const notice = ref('')

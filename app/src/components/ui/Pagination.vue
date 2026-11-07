@@ -13,7 +13,7 @@ function go(page: number): void {
 
 <template>
   <div v-if="visible" class="flex items-center justify-between gap-4 mt-5 py-3.5 border-t border-line w-full">
-    <span class="text-[13px] text-muted">Page <strong class="text-ink">{{ currentPage }}</strong> of <strong class="text-ink">{{ totalPages }}</strong></span>
+    <span class="text-[15.6px] text-muted">Page <strong class="text-ink">{{ currentPage }}</strong> of <strong class="text-ink">{{ totalPages }}</strong></span>
     <div class="flex gap-2.5">
       <button
         type="button"

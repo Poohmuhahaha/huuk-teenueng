@@ -98,9 +98,9 @@ function clear(): void {
   <div v-if="open" class="backdrop fixed inset-0 z-50 flex justify-center items-center p-4 bg-backdrop backdrop-blur-[4px]" @click.self="close">
     <div class="dp-modal w-full max-w-[340px] bg-surface border border-line rounded-none shadow-none p-5.5" role="dialog" aria-modal="true" :aria-label="title ?? t('campaign.pickDate')">
       <div class="dp-head flex justify-between items-center gap-2">
-        <button type="button" class="dp-nav w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default leading-[1.2]" aria-label="Previous month" @click="step(-1)">‹</button>
+        <button type="button" class="dp-nav w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default leading-[1.2]" aria-label="Previous month" @click="step(-1)">‹</button>
         <strong class="text-base">{{ monthName(viewM) }} {{ viewY }}</strong>
-        <button type="button" class="dp-nav w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default leading-[1.2]" aria-label="Next month" @click="step(1)">›</button>
+        <button type="button" class="dp-nav w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default leading-[1.2]" aria-label="Next month" @click="step(1)">›</button>
       </div>
       <div class="grid grid-cols-7 gap-1 mt-4">
         <span v-for="(d, i) in DOW" :key="i" class="text-center text-muted text-2xs font-bold">{{ d }}</span>
@@ -110,9 +110,9 @@ function clear(): void {
         </template>
       </div>
       <div class="actions flex justify-end gap-2 mt-4">
-        <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default" @click="clear">{{ t('campaign.clearDate') }}</button>
-        <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default" @click="pickToday">{{ t('campaign.today') }}</button>
-        <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" @click="close">{{ t('common.close') }}</button>
+        <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default" @click="clear">{{ t('campaign.clearDate') }}</button>
+        <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default" @click="pickToday">{{ t('campaign.today') }}</button>
+        <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" @click="close">{{ t('common.close') }}</button>
       </div>
     </div>
   </div>

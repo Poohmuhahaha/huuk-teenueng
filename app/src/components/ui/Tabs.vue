@@ -19,7 +19,7 @@ defineProps<{ tabs: { id: string; label: string; badge?: string | number; disabl
       <span>{{ t.label }}</span>
       <span
         v-if="t.badge !== undefined"
-        class="text-[11px] font-semibold tracking-[0.04em] px-1.5 py-0.5 rounded-full"
+        class="text-[13.2px] font-semibold tracking-[0.04em] px-1.5 py-0.5 rounded-full"
         :class="model === t.id ? 'bg-ink text-surface' : 'bg-wash text-muted'"
       >{{ t.badge }}</span>
     </button>

@@ -71,7 +71,7 @@ function onKeydown(event: KeyboardEvent): void {
       <input
         ref="input"
         v-model="query"
-        class="w-full border-0 border-b border-line bg-transparent text-ink font-sans text-[15px] p-3.5 px-4 outline-none rounded-none focus:outline-none focus-visible:outline-2 focus-visible:outline-ink focus-visible:-outline-offset-2"
+        class="w-full border-0 border-b border-line bg-transparent text-ink font-sans text-[18px] p-3.5 px-4 outline-none rounded-none focus:outline-none focus-visible:outline-2 focus-visible:outline-ink focus-visible:-outline-offset-2"
         :placeholder="placeholder"
         role="combobox"
         aria-label="Command palette"
@@ -88,16 +88,16 @@ function onKeydown(event: KeyboardEvent): void {
           type="button"
           role="option"
           :aria-selected="i === index"
-          class="flex items-center justify-between gap-3 w-full bg-transparent border-0 font-sans text-[13px] p-2.5 px-2.5 rounded-none cursor-pointer text-left transition-colors"
+          class="flex items-center justify-between gap-3 w-full bg-transparent border-0 font-sans text-[15.6px] p-2.5 px-2.5 rounded-none cursor-pointer text-left transition-colors"
           :class="i === index ? 'bg-ink text-surface' : 'text-ink hover:bg-wash'"
           @mouseenter="index = i"
           @click="pick(item)"
         >
           <span>
-            <span v-if="item.group" class="text-[11px] uppercase tracking-[0.06em] opacity-60 mr-2">{{ item.group }}</span>
+            <span v-if="item.group" class="text-[13.2px] uppercase tracking-[0.06em] opacity-60 mr-2">{{ item.group }}</span>
             {{ item.label }}
           </span>
-          <kbd v-if="item.shortcut" class="font-mono text-[10px] border border-current rounded-none px-1 py-0.5">{{ item.shortcut }}</kbd>
+          <kbd v-if="item.shortcut" class="font-mono text-[12px] border border-current rounded-none px-1 py-0.5">{{ item.shortcut }}</kbd>
         </button>
         <p v-if="!filtered.length" role="status" class="m-2.5 text-xs text-muted">No results</p>
       </div>

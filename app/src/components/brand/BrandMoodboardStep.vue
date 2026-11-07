@@ -24,7 +24,7 @@ const emit = defineEmits<{
 
 <template>
   <section class="brand-body">
-    <div class="moodboard">
+    <div class="moodboard" :class="{ 'mood-empty': !moodboard.length }">
       <div v-for="(url, i) in moodboard" :key="`${url}-${i}`" class="mood-item">
         <img :src="url" :alt="`${t('brand.moodboard')} ${i + 1}`" @load="emit('note-rendered-size', url, $event)" />
         <button

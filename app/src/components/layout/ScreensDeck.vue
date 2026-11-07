@@ -49,9 +49,22 @@ const index = ref(notFound.value ? 0 : visibleIndexOf(route.path))
 const full = ref(false)
 
 // Performance optimization: mount the active slide plus its immediate left/right
-// neighbors so side-peeking cards are always visible while off-screen cards stay unmounted.
+// neighbors, and keep slides the user has already visited mounted. Tearing down
+// the heavy Studio editor while mounting Dashboard caused a multi-hundred-ms
+// long task during navigation; keeping visited slides alive makes return trips
+// and neighbouring slides cheap.
+const visited = ref<Set<number>>(new Set())
+let warmId: number | ReturnType<typeof setTimeout> | undefined
+
+function markVisited(i: number): void {
+  if (i < 0 || visited.value.has(i)) return
+  const next = new Set(visited.value)
+  next.add(i)
+  visited.value = next
+}
+
 function shouldRender(i: number): boolean {
-  return Math.abs(i - index.value) <= 1
+  return visited.value.has(i) || Math.abs(i - index.value) <= 1
 }
 
 // Publish the full-page state so pages can reflow (e.g. calendar 2 columns).
@@ -237,17 +250,21 @@ function scrollToIndex(i: number, smooth = true): void {
 }
 
 function queryForScreen(s: Screen): Record<string, string> {
-  const { tab: _currentTab, ...rest } = (route.query ?? {}) as Record<string, string>
+  // Studio ids and the one-shot onboarding flag are screen-local. Do not leak
+  // them into Dashboard/Plan/Promote URLs — nor between hubs.
+  const { tab: _currentTab, id, onboarding, ...rest } = (route.query ?? {}) as Record<string, string>
+  const onContent = route.path === '/content' || route.path.startsWith('/content/')
+  if (s.path === '/content' && onContent && typeof id === 'string' && id) rest.id = id
+  if (s.path === '/branding' && onboarding === '1') rest.onboarding = '1'
   const remembered = getRememberedTab(s.path)
-  if (remembered) {
-    return { ...rest, tab: remembered }
-  }
+  if (remembered) return { ...rest, tab: remembered }
   return rest
 }
 
 async function goTo(i: number): Promise<void> {
   const clamped = Math.min(visible.value.length - 1, Math.max(0, i))
   index.value = clamped
+  markVisited(clamped)
   await nextTick()
   scrollToIndex(clamped)
   const s = visible.value[clamped]
@@ -306,6 +323,18 @@ function onScroll(): void {
 }
 
 onMounted(() => {
+  markVisited(index.value)
+  // Warm the dashboard once the initial screen is idle: it is the most
+  // expensive screen (KPI sparklines + charts), and pre-mounting it removes
+  // the first-slide spike without delaying the current card.
+  const warm = (): void => {
+    const i = visible.value.findIndex((s) => s.path === '/dashboard')
+    if (i >= 0) markVisited(i)
+  }
+  const idle = (window as Window & {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+  }).requestIdleCallback
+  warmId = idle ? idle(warm, { timeout: 2500 }) : globalThis.setTimeout(warm, 1200)
   if (!notFound.value) {
     index.value = visibleIndexOf(route.path)
     // Snap the track synchronously — before the first paint — so a deep
@@ -348,6 +377,11 @@ function onResize(): void {
 
 onBeforeUnmount(() => {
   if (resizeRaf) cancelAnimationFrame(resizeRaf)
+  if (warmId !== undefined) {
+    const cancelIdle = (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback
+    if (typeof warmId === 'number' && cancelIdle) cancelIdle(warmId)
+    else globalThis.clearTimeout(warmId)
+  }
   track.value?.removeEventListener('wheel', onWheel)
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onKeyGlobal)

@@ -7,7 +7,7 @@ withDefaults(defineProps<{ orientation?: 'horizontal' | 'vertical'; label?: stri
 <template>
   <div v-if="label" class="flex items-center gap-2.5 w-full">
     <span class="flex-1 h-px bg-line" />
-    <span class="text-[11px] tracking-[0.08em] uppercase text-muted">{{ label }}</span>
+    <span class="text-[13.2px] tracking-[0.08em] uppercase text-muted">{{ label }}</span>
     <span class="flex-1 h-px bg-line" />
   </div>
   <div

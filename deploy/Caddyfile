@@ -76,6 +76,16 @@
             roll_size 50mb
             roll_keep 10
         }
-        format json
+        # OAuth callbacks carry single-use `code` / `state` secrets in the query
+        # string; redact them so access logs cannot be replayed as credentials.
+        format filter {
+            wrap json
+            fields {
+                request>uri query {
+                    delete code
+                    delete state
+                }
+            }
+        }
     }
 }

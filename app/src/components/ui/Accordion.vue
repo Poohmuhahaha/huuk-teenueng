@@ -28,12 +28,12 @@ function toggle(id: string): void {
       >
         <span>{{ it.title }}</span>
         <span
-          class="transition-transform duration-150 text-muted text-[13px] inline-block"
+          class="transition-transform duration-150 text-muted text-[15.6px] inline-block"
           :class="{ 'rotate-45': isOpen(it.id) }"
           aria-hidden="true"
         >＋</span>
       </button>
-      <div v-show="isOpen(it.id)" class="px-3.5 pb-3.5 text-[13px] text-muted">
+      <div v-show="isOpen(it.id)" class="px-3.5 pb-3.5 text-[15.6px] text-muted">
         <slot :item="it" />
       </div>
     </div>

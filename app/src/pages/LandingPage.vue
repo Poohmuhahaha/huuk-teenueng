@@ -203,7 +203,7 @@ onMounted(() => {
               {{ t('auth.login') }}
             </button>
           </div>
-          <p class="pf-lede" style="margin-top: 20px; font-size: 16px;">{{ t('landing.demoNote') }}</p>
+          <p class="pf-lede" style="margin-top: 20px; font-size: 19.2px;">{{ t('landing.demoNote') }}</p>
         </div>
       </section>
 

@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 
 use crate::error::{ApiError, AppJson};
 use crate::handlers::{current_account, has_read_access, require_perm};
-use crate::model::WorkspaceSummary;
+use crate::model::{workspace_owner_role, WorkspaceSummary, WORKSPACE_OWNER_ROLE};
 use crate::store::{blank_workspace_for, random_hex, Store};
 use crate::AppState;
 
@@ -58,9 +58,17 @@ pub async fn create(
     AppJson(body): AppJson<WorkspaceBody>,
 ) -> Result<Json<WorkspaceSummary>, ApiError> {
     let mut store = s.write().await;
-    require_perm(&mut store, &headers, "platforms.manage")?;
-    let name = validate_name(&body.name)?;
     let account = current_account(&store, &headers);
+    // A signed-in account with no workspace is about to finish first-run
+    // onboarding. It must be able to create that first workspace even when its
+    // starter role (Viewer) has no workspace-management permission yet.
+    let first_workspace = account
+        .as_deref()
+        .is_some_and(|email| store.visible_workspaces(Some(email)).is_empty());
+    if !first_workspace {
+        require_perm(&mut store, &headers, "platforms.manage")?;
+    }
+    let name = validate_name(&body.name)?;
     if store.visible_workspaces(account.as_deref()).len() >= MAX_WORKSPACES {
         return Err(ApiError::bad_request("too many workspaces (max 50)"));
     }
@@ -68,8 +76,55 @@ pub async fn create(
     let workspace = blank_workspace_for(&format!("ws-{}", random_hex(6)), &name, owner);
     let summary = workspace.summary(account.as_deref());
     store.workspaces.push(workspace);
+    if first_workspace {
+        if let Some(email) = account.as_deref() {
+            promote_first_workspace_owner(&mut store, email);
+        }
+    }
     tracing::info!(workspace = %summary.id, name = %summary.name, owner = %owner, "workspace created");
     Ok(Json(summary))
+}
+
+/// A self-serve account starts as a Viewer. When it creates its first
+/// workspace it becomes that workspace's owner, with the workspace-scoped
+/// permissions but not deployment-wide setup/user administration.
+fn promote_first_workspace_owner(store: &mut Store, email: &str) {
+    let Some(name) = store.accounts.get(email).map(|a| a.name.clone()) else {
+        return;
+    };
+    let Some(role) = store
+        .setup
+        .users
+        .iter()
+        .find(|u| u.name == name)
+        .map(|u| u.role.clone())
+    else {
+        return;
+    };
+    if role_has(store, &role, "platforms.manage") && role_has(store, &role, "brand.write") {
+        return;
+    }
+    if !store
+        .setup
+        .roles
+        .iter()
+        .any(|r| r.name == WORKSPACE_OWNER_ROLE)
+    {
+        store.setup.roles.push(workspace_owner_role());
+    }
+    if let Some(user) = store.setup.users.iter_mut().find(|u| u.name == name) {
+        user.role = WORKSPACE_OWNER_ROLE.into();
+    }
+    tracing::info!(email = %email, "first workspace created; account promoted to workspace owner");
+}
+
+fn role_has(store: &Store, role: &str, perm: &str) -> bool {
+    store
+        .setup
+        .roles
+        .iter()
+        .find(|r| r.name == role)
+        .is_some_and(|r| r.permissions.iter().any(|p| p == perm))
 }
 
 /// `PATCH /api/workspaces/{id}` — renames a workspace the account owns.
@@ -114,6 +169,10 @@ pub async fn remove(
             "the last workspace cannot be deleted — create another one first",
         ));
     }
+    // Drop every entity owned by the workspace before removing the container,
+    // so planning/content/finance rows cannot outlive it (and cannot be
+    // resurrected if the generated id is ever reused).
+    store.clear_workspace_data(&id);
     store.workspaces.remove(position);
     // Drop everything ephemeral that belonged to the workspace.
     store.clear_workspace_tokens(&id);

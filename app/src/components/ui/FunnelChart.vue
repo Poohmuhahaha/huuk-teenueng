@@ -27,12 +27,12 @@ function share(v: number): number {
     <div v-if="!steps.length" class="text-muted text-sm">No data yet.</div>
     <div v-else class="grid gap-2">
       <div v-for="(s, i) in steps" :key="`${s.label}-${i}`" class="grid grid-cols-[minmax(56px,92px)_minmax(0,1fr)_auto_40px] items-center gap-2.5">
-        <span class="text-[12.5px] truncate overflow-hidden">{{ s.label }}</span>
+        <span class="text-[15px] truncate overflow-hidden">{{ s.label }}</span>
         <div class="h-[14px] bg-faint rounded-full overflow-hidden">
           <div class="h-full bg-accent rounded-full" :style="{ width: width(s.value), opacity: Math.max(0.3, 1 - i * 0.16) }" />
         </div>
-        <b class="text-[12.5px] min-w-8 text-right">{{ Number(num(s.value)).toLocaleString('en-US') }}</b>
-        <span class="text-muted text-[11.5px] text-right">{{ share(s.value) }}%</span>
+        <b class="text-[15px] min-w-8 text-right">{{ Number(num(s.value)).toLocaleString('en-US') }}</b>
+        <span class="text-muted text-[13.8px] text-right">{{ share(s.value) }}%</span>
       </div>
     </div>
   </div>

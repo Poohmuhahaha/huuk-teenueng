@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
@@ -13,12 +13,30 @@ import { t } from '@/core/i18n'
 
 const route = useRoute()
 const { authRequired, isLoggedIn } = usePermission()
-const { isPending: setupPending } = useSetup()
+const { data: setup, isPending: setupPending, refetch: refetchSetup } = useSetup()
 const restored = ref(false)
 
 // A signed-in account always needs at least one workspace before the planner
 // is usable; workspaces keep each account's brands and connections separate.
-const { data: workspaces, isSuccess: workspacesLoaded } = useWorkspaces()
+const {
+  data: workspaces,
+  isSuccess: workspacesLoaded,
+  isPending: workspacesPending,
+  isFetching: workspacesFetching,
+  isError: workspacesError,
+  refetch: refetchWorkspaces,
+} = useWorkspaces()
+
+// A query that raced the anonymous boot must be replayed as soon as a
+// session exists; this is what makes post-signup workspace onboarding land
+// on the create-workspace screen instead of an empty app shell.
+watch(
+  isLoggedIn,
+  (loggedIn) => {
+    if (loggedIn) void refetchWorkspaces()
+  },
+  { immediate: true },
+)
 
 // The brand's palette/fonts (CI) theme the whole site — public data.
 const { data: brand } = useBrand()
@@ -34,10 +52,53 @@ watch([brand, fontAssets], () => {
 onMounted(async () => {
   await restore().catch(() => undefined)
   restored.value = true
+  // Establishing the session clears the query cache, which can strand the
+  // boot-critical setup query; replay it so boot never waits forever.
+  if (setup.value === undefined) void refetchSetup()
 })
+
+const slowBoot = ref(false)
+const slowWorkspace = ref(false)
+let bootTimer: number | undefined
+let workspaceTimer: number | undefined
+
+onMounted(() => {
+  bootTimer = window.setTimeout(() => { slowBoot.value = true }, 6_000)
+})
+onBeforeUnmount(() => {
+  window.clearTimeout(bootTimer)
+  window.clearTimeout(workspaceTimer)
+})
+
+function reloadPage(): void {
+  window.location.reload()
+}
 
 const ready = computed(() => restored.value && !setupPending.value)
 const showLogin = computed(() => ready.value && authRequired.value && !isLoggedIn.value)
+const workspaceGatePending = computed(
+  () =>
+    ready.value &&
+    !route.meta.public &&
+    isLoggedIn.value &&
+    !workspacesLoaded.value &&
+    (workspacesPending.value || workspacesFetching.value),
+)
+const workspaceGateError = computed(
+  () =>
+    ready.value &&
+    !route.meta.public &&
+    isLoggedIn.value &&
+    workspacesError.value &&
+    !workspacesFetching.value,
+)
+watch(workspaceGatePending, (pending) => {
+  window.clearTimeout(workspaceTimer)
+  slowWorkspace.value = false
+  if (pending) {
+    workspaceTimer = window.setTimeout(() => { slowWorkspace.value = true }, 6_000)
+  }
+})
 const showWorkspaceSetup = computed(
   () =>
     ready.value &&
@@ -53,43 +114,35 @@ const showWorkspaceSetup = computed(
   <RouterView v-if="route.meta.public" />
   <!-- Production gate: nothing to do before signing in. -->
   <LoginPage v-else-if="showLogin" />
-  <!-- Boot Loading Animation Screen: 1:1 Squares Wave Loader -->
-  <div
-    v-else-if="!ready"
-    class="min-h-screen w-full flex flex-col items-center justify-center bg-surface select-none relative overflow-hidden"
-  >
-    <!-- Ambient subtle background glow -->
-    <div
-      class="absolute w-80 h-80 rounded-full bg-wash blur-3xl -z-10 pointer-events-none opacity-80"
-    />
-
-    <div class="flex flex-col items-center text-center gap-6 px-6 max-w-sm">
-      <!-- Huuk Brand Logo -->
-      <img
-        src="/huuk-logo.svg"
-        alt="Huuk"
-        class="h-8 sm:h-9 w-auto object-contain opacity-90 transition-opacity"
-      />
-
-      <!-- 1:1 Squares Loading Wave -->
-      <div class="flex items-center gap-2.5 sm:gap-3 py-2" role="status" aria-label="Loading">
-        <div
-          v-for="i in 5"
-          :key="i"
-          class="square-loader-item w-7 h-7 sm:w-8 sm:h-8 aspect-square flex-none"
-          :style="{ animationDelay: `${(i - 1) * 0.14}s` }"
-        />
+  <!-- Boot: a branded loading stage instead of a blank white page. -->
+  <div v-else-if="!ready || workspaceGatePending" class="huuk-boot">
+    <span class="huuk-boot-ambient" aria-hidden="true"></span>
+    <div class="huuk-boot-stage">
+      <div class="huuk-boot-mark" aria-hidden="true">
+        <span class="huuk-boot-orbit"></span>
+        <span class="huuk-boot-orbit is-two"></span>
+        <span class="huuk-boot-monogram">H</span>
       </div>
-
-      <!-- Dynamic Loading Status with Animated Bouncing Dots -->
-      <div class="flex items-center gap-1.5 text-xs font-semibold text-muted tracking-wider uppercase">
-        <span>{{ t('common.loading').replace(/…|\.\.\./, '') }}</span>
-        <span class="inline-flex gap-1 items-center">
-          <span class="w-1 h-1 rounded-full bg-muted/70 animate-bounce [animation-delay:0ms]" />
-          <span class="w-1 h-1 rounded-full bg-muted/70 animate-bounce [animation-delay:150ms]" />
-          <span class="w-1 h-1 rounded-full bg-muted/70 animate-bounce [animation-delay:300ms]" />
-        </span>
+      <p class="huuk-boot-brand">Huuk<span>by teenueng</span></p>
+      <p class="huuk-boot-title">Getting your studio ready</p>
+      <p class="huuk-boot-sub">
+        {{ workspaceGatePending ? 'Loading your workspace…' : 'Restoring your session…' }}
+      </p>
+      <div class="huuk-boot-track" aria-hidden="true"><span class="huuk-boot-sweep"></span></div>
+      <p class="huuk-boot-status"><span class="huuk-boot-pulse" aria-hidden="true"></span>Loading</p>
+      <div v-if="slowBoot || slowWorkspace" class="huuk-boot-slow">
+        <p>This is taking longer than usual. Check your connection and try again.</p>
+        <button type="button" class="btn w-auto" @click="reloadPage">{{ t('common.reload') }}</button>
       </div>
+    </div>
+  </div>
+  <!-- Workspace lookup failed: give the user a retry instead of an empty shell. -->
+  <div v-else-if="workspaceGateError" class="min-h-screen grid place-items-center p-6 bg-wash">
+    <div class="card p-6 max-w-sm w-full text-center grid gap-3">
+      <p class="font-semibold text-ink m-0">{{ t('ws.loadError') }}</p>
+      <button type="button" class="btn w-auto justify-self-center" @click="refetchWorkspaces()">
+        {{ t('common.tryAgain') }}
+      </button>
     </div>
   </div>
   <!-- First run: a signed-in account without a workspace creates one first. -->

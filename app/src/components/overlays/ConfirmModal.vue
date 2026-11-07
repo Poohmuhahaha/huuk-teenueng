@@ -19,7 +19,7 @@ const emit = defineEmits<{ cancel: []; confirm: [] }>()
     <div class="w-[90%] max-w-[480px] bg-surface border border-ink shadow-[6px_6px_0_var(--color-ink)] rounded-none" role="dialog" aria-modal="true">
       <div class="flex items-center justify-between p-3.5 px-4.5 border-b border-ink">
         <h3 class="m-0 text-lg font-bold text-ink">{{ title }}</h3>
-        <button type="button" class="bg-transparent border-0 text-[22px] leading-none cursor-pointer text-muted w-auto hover:text-ink" aria-label="Close" @click="emit('cancel')">×</button>
+        <button type="button" class="bg-transparent border-0 text-[26.4px] leading-none cursor-pointer text-muted w-auto hover:text-ink" aria-label="Close" @click="emit('cancel')">×</button>
       </div>
       <div class="p-4.5">
         <p v-if="message" class="m-0 mb-2 text-sm text-ink">{{ message }}</p>

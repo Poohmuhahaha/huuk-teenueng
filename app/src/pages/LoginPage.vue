@@ -2,14 +2,16 @@
 // Full-screen gate shown before the app when AUTH_REQUIRED is on.
 // New users go to the dedicated /register page (SaaS self-serve signup).
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { login } from '@/core/auth'
 import { useSetup } from '@/core/queries'
 import { t } from '@/core/i18n'
+import { BASE } from '@/api/client'
 
 const REMEMBER_KEY = 'huuk.login.email'
 
 const router = useRouter()
+const route = useRoute()
 const { data: setup } = useSetup()
 
 const email = ref('')
@@ -72,6 +74,18 @@ function startDrag(e: PointerEvent): void {
 }
 
 const canRegister = computed(() => setup.value?.allowRegistration ?? false)
+const googleReady = ref(false)
+const googleHref = computed(() => `${BASE}/api/auth/oauth/google/start`)
+const OAUTH_ERRORS: Record<string, string> = {
+  google_not_configured: 'auth.googleNotConfigured',
+  google_email_unverified: 'auth.googleEmailUnverified',
+  registration_disabled: 'auth.registrationDisabled',
+  google_failed: 'auth.googleFailed',
+}
+const oauthError = computed(() => {
+  const code = typeof route.query.error === 'string' ? route.query.error : ''
+  return code ? t(OAUTH_ERRORS[code] ?? 'auth.googleFailed') : ''
+})
 
 onMounted(() => {
   try {
@@ -83,6 +97,10 @@ onMounted(() => {
   } catch {
     // storage unavailable (private mode) — the checkbox simply stays off
   }
+  fetch(`${BASE}/api/auth/oauth/google/status`)
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data) => { googleReady.value = Boolean(data?.configured) })
+    .catch(() => { googleReady.value = false })
   form.value?.querySelector('input')?.focus()
 })
 
@@ -164,6 +182,7 @@ async function submit(): Promise<void> {
       <div class="lp-form">
         <h1>{{ t('auth.login') }}</h1>
         <p class="lp-sub">{{ t('auth.loginSubtitle') }}</p>
+        <p v-if="oauthError" class="autherr" role="alert">{{ oauthError }}</p>
         <form ref="form" @submit.prevent="submit">
           <label class="lbl" for="lp-email">{{ t('auth.email') }}</label>
           <input id="lp-email" v-model="email" class="field" type="email" autocomplete="email" required />
@@ -179,6 +198,14 @@ async function submit(): Promise<void> {
             {{ busy ? t('common.loading') : t('auth.login') }}
           </button>
         </form>
+        <div v-if="googleReady" class="mt-4">
+          <div class="flex items-center gap-3 text-muted text-2xs uppercase tracking-wider my-4">
+            <span class="h-px flex-1 bg-line" />
+            <span>{{ t('auth.or') }}</span>
+            <span class="h-px flex-1 bg-line" />
+          </div>
+          <a class="btn w-full justify-center text-sm py-2.5" :href="googleHref">{{ t('auth.continueWithGoogle') }}</a>
+        </div>
         <p v-if="canRegister" class="lp-foot">
           <span>{{ t('auth.notMember') }}</span>
           <button type="button" class="lp-link" @click="router.push('/register')">

@@ -279,15 +279,15 @@ onMounted(() => {
           <!-- Top Metric Callout: Value & % Share (hidden when inactive to reduce noise) -->
           <div class="h-9 flex flex-col items-center justify-end mb-1.5 transition-transform duration-200 group-hover/col:-translate-y-0.5">
             <template v-if="col.hasData">
-              <span class="text-[8.5px] sm:text-[9.5px] font-semibold text-muted bg-wash border border-line/60 px-1 py-0.2 rounded-full mb-0.5 transition-colors group-hover/col:bg-black group-hover/col:text-white leading-tight">
+              <span class="text-[10.2px] sm:text-[11.4px] font-semibold text-muted bg-wash border border-line/60 px-1 py-0.2 rounded-full mb-0.5 transition-colors group-hover/col:bg-black group-hover/col:text-white leading-tight">
                 {{ col.pct }}%
               </span>
-              <span class="text-[9.5px] sm:text-[11px] font-bold font-mono text-ink tracking-tight whitespace-nowrap">
+              <span class="text-[11.4px] sm:text-[13.2px] font-bold font-mono text-ink tracking-tight whitespace-nowrap">
                 {{ formatTowerValue(col.value) }}
               </span>
             </template>
             <template v-else>
-              <span class="text-[10px] text-muted/30 font-mono opacity-0 group-hover/col:opacity-100 transition-opacity">
+              <span class="text-[12px] text-muted/30 font-mono opacity-0 group-hover/col:opacity-100 transition-opacity">
                 —
               </span>
             </template>
@@ -311,7 +311,7 @@ onMounted(() => {
           <!-- Bottom Label: Month Name -->
           <div class="w-full border-t border-line/40 pt-1 mt-1 flex flex-col items-center text-center min-w-0 max-w-full">
             <span
-              class="text-[9.5px] sm:text-[11px] font-bold truncate max-w-full transition-colors"
+              class="text-[11.4px] sm:text-[13.2px] font-bold truncate max-w-full transition-colors"
               :class="col.hasData ? 'text-ink group-hover/col:text-brand-600' : 'text-muted/60 group-hover/col:text-ink'"
             >
               {{ col.primaryLabel }}
@@ -332,15 +332,15 @@ onMounted(() => {
             class="flex flex-col items-center group/pt cursor-default transition-transform duration-200 hover:-translate-y-0.5"
             :title="`${pt.label}: ${currency}${pt.val.toLocaleString('en-US')} (${pt.pct}%)`"
           >
-            <span class="text-[9.5px] font-semibold text-muted bg-wash border border-line/60 px-1.5 py-0.5 rounded-full mb-1 group-hover/pt:bg-black group-hover/pt:text-white transition-colors">
+            <span class="text-[11.4px] font-semibold text-muted bg-wash border border-line/60 px-1.5 py-0.5 rounded-full mb-1 group-hover/pt:bg-black group-hover/pt:text-white transition-colors">
               {{ pt.pct }}%
             </span>
-            <span class="text-xs sm:text-[13px] font-bold font-mono text-ink tracking-tight">
+            <span class="text-xs sm:text-[15.6px] font-bold font-mono text-ink tracking-tight">
               {{ formatTowerValue(pt.val) }}
             </span>
-            <span class="text-[11px] font-bold text-ink mt-0.5">
+            <span class="text-[13.2px] font-bold text-ink mt-0.5">
               {{ pt.primaryLabel }}
-              <span v-if="pt.secondaryLabel" class="text-[9.5px] font-medium text-muted font-mono">{{ pt.secondaryLabel }}</span>
+              <span v-if="pt.secondaryLabel" class="text-[11.4px] font-medium text-muted font-mono">{{ pt.secondaryLabel }}</span>
             </span>
           </div>
         </div>
@@ -436,13 +436,13 @@ onMounted(() => {
                   <PlatformLogo :name="it.platform" :size="13" />
                 </span>
                 <span v-else class="w-2.5 h-2.5 rounded-full flex-none shadow-2xs" :style="{ background: it.color }" />
-                <span class="text-[13px] font-bold text-ink truncate">{{ it.label }}</span>
+                <span class="text-[15.6px] font-bold text-ink truncate">{{ it.label }}</span>
               </div>
               <div class="flex items-center gap-1.5 flex-none">
                 <span class="text-sm font-bold text-ink font-mono">
                   <CountUpNumber :value="it.value.toLocaleString('en-US')" />
                 </span>
-                <span class="text-[11px] font-semibold text-muted bg-wash border border-line px-1.5 py-0.5 rounded-full">
+                <span class="text-[13.2px] font-semibold text-muted bg-wash border border-line px-1.5 py-0.5 rounded-full">
                   <CountUpNumber :value="`${it.pct}%`" />
                 </span>
                 <svg
@@ -469,7 +469,7 @@ onMounted(() => {
             </div>
 
             <!-- Sub-metrics metadata (Planned vs Posted, etc.) -->
-            <div v-if="it.sublabel || it.posted !== undefined" class="flex items-center justify-between text-[11px] text-muted pt-0.5">
+            <div v-if="it.sublabel || it.posted !== undefined" class="flex items-center justify-between text-[13.2px] text-muted pt-0.5">
               <span class="truncate">{{ it.sublabel }}</span>
               <span
                 v-if="it.posted !== undefined"

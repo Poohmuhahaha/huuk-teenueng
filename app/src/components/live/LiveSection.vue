@@ -144,7 +144,7 @@ async function onReconnect(): Promise<void> {
     <div class="flex items-center justify-between flex-wrap gap-2.5 mb-2">
       <div class="flex items-center gap-2 flex-wrap">
         <h2 class="section-title m-0 text-xs font-bold uppercase tracking-widest text-muted">{{ t('live.title') }}</h2>
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[13.2px] font-semibold bg-black text-white font-mono">
           {{ posts.length }} posts
         </span>
         <span class="text-xs text-muted font-mono">{{ t('live.synced') }} {{ syncedLabel(live?.fetchedAt) }}</span>
@@ -206,7 +206,7 @@ async function onReconnect(): Promise<void> {
           <div v-else class="w-full h-full flex flex-col justify-between p-3.5 bg-wash/50 text-ink relative overflow-hidden select-none border-b border-line">
             <div class="flex items-center justify-between z-10">
               <PlatformLogo :id="p.platform" :size="16" :tile="true" />
-              <span v-if="p.videoLength" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface text-muted backdrop-blur-sm border border-line">{{ mmss(p.videoLength) }}</span>
+              <span v-if="p.videoLength" class="text-[12px] font-mono px-1.5 py-0.5 rounded bg-surface text-muted backdrop-blur-sm border border-line">{{ mmss(p.videoLength) }}</span>
             </div>
             <div class="flex flex-col items-center justify-center my-auto text-center z-10 px-1">
               <div class="w-9 h-9 rounded-full bg-surface border border-line flex items-center justify-center text-ink mb-1.5 shadow-2xs">
@@ -215,16 +215,16 @@ async function onReconnect(): Promise<void> {
               </div>
               <p class="text-xs font-medium text-ink line-clamp-2 leading-snug m-0">{{ p.caption || p.attachmentTitle || 'Live post' }}</p>
             </div>
-            <div class="text-[10px] text-muted font-mono text-center z-10">{{ dateOf(p.createdAt) }}</div>
+            <div class="text-[12px] text-muted font-mono text-center z-10">{{ dateOf(p.createdAt) }}</div>
             <div class="absolute -right-4 -bottom-4 opacity-5 pointer-events-none scale-125">
               <PlatformLogo :id="p.platform" :size="80" :color="false" />
             </div>
           </div>
-          <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[11px] bg-black/60 text-white rounded-full z-20">{{ platformLabel(p.platform) }} · {{ p.kind }}</span>
-          <span v-if="boostedBy(p.id)" class="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-[11px] bg-accent text-white rounded-full z-20">{{ t('live.boosted') }}</span>
+          <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[13.2px] bg-black/60 text-white rounded-full z-20">{{ platformLabel(p.platform) }} · {{ p.kind }}</span>
+          <span v-if="boostedBy(p.id)" class="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-[13.2px] bg-accent text-white rounded-full z-20">{{ t('live.boosted') }}</span>
         </div>
         <div class="flex flex-col gap-1.5 p-2.5">
-          <p class="m-0 text-[13px] line-clamp-2">{{ p.caption || p.attachmentTitle || '—' }}</p>
+          <p class="m-0 text-[15.6px] line-clamp-2">{{ p.caption || p.attachmentTitle || '—' }}</p>
           <div class="flex flex-wrap gap-2 text-xs text-muted">
             <span>{{ t('live.likes') }} {{ fmt(p.likes) }}</span>
             <span>{{ t('live.comments') }} {{ fmt(p.comments) }}</span>

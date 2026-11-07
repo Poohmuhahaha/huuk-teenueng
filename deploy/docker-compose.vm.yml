@@ -1,0 +1,139 @@
+# Huuk on a 24/7 VM (AWS EC2 free plan, Hetzner, GratisVPS, ...).
+#
+# Build on the VM itself so the image matches the CPU architecture:
+#   cp deploy/.env.vm.example deploy/.env.vm
+#   $EDITOR deploy/.env.vm
+#   docker compose --env-file deploy/.env.vm \
+#     -f deploy/docker-compose.vm.yml up -d --build
+#
+# With the bundled Cloudflare Tunnel container (no public ports needed):
+#   docker compose --env-file deploy/.env.vm \
+#     -f deploy/docker-compose.vm.yml --profile tunnel up -d
+#
+# Data: uploads + a JSON snapshot are kept in huuk-data; PostgreSQL keeps the
+# durable application snapshot in the huuk-pgdata volume.
+
+name: huuk-vm
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.app
+    image: huuk:${HUUK_IMAGE_TAG:-local}
+    container_name: huuk-app
+    restart: unless-stopped
+    env_file:
+      - .env.vm
+    environment:
+      BIND_ADDR: 0.0.0.0
+      PORT: "8787"
+      DATA_FILE: /data/store.json
+      STATIC_DIR: /app/dist
+      RUST_LOG: ${RUST_LOG:-info}
+      DATABASE_URL: postgres://${POSTGRES_USER:-huuk}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env.vm}@postgres:5432/${POSTGRES_DB:-huuk}
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # Loopback only. Cloudflare Tunnel (container or host) reaches the app
+      # over the compose network / localhost; nothing is exposed publicly.
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - huuk-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8787/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # PostgreSQL inside the VM. The port is bound to loopback only; use an SSH
+  # tunnel for DBeaver/pgAdmin/psql access. Volumes: huuk-pgdata.
+  postgres:
+    image: postgres:16-alpine
+    container_name: huuk-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-huuk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env.vm}
+      POSTGRES_DB: ${POSTGRES_DB:-huuk}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - max_connections=50
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - huuk-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-huuk} -d ${POSTGRES_DB:-huuk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # Optional: HTTPS directly on the VM with Caddy + Let's Encrypt.
+  # Point an A record at the VM's public IP, then run with --profile caddy.
+  # No Cloudflare account or nameserver change is required.
+  caddy:
+    image: caddy:2-alpine
+    container_name: huuk-caddy
+    restart: unless-stopped
+    profiles: ["caddy"]
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-beta.huuk.teenueng.com}
+      API_UPSTREAM: app:8787
+      ACME_EMAIL: ${ACME_EMAIL:-hontrapoowadol@gmail.com}
+    volumes:
+      - ./Caddyfile.vm:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # Optional: run the Cloudflare Tunnel connector next to the app.
+  # Create the tunnel in Zero Trust -> Networks -> Tunnels, then set
+  # CLOUDFLARED_TOKEN in deploy/.env.vm and use --profile tunnel.
+  # Public hostname service URL: http://app:8787
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN:-}
+    depends_on:
+      app:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  huuk-data:
+  huuk-pgdata:
+  caddy-data:
+  caddy-config:

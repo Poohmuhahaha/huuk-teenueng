@@ -45,7 +45,7 @@ function linkOf(id: PlatformId): string | null {
   <!-- Inline Bar (default when popup=false) -->
   <div v-if="!popup" class="flex flex-wrap items-center gap-2 min-w-0 mb-3" role="group" :aria-label="t('social.title')" :title="t('social.title')">
     <span class="tracking-[0.08em] uppercase text-muted flex-none text-2xs font-extrabold max-sm:hidden">{{ t('social.title') }}</span>
-    <div v-for="p in PLATFORMS" :key="p.id" class="inline-flex items-center gap-[7px] px-[13px] py-[5px] rounded-full border text-[13.5px] font-[550] flex-none transition-colors hover:bg-wash hover:text-ink"
+    <div v-for="p in PLATFORMS" :key="p.id" class="inline-flex items-center gap-[7px] px-[13px] py-[5px] rounded-full border text-[16.2px] font-[550] flex-none transition-colors hover:bg-wash hover:text-ink"
       :class="activePlatforms.includes(p.id) ? 'on bg-ink text-accent-ink border-ink font-[650]' : 'bg-surface text-muted border-faint'" :title="`Include ${p.name}`">
       <input type="checkbox" class="m-0 accent-accent cursor-pointer" :checked="activePlatforms.includes(p.id)" :aria-label="`Include ${p.name}`"
         @change="onToggle(p.id, $event)" />
@@ -93,7 +93,7 @@ function linkOf(id: PlatformId): string | null {
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
       <span>{{ t('social.title') }}</span>
-      <span class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-wash text-muted border border-line/60">
+      <span class="px-1.5 py-0.2 rounded-full text-[12px] font-bold bg-wash text-muted border border-line/60">
         {{ activePlatforms.length }}
       </span>
     </button>
@@ -144,7 +144,7 @@ function linkOf(id: PlatformId): string | null {
               <PlatformLogo :id="p.id" :size="18" :tile="true" />
               <div class="min-w-0">
                 <div class="font-semibold text-xs text-ink truncate">{{ p.name }}</div>
-                <div class="flex items-center gap-1.5 text-[10px] text-muted">
+                <div class="flex items-center gap-1.5 text-[12px] text-muted">
                   <span
                     class="inline-block w-1.5 h-1.5 rounded-full"
                     :class="statusOf(p.id) === 'connected' ? 'bg-emerald-500' : statusOf(p.id) === 'connecting' ? 'bg-amber-500' : 'bg-neutral-400'"
@@ -179,7 +179,7 @@ function linkOf(id: PlatformId): string | null {
               <button
                 v-else
                 type="button"
-                class="text-[11px] font-semibold text-muted hover:text-ink px-2 py-0.5 rounded bg-wash border border-line/60 hover:bg-surface cursor-pointer transition"
+                class="text-[13.2px] font-semibold text-muted hover:text-ink px-2 py-0.5 rounded bg-wash border border-line/60 hover:bg-surface cursor-pointer transition"
                 :title="`${p.name} — ${t('social.connect')}`"
                 @click="loginFor = p.id"
               >

@@ -14,8 +14,10 @@ const props = withDefaults(
     inline?: boolean
     /** Allow backdrop click / ESC to dismiss. */
     dismissable?: boolean
+    /** Show the × close button in the header. */
+    closable?: boolean
   }>(),
-  { side: 'right', width: '360px', dismissable: true },
+  { side: 'right', width: '360px', dismissable: true, closable: true },
 )
 
 const uid = useId()
@@ -107,7 +109,7 @@ const drawerStyle = computed(() => {
   >
     <header class="flex items-center justify-between gap-3 p-3.5 px-4 border-b border-line">
       <h3 v-if="title" :id="titleId" class="m-0 text-lg font-display text-ink truncate">{{ title }}</h3>
-      <button type="button" class="p-drawer-x w-auto bg-transparent border-0 text-[22px] leading-none text-muted cursor-pointer p-0 hover:text-ink" :aria-label="t('common.close')" @click="open = false">×</button>
+      <button v-if="closable" type="button" class="p-drawer-x w-auto bg-transparent border-0 text-[26.4px] leading-none text-muted cursor-pointer p-0 hover:text-ink" :aria-label="t('common.close')" @click="open = false">×</button>
     </header>
     <div class="flex-1 overflow-y-auto p-4"><slot /></div>
     <footer v-if="$slots.footer" class="flex justify-end gap-2.5 p-3 px-4 border-t border-line"><slot name="footer" /></footer>
@@ -153,7 +155,7 @@ const drawerStyle = computed(() => {
           @pointerdown="startDrag"
         >
           <h3 v-if="title" :id="titleId" class="m-0 text-lg font-display text-ink truncate pointer-events-none">{{ title }}</h3>
-          <button type="button" class="p-drawer-x w-auto bg-transparent border-0 text-[22px] leading-none text-muted cursor-pointer p-0 hover:text-ink" :aria-label="t('common.close')" @click="open = false">×</button>
+          <button v-if="closable" type="button" class="p-drawer-x w-auto bg-transparent border-0 text-[26.4px] leading-none text-muted cursor-pointer p-0 hover:text-ink" :aria-label="t('common.close')" @click="open = false">×</button>
         </header>
         <div class="flex-1 overflow-y-auto p-4"><slot /></div>
         <footer v-if="$slots.footer" class="flex justify-end gap-2.5 p-3 px-4 border-t border-line flex-none"><slot name="footer" /></footer>

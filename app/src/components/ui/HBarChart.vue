@@ -31,11 +31,11 @@ function opacity(i: number): number {
     <div v-else class="grid gap-2">
       <div v-for="(it, i) in items" :key="`${it.label}-${i}`" class="grid grid-cols-[minmax(64px,140px)_minmax(0,1fr)_auto] items-center gap-2.5"
         :title="`${it.label}: ${num(it.value).toLocaleString('en-US')}`">
-        <span class="text-[12.5px] truncate overflow-hidden">{{ it.label }}</span>
+        <span class="text-[15px] truncate overflow-hidden">{{ it.label }}</span>
         <div class="h-3 bg-faint rounded-full overflow-hidden">
           <div class="h-full rounded-full" :style="{ width: width(it.value), background: color(i), opacity: opacity(i) }" />
         </div>
-        <b class="text-[12.5px] min-w-12 text-right">{{ num(it.value).toLocaleString('en-US') }}</b>
+        <b class="text-[15px] min-w-12 text-right">{{ num(it.value).toLocaleString('en-US') }}</b>
       </div>
     </div>
   </div>

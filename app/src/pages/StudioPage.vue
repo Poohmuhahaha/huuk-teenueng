@@ -42,14 +42,15 @@ const selectedId = computed(() =>
 const rows = computed<ContentSummary[]>(() => listQ.data.value ?? [])
 const selectedRow = computed(() => rows.value.find((r) => r.id === selectedId.value) ?? null)
 
-// Auto-select first item on desktop so right pane is immediately active and ready
+// Auto-select the first item on desktop so the right pane is immediately active,
+// and recover when the current id belongs to another hub (or no longer exists).
 watch(
-  [() => rows.value, () => wide.value],
-  ([list, isWide]) => {
-    if (isWide && !selectedId.value && list && list.length > 0) {
-      if (props.embedded) emit('update:id', list[0].id)
-      else void router.replace(`/studio/${list[0].id}`)
-    }
+  [() => rows.value, () => wide.value, () => selectedId.value],
+  ([list, isWide, id]) => {
+    if (!isWide || !list?.length) return
+    if (id && list.some((row) => row.id === id)) return
+    if (props.embedded) emit('update:id', list[0].id)
+    else void router.replace(`/studio/${list[0].id}`)
   },
   { immediate: true },
 )
@@ -57,7 +58,10 @@ watch(
 // Mobile-only bottom drawer: only active when card is narrow
 const editorOpen = ref(false)
 let mounted = false
-onMounted(() => { mounted = true })
+onMounted(() => {
+  mounted = true
+  if (selectedId.value && !wide.value && !deckFull.value) editorOpen.value = true
+})
 watch(selectedId, (id) => {
   if (id && mounted && !wide.value && !deckFull.value) {
     editorOpen.value = true
@@ -69,6 +73,10 @@ watch(editorOpen, (open) => {
     if (props.embedded) emit('update:id', '')
     else void router.replace('/studio')
   }
+})
+watch([wide, deckFull], ([isWide, full]) => {
+  if (isWide || full) editorOpen.value = false
+  else if (selectedId.value) editorOpen.value = true
 })
 
 function select(id: string): void {
@@ -95,10 +103,6 @@ async function newContent(): Promise<void> {
 
 function statusLabel(s: ContentStatus): string {
   return t(`studio.status.${s}`)
-}
-
-function statusBadgeClass(_s: ContentStatus): string {
-  return 'bg-ink text-white'
 }
 
 // Status filter as a toggle button: press to open the status menu.
@@ -137,6 +141,7 @@ function updatedLabel(row: ContentSummary): string {
                 <span>{{ currentStatusLabel }}</span> <span aria-hidden="true">▾</span>
               </button>
             </template>
+
           </DropdownMenu>
           <span class="text-xs text-muted font-medium">{{ rows.length }} items</span>
         </div>
@@ -147,9 +152,9 @@ function updatedLabel(row: ContentSummary): string {
       </div>
     </DockBar>
 
-    <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-0 rounded-2xl bg-surface overflow-hidden mt-2">
+    <div class="studio-shell flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] gap-0 rounded-2xl bg-surface overflow-hidden mt-2">
       <!-- Left pane: Article List -->
-      <div class="md:col-span-5 border-r border-line/40 flex flex-col min-h-0 overflow-y-auto p-3 gap-2">
+      <div class="border-r border-line/40 flex flex-col min-h-0 overflow-y-auto p-3 md:px-0 md:py-3">
         <div v-if="listQ.isPending.value" class="muted p-4 text-center">{{ t('studio.loading') }}</div>
         <div v-else-if="listQ.isError.value" class="py-4 grid gap-2 justify-items-center text-center">
           <p class="muted">{{ listQ.error.value?.message }}</p>
@@ -157,35 +162,47 @@ function updatedLabel(row: ContentSummary): string {
         </div>
         <p v-else-if="!rows.length" class="muted p-6 text-center">{{ t('studio.empty') }}</p>
         <template v-else>
-          <button v-for="row in rows" :key="row.id"
-            class="w-full text-left p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5"
-            :class="row.id === selectedId ? 'border-ink bg-wash/60 shadow-xs' : 'border-line/60 bg-surface hover:border-line hover:bg-wash/30'"
-            @click="select(row.id)">
-            <div class="flex items-start justify-between gap-2">
-              <strong class="text-sm font-bold text-ink leading-snug line-clamp-1">{{ row.title || t('studio.untitled') }}</strong>
-              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider flex-none"
-                :class="statusBadgeClass(row.status)">
-                {{ statusLabel(row.status) }}
-              </span>
+          <button v-for="row in rows" :key="row.id" type="button" class="camp-item card-fade group"
+            :class="{ active: row.id === selectedId }" @click="select(row.id)">
+            <div class="camp-item-head">
+              <div class="min-w-0 flex-1 pr-2">
+                <strong class="block text-[16.8px] font-bold text-ink tracking-tight truncate">{{ row.title || t('studio.untitled') }}</strong>
+                <p class="text-[13.2px] text-muted truncate m-0 mt-0.5">{{ row.excerpt || t('studio.noExcerpt') }}</p>
+              </div>
+              <span class="camp-status flex-none" :class="row.status">{{ statusLabel(row.status) }}</span>
             </div>
-            <span class="muted text-xs line-clamp-2 leading-relaxed">{{ row.excerpt || t('studio.noExcerpt') }}</span>
-            <div class="text-[11px] text-muted flex items-center gap-1.5 mt-0.5">
-              <span>{{ row.author }}</span>
-              <span>·</span>
-              <span>{{ updatedLabel(row) }}</span>
-              <span>·</span>
-              <span>{{ row.wordCount }} {{ t('studio.words') }}</span>
-              <template v-if="row.tags.length">
-                <span>·</span>
-                <span class="truncate">{{ row.tags.join(', ') }}</span>
-              </template>
+
+            <div class="flex items-center gap-1.5 text-[13.8px] text-ink-soft font-mono mt-0.5">
+              <svg class="w-3.5 h-3.5 text-muted flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+              <span class="truncate">{{ row.author }} · {{ updatedLabel(row) }}</span>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 text-xs text-muted mt-1.5 w-full pt-2.5 border-t border-black/[0.06]">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="inline-flex items-center gap-1 font-mono text-[13.2px] text-muted min-w-0">
+                  <svg class="w-3.5 h-3.5 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.59 7.59a2 2 0 0 1 0 2.82z"></path>
+                    <circle cx="7.5" cy="7.5" r="1.5"></circle>
+                  </svg>
+                  <span class="truncate">{{ row.tags.length ? row.tags.join(', ') : '—' }}</span>
+                </span>
+              </div>
+              <span class="font-mono font-bold text-ink text-[15.6px] tracking-tight tabular-nums flex-none">
+                {{ row.wordCount }} {{ t('studio.words') }}
+              </span>
             </div>
           </button>
         </template>
+
       </div>
 
-      <!-- Right pane: In-Place Content Editor -->
-      <div class="md:col-span-7 flex flex-col min-h-0 overflow-y-auto p-4 md:p-6 bg-surface">
+      <!-- Right pane: In-Place Content Editor (wide layouts only; narrow uses the drawer) -->
+      <div v-if="wide || deckFull" class="flex flex-col min-h-0 overflow-y-auto p-4 md:p-6 bg-surface">
         <ContentEditor v-if="selectedRow" :key="selectedRow.id" :id="selectedRow.id" />
         <div v-else class="h-full flex flex-col items-center justify-center p-8 text-center text-muted gap-2 min-h-[300px]">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="opacity-30 mb-2">
@@ -207,3 +224,14 @@ function updatedLabel(row: ContentSummary): string {
     </Drawer>
   </div>
 </template>
+
+<style scoped>
+.studio-page > .studio-shell {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+
+.studio-shell > * {
+  min-height: 0;
+}
+</style>

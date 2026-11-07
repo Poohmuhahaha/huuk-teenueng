@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   useBrand, useBrandFonts, useDeleteFont, useSaveBrand, useUploadFont, useUploadBrandImage,
   usePermission,
 } from '@/core/queries'
 import { t } from '@/core/i18n'
-import InfoTip from '@/components/ui/InfoTip.vue'
 import DockBar from '@/components/ui/DockBar.vue'
 import type { Brand, FontAsset } from '@/mock/db'
 import {
@@ -32,7 +31,117 @@ const saveBrand = useSaveBrand()
 const { can } = usePermission()
 const canWrite = computed(() => can('brand.write'))
 const route = useRoute()
+const router = useRouter()
 const onboarding = computed(() => route.query.onboarding === '1')
+
+// ---- first-run brand onboarding wizard ----
+const obStep = ref(0)
+const obName = ref('')
+const obFont = ref('')
+const obPalette = ref(['', '', '', ''])
+const obVoice = ref('')
+const obError = ref('')
+const obBusy = ref(false)
+const obInitialized = ref(false)
+
+const obStepTitle = computed(() => [
+  t('brand.stepIdentity'),
+  t('brand.cover'),
+  t('brand.logos'),
+  t('brand.typography'),
+  t('brand.paletteLabel'),
+  t('brand.stepVoice'),
+][obStep.value] ?? '')
+
+watch(
+  [brand, onboarding],
+  ([b, on]) => {
+    if (!on) {
+      obInitialized.value = false
+      return
+    }
+    if (!b || obInitialized.value) return
+    obInitialized.value = true
+    obStep.value = 0
+    obName.value = b.channel
+    obFont.value = b.fonts[0] ?? ''
+    obPalette.value = [0, 1, 2, 3].map((i) => b.palette[i] ?? '')
+    obVoice.value = b.voice
+    obError.value = ''
+  },
+  { immediate: true },
+)
+
+function obNext(): void {
+  if (obBusy.value) return
+  if (obStep.value === 0 && !obName.value.trim()) {
+    obError.value = t('brand.onboardingNameRequired')
+    return
+  }
+  if (obStep.value === 3 && !obFont.value) {
+    obError.value = t('brand.onboardingFontRequired')
+    return
+  }
+  obError.value = ''
+  if (obStep.value < 5) {
+    obStep.value += 1
+    return
+  }
+  void obFinish()
+}
+
+function obBack(): void {
+  if (obBusy.value) return
+  obError.value = ''
+  if (obStep.value > 0) obStep.value -= 1
+}
+
+function obPickCover(event: Event): void {
+  bgTargetDevice.value = 'desktop'
+  onPickBgFile(event)
+}
+
+function obApplyCoverUrl(): void {
+  bgTargetDevice.value = 'desktop'
+  applyBgUrl()
+}
+
+async function obPickLogo(event: Event): Promise<void> {
+  await pickLogo(0, event)
+}
+
+function obSetColor(index: number, event: Event): void {
+  const next = [...obPalette.value]
+  next[index] = (event.target as HTMLInputElement).value
+  obPalette.value = next
+}
+
+async function obFinish(): Promise<void> {
+  if (obBusy.value || !brand.value || !canWrite.value) return
+  if (!obName.value.trim()) {
+    obStep.value = 0
+    obError.value = t('brand.onboardingNameRequired')
+    return
+  }
+  obBusy.value = true
+  obError.value = ''
+  try {
+    const patch: Partial<Brand> = {
+      channel: obName.value.trim(),
+      palette: obPalette.value.filter(Boolean),
+      voice: obVoice.value,
+    }
+    if (obFont.value) patch.fonts = [obFont.value]
+    await saveBrand.mutateAsync(patch)
+    const query = { ...route.query }
+    delete query.onboarding
+    await router.replace({ path: route.path, query })
+  } catch (e) {
+    obError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    obBusy.value = false
+  }
+}
 const doDraft = ref('')
 const dontDraft = ref('')
 const paletteDraft = ref<string[]>(['', '', '', ''])
@@ -77,19 +186,18 @@ function restartStep(): void {
 }
 
 // ---- Brand Card Background Customization (Desktop & Mobile Independent) ----
-const defaultBrandBg = '/brand-default-bg.jpg'
-const customBgDesktop = ref<string>(
-  typeof window !== 'undefined'
-    ? localStorage.getItem('huuk_brand_bg_desktop') || localStorage.getItem('huuk_brand_bg') || defaultBrandBg
-    : defaultBrandBg,
-)
-const customBgMobile = ref<string>(
-  typeof window !== 'undefined'
-    ? localStorage.getItem('huuk_brand_bg_mobile') || ''
-    : '',
-)
+const LEGACY_DEFAULT_BG = '/brand-default-bg.jpg'
+function loadStoredBg(key: string): string {
+  if (typeof window === 'undefined') return ''
+  const value = localStorage.getItem(key) || ''
+  // Older builds seeded the demo cat collage into this slot. Treat it as a
+  // missing choice so first-run onboarding asks for a real background.
+  return value === LEGACY_DEFAULT_BG ? '' : value
+}
+const customBgDesktop = ref<string>(loadStoredBg('huuk_brand_bg_desktop') || loadStoredBg('huuk_brand_bg'))
+const customBgMobile = ref<string>(loadStoredBg('huuk_brand_bg_mobile'))
 
-const activeBrandBg = computed(() => customBgDesktop.value || defaultBrandBg)
+const activeBrandBg = computed(() => customBgDesktop.value || customBgMobile.value || '')
 
 const bgTargetDevice = ref<'desktop' | 'mobile'>('desktop')
 const currentActiveBg = computed(() =>
@@ -99,11 +207,12 @@ const currentActiveBg = computed(() =>
 const hasCustomBg = computed(() => Boolean(customBgDesktop.value || customBgMobile.value))
 
 const customBgStyle = computed(() => {
-  const d = customBgDesktop.value || customBgMobile.value || defaultBrandBg
-  const m = customBgMobile.value || customBgDesktop.value || defaultBrandBg
+  const d = customBgDesktop.value || customBgMobile.value
+  const m = customBgMobile.value || customBgDesktop.value
+  if (!d && !m) return {}
   return {
-    '--brand-bg-desktop': `url("${d}")`,
-    '--brand-bg-mobile': `url("${m}")`,
+    '--brand-bg-desktop': d ? `url("${d}")` : 'none',
+    '--brand-bg-mobile': m ? `url("${m}")` : 'none',
   } as Record<string, string>
 })
 
@@ -738,11 +847,7 @@ async function removeDont(index: number): Promise<void> {
 </script>
 
 <template>
-  <div class="brandpage" :class="{ 'has-custom-bg': hasCustomBg && (step === 0 || step === 1 || finished) }" :style="customBgStyle">
-    <div v-if="onboarding" class="brand-note">
-      <strong>{{ t('brand.onboardingTitle') }}</strong>
-      <InfoTip :text="t('brand.onboarding')" />
-    </div>
+  <div class="brandpage" :class="{ 'has-custom-bg': hasCustomBg && step === 0 }" :style="customBgStyle">
 
     <div v-if="isPending" class="muted">Loading brand kit…</div>
     <div v-else-if="isError" class="card">
@@ -750,6 +855,109 @@ async function removeDont(index: number): Promise<void> {
       <button class="btn" @click="() => refetch()">Try again</button>
     </div>
     <template v-else-if="brand">
+      <!-- First-run guided setup: ask for the brand basics before the full kit. -->
+      <div v-if="onboarding" class="brand-onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="brand-onboarding-title">
+        <div class="brand-onboarding-card">
+          <header class="brand-onboarding-head">
+            <div>
+              <p class="brand-onboarding-progress">{{ t('brand.onboardingStep', { n: obStep + 1, total: 6 }) }}</p>
+              <h2 id="brand-onboarding-title">{{ obStepTitle }}</h2>
+            </div>
+            <span class="brand-onboarding-mark" aria-hidden="true">Huuk</span>
+          </header>
+
+          <div class="brand-onboarding-body">
+            <template v-if="obStep === 0">
+              <p class="brand-onboarding-hint">{{ t('brand.onboardingNameHint') }}</p>
+              <label class="lbl" for="onboarding-brand-name">{{ t('brand.nameLabel') }}</label>
+              <input id="onboarding-brand-name" v-model="obName" class="field" maxlength="80" autofocus
+                :placeholder="t('brand.channelPlaceholder')" @keydown.enter.prevent="obNext" />
+            </template>
+
+            <template v-else-if="obStep === 1">
+              <p class="brand-onboarding-hint">{{ t('brand.coverHint') }}</p>
+              <div class="brand-onboarding-cover" :style="customBgDesktop ? { backgroundImage: `url(${customBgDesktop})` } : {}">
+                <span v-if="!customBgDesktop">{{ t('brand.coverEmpty') }}</span>
+              </div>
+              <div class="brand-onboarding-row">
+                <label class="btn w-auto brand-onboarding-upload">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                  <span>{{ t('brand.chooseComputer') }}</span>
+                  <input type="file" accept="image/*" hidden @change="obPickCover" />
+                </label>
+                <span v-if="customBgDesktop" class="brand-onboarding-muted">{{ t('brand.coverReady') }}</span>
+              </div>
+              <div class="brand-onboarding-row">
+                <input v-model="bgUrlDraft" class="field" :placeholder="t('brand.coverUrl')" @keydown.enter.prevent="obApplyCoverUrl" />
+                <button type="button" class="btn w-auto brand-onboarding-linkbtn" :disabled="!bgUrlDraft.trim()" @click="obApplyCoverUrl">{{ t('common.add') }}</button>
+              </div>
+            </template>
+
+            <template v-else-if="obStep === 2">
+              <p class="brand-onboarding-hint">{{ t('brand.logoHint') }}</p>
+              <div class="brand-onboarding-logo">
+                <img v-if="logoSlots[0]?.url" :src="logoSlots[0].url" alt="" />
+                <span v-else>{{ t('brand.logoEmpty') }}</span>
+              </div>
+              <label class="btn w-auto brand-onboarding-upload">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" x2="12" y1="3" y2="15" />
+                </svg>
+                <span>{{ t('brand.chooseComputer') }}</span>
+                <input type="file" accept="image/*" hidden @change="obPickLogo" />
+              </label>
+            </template>
+
+            <template v-else-if="obStep === 3">
+              <p class="brand-onboarding-hint">{{ t('brand.pickFontHint') }}</p>
+              <div class="brand-onboarding-fonts">
+                <button v-for="font in suggestedFonts" :key="font" type="button"
+                  class="brand-onboarding-font" :class="{ active: obFont === font }"
+                  :style="{ fontFamily: `'${font}', var(--font)` }" @click="obFont = font">
+                  <span>Aa Bb 123</span>
+                  <strong>{{ font }}</strong>
+                </button>
+              </div>
+            </template>
+
+            <template v-else-if="obStep === 4">
+              <p class="brand-onboarding-hint">{{ t('brand.colorsHint') }}</p>
+              <div class="brand-onboarding-colors">
+                <label v-for="(_, i) in obPalette" :key="i" class="brand-onboarding-color">
+                  <input type="color" :value="obPalette[i] || '#ffffff'" @input="(e) => obSetColor(i, e)" />
+                  <span>{{ i + 1 }}</span>
+                </label>
+              </div>
+            </template>
+
+            <template v-else>
+              <p class="brand-onboarding-hint">{{ t('brand.voiceHint') }}</p>
+              <label class="lbl" for="onboarding-brand-voice">{{ t('brand.stepVoice') }}</label>
+              <textarea id="onboarding-brand-voice" v-model="obVoice" class="field" rows="5"
+                :placeholder="t('brand.voicePlaceholder')"></textarea>
+            </template>
+
+            <p v-if="obError" class="autherr" role="alert">{{ obError }}</p>
+            <p v-if="imageError" class="autherr" role="alert">{{ imageError }}</p>
+          </div>
+
+          <footer class="brand-onboarding-foot">
+            <button type="button" class="btn w-auto" :disabled="obStep === 0 || obBusy" @click="obBack">
+              {{ t('brand.onboardingBack') }}
+            </button>
+            <button type="button" class="btn btn-primary w-auto" :disabled="obBusy" @click="obNext">
+              {{ obBusy ? t('common.loading') : (obStep === 5 ? t('brand.onboardingFinish') : t('brand.onboardingContinue')) }}
+            </button>
+          </footer>
+        </div>
+      </div>
+
       <p v-if="writeError" class="autherr" role="alert">{{ writeError }}</p>
 
       <!-- 0 · identity -->
@@ -767,7 +975,7 @@ async function removeDont(index: number): Promise<void> {
         :brand="brand"
         :can-write="canWrite"
         :busy="busy"
-        :has-custom-bg="hasCustomBg"
+        :has-custom-bg="hasCustomBg && step === 0"
         @save="save"
         @add-do="addDo"
         @remove-do="removeDo"

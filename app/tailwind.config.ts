@@ -34,9 +34,9 @@ export default {
         mono: ['var(--font-mono)', 'monospace'],
       },
       fontSize: {
-        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
-        'xs-plus': ['0.8125rem', { lineHeight: '1.25rem' }],
-        'sm-plus': ['0.9375rem', { lineHeight: '1.375rem' }],
+        '2xs': ['0.825rem', { lineHeight: '1rem' }],
+        'xs-plus': ['0.975rem', { lineHeight: '1.25rem' }],
+        'sm-plus': ['1.125rem', { lineHeight: '1.375rem' }],
       },
       spacing: {
         touch: '2.75rem',

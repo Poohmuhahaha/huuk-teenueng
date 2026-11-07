@@ -116,6 +116,18 @@ pub fn provider(id: &str) -> Option<&'static Provider> {
     PROVIDERS.iter().find(|p| p.id == id)
 }
 
+/// Google OpenID Connect login (separate from the YouTube data connection).
+pub const GOOGLE_LOGIN: Provider = Provider {
+    id: "google-login",
+    name: "Google",
+    cred_key: "google",
+    authorize_url: "https://accounts.google.com/o/oauth2/v2/auth",
+    token_url: "https://oauth2.googleapis.com/token",
+    scopes: &["openid", "email", "profile"],
+    scope_sep: " ",
+    extra_auth_params: &[("access_type", "online"), ("prompt", "select_account")],
+};
+
 /// OAuth client credentials + URLs (from the environment; empty ⇒ mock mode).
 #[derive(Clone)]
 pub struct OauthSettings {
@@ -254,6 +266,13 @@ impl OAuthState {
 
 // ---- handlers ----
 
+/// Mock OAuth is for local/demo/test setups only. A production deployment
+/// (auth required and `DEMO_MODE` unset) must never advertise or accept an
+/// unauthenticated mock connect flow.
+fn mock_flow_allowed(store: &Store) -> bool {
+    store.demo_mode || !store.setup.auth_required
+}
+
 /// `GET /api/oauth/{platform}` — tells the frontend which flow to show.
 pub async fn status(
     State(s): State<AppState>,
@@ -262,9 +281,16 @@ pub async fn status(
     let p = provider(&platform).ok_or_else(|| ApiError::not_found("unknown platform"))?;
     let store = s.read().await;
     let configured = store.oauth.configured(p);
+    let mode = if configured {
+        "redirect"
+    } else if mock_flow_allowed(&store) {
+        "mock"
+    } else {
+        "disabled"
+    };
     Ok(Json(json!({
         "platform": p.id,
-        "mode": if configured { "redirect" } else { "mock" },
+        "mode": mode,
         "configured": configured,
         "authorizeHost": Url::parse(p.authorize_url).ok().and_then(|u| u.host_str().map(str::to_string)),
     })))
@@ -286,6 +312,11 @@ pub async fn start(
     let workspace_id = crate::handlers::active_workspace_id(&store, &headers)?;
     store.prune_ephemeral();
     let Some(client_id) = store.oauth.credentials(p).map(|(id, _)| id.to_string()) else {
+        if !mock_flow_allowed(&store) {
+            return Err(ApiError::bad_request(
+                "OAuth is disabled: provider credentials are not configured",
+            ));
+        }
         return Ok(Json(json!({ "mode": "mock" })));
     };
     let state = format!("st-{}", random_hex(16));
@@ -332,7 +363,7 @@ pub async fn callback(
 
     // Validate (and consume) the single-use state under a short lock, then
     // release it before any network I/O.
-    let (oauth, workspace_id) = {
+    let (oauth, workspace_id, mock_allowed) = {
         let mut store = s.write().await;
         store.prune_ephemeral();
         let state = q
@@ -352,12 +383,20 @@ pub async fn callback(
             return Err(ApiError::bad_request("state expired"));
         }
         store.oauth_states.remove(&state);
-        // The workspace may have been deleted mid-flow; fall back to the
-        // first live workspace so the connection is not lost.
-        let workspace_id = store
-            .resolve_workspace_id(Some(&entry.workspace_id), None)
-            .unwrap_or_default();
-        (store.oauth.clone(), workspace_id)
+        let workspace_id = entry.workspace_id.clone();
+        // The workspace may have been deleted mid-flow. Never attach the
+        // provider token to a different workspace: fail closed and make the
+        // user reconnect from a live workspace.
+        if store.workspace(&workspace_id).is_none() {
+            tracing::warn!(
+                platform = p.id,
+                workspace = %workspace_id,
+                "oauth callback for a deleted workspace — refusing to attach the token elsewhere"
+            );
+            let oauth = store.oauth.clone();
+            return Ok(workspace_gone_redirect(&oauth.frontend_url, p.id));
+        }
+        (store.oauth.clone(), workspace_id, mock_flow_allowed(&store))
     };
 
     enum Outcome {
@@ -378,6 +417,8 @@ pub async fn callback(
             }
             Err(e) => Outcome::Failed(e),
         }
+    } else if !mock_allowed {
+        Outcome::Failed("OAuth is disabled: provider credentials are not configured".into())
     } else if q.code.is_some() {
         Outcome::MockConnected
     } else {
@@ -391,17 +432,12 @@ pub async fn callback(
         Outcome::Accounts(accounts, token, expires_in) => {
             let mut store = s.write().await;
             if store.workspace(&workspace_id).is_none() {
-                tracing::warn!(workspace = %workspace_id, "oauth callback for a missing workspace");
-                return Ok(redirect_to_frontend(
-                    &oauth.frontend_url,
-                    &format!(
-                        "oauth={}&status=error&reason={}",
-                        p.id,
-                        url_escape(
-                            "this workspace no longer exists — switch to a live workspace and reconnect"
-                        )
-                    ),
-                ));
+                tracing::warn!(
+                    platform = p.id,
+                    workspace = %workspace_id,
+                    "oauth callback for a workspace deleted mid-flow — refusing to attach the token elsewhere"
+                );
+                return Ok(workspace_gone_redirect(&oauth.frontend_url, p.id));
             }
             if accounts.len() == 1 {
                 if let Some(mut account) = accounts.into_iter().next() {
@@ -445,6 +481,14 @@ pub async fn callback(
         }
         Outcome::MockConnected => {
             let mut store = s.write().await;
+            if store.workspace(&workspace_id).is_none() {
+                tracing::warn!(
+                    platform = p.id,
+                    workspace = %workspace_id,
+                    "oauth callback for a workspace deleted mid-flow — refusing to attach the token elsewhere"
+                );
+                return Ok(workspace_gone_redirect(&oauth.frontend_url, p.id));
+            }
             if mark_connected(&mut store, &workspace_id, p.id).is_none() {
                 return Err(ApiError::not_found("platform not found"));
             }
@@ -517,6 +561,13 @@ pub async fn pending_pick(
     if entry.platform != p.id {
         return Err(ApiError::bad_request("pick does not match platform"));
     }
+    let account = crate::handlers::current_account(&store, &headers);
+    if !store
+        .workspace(&entry.workspace_id)
+        .is_some_and(|w| w.visible_to(account.as_deref()))
+    {
+        return Err(ApiError::not_found("unknown or expired pick"));
+    }
     if Utc::now() - entry.created > ChronoDuration::minutes(PICK_TTL_MIN) {
         return Err(ApiError::bad_request("pick expired — reconnect"));
     }
@@ -547,6 +598,7 @@ pub async fn choose_page(
     let p = provider(&platform).ok_or_else(|| ApiError::not_found("unknown platform"))?;
     let mut store = s.write().await;
     crate::handlers::require_perm(&mut store, &headers, "platforms.manage")?;
+    let caller = crate::handlers::current_account(&store, &headers);
     let entry = store
         .oauth_picks
         .get(&body.pick)
@@ -559,6 +611,19 @@ pub async fn choose_page(
         store.oauth_picks.remove(&body.pick);
         return Err(ApiError::bad_request("pick expired — reconnect"));
     }
+    // The pick belongs to the workspace that started the OAuth flow. Never
+    // fall back to another workspace, and only the caller who can see that
+    // workspace may finalize it.
+    let Some(workspace) = store.workspace(&entry.workspace_id) else {
+        store.oauth_picks.remove(&body.pick);
+        return Err(ApiError::bad_request(
+            "workspace no longer exists — reconnect",
+        ));
+    };
+    if !workspace.visible_to(caller.as_deref()) {
+        return Err(ApiError::not_found("unknown or expired pick"));
+    }
+    let workspace_id = entry.workspace_id.clone();
     let Some(account) = entry
         .accounts
         .iter()
@@ -567,9 +632,6 @@ pub async fn choose_page(
     else {
         return Err(ApiError::not_found("page is not part of this pick"));
     };
-    let workspace_id = store
-        .resolve_workspace_id(Some(&entry.workspace_id), None)
-        .ok_or_else(|| ApiError::bad_request("workspace no longer exists — reconnect"))?;
     store.oauth_picks.remove(&body.pick);
     apply_account(&mut store, &workspace_id, p, account);
     // User token under the plain key (fallback for user-level calls) and under
@@ -687,6 +749,20 @@ fn redirect_to_frontend(frontend_url: &str, query: &str) -> Redirect {
         "{}/#/profile?{query}",
         frontend_url.trim_end_matches('/')
     ))
+}
+
+/// Browser-facing failure for a connect flow whose workspace disappeared.
+fn workspace_gone_redirect(frontend_url: &str, platform: &str) -> Redirect {
+    redirect_to_frontend(
+        frontend_url,
+        &format!(
+            "oauth={}&status=error&reason={}",
+            platform,
+            url_escape(
+                "this workspace no longer exists — switch to a live workspace and reconnect"
+            )
+        ),
+    )
 }
 
 fn truncate(s: &str, max: usize) -> String {
@@ -1334,6 +1410,186 @@ mod tests {
         assert!(store
             .platform_token(crate::store::DEFAULT_WORKSPACE_ID, "meta#user")
             .is_none());
+    }
+
+    #[tokio::test]
+    async fn production_does_not_advertise_mock_oauth() {
+        let prod = crate::new_state();
+        {
+            let mut store = prod.write().await;
+            store.demo_mode = false;
+            store.setup.auth_required = true;
+        }
+        let body = status(State(prod), Path("meta".into())).await.unwrap().0;
+        assert_eq!(body["mode"], "disabled");
+        assert_eq!(body["configured"], false);
+
+        // Demo/test setups keep the simulation.
+        let demo = crate::new_state();
+        let body = status(State(demo), Path("meta".into())).await.unwrap().0;
+        assert_eq!(body["mode"], "mock");
+    }
+
+    #[tokio::test]
+    async fn callback_after_workspace_deletion_fails_closed() {
+        let state = crate::new_state();
+        {
+            let mut store = state.write().await;
+            store.oauth_states.insert(
+                "st-gone".into(),
+                OAuthState::new("tiktok", "ws-deleted-mid-flow"),
+            );
+        }
+        let result = callback(
+            State(state.clone()),
+            Path("tiktok".into()),
+            AppQuery(CallbackQuery {
+                code: Some("demo".into()),
+                state: Some("st-gone".into()),
+                error: None,
+                error_description: None,
+            }),
+        )
+        .await
+        .expect("a deleted workspace must redirect with an error, not attach elsewhere");
+        let response = axum::response::IntoResponse::into_response(result);
+        assert_eq!(response.status(), axum::http::StatusCode::SEE_OTHER);
+        let location = response
+            .headers()
+            .get(axum::http::header::LOCATION)
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(location.contains("oauth=tiktok"), "{location}");
+        assert!(location.contains("status=error"), "{location}");
+
+        let store = state.read().await;
+        assert!(
+            !store.oauth_states.contains_key("st-gone"),
+            "the state is consumed even when the callback fails"
+        );
+        let tiktok = store
+            .workspace(crate::store::DEFAULT_WORKSPACE_ID)
+            .unwrap()
+            .connections
+            .iter()
+            .find(|c| c.id == "tiktok")
+            .unwrap();
+        assert_eq!(
+            tiktok.status, "disconnected",
+            "the token must not fall back to another workspace"
+        );
+        assert!(!store.has_platform_token(crate::store::DEFAULT_WORKSPACE_ID, "tiktok"));
+    }
+
+    fn auth_headers(token: &str) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            axum::http::header::AUTHORIZATION,
+            axum::http::HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
+        );
+        headers
+    }
+
+    fn seed_workspace_pick(store: &mut Store, pick: &str, workspace_id: &str) {
+        let account = |handle: &str, id: &str| Account {
+            handle: handle.into(),
+            external_id: id.into(),
+            scopes: vec![],
+            token_type: "long-lived".into(),
+            expires_at: None,
+        };
+        store.oauth_picks.insert(
+            pick.into(),
+            PendingPick {
+                platform: "meta".into(),
+                token: "tok-owner-secret".into(),
+                accounts: vec![account("Page One", "111"), account("Page Two", "222")],
+                created: Utc::now(),
+                workspace_id: workspace_id.into(),
+            },
+        );
+    }
+
+    #[tokio::test]
+    async fn choose_page_rejects_callers_from_another_workspace() {
+        let state = crate::new_state();
+        let editor_token;
+        let owner_token;
+        {
+            let mut store = state.write().await;
+            store.setup.auth_required = true;
+            if let Some(role) = store.setup.roles.iter_mut().find(|r| r.name == "Editor") {
+                role.permissions.push("platforms.manage".into());
+            }
+            store.workspaces.push(crate::store::blank_workspace_for(
+                "ws-owner",
+                "Owner Workspace",
+                "owner@studio.local",
+            ));
+            seed_workspace_pick(&mut store, "pick-other", "ws-owner");
+            editor_token = store.open_session("editor@studio.local");
+            owner_token = store.open_session("owner@studio.local");
+        }
+
+        let editor = auth_headers(&editor_token);
+        let pending = pending_pick(
+            State(state.clone()),
+            editor.clone(),
+            Path("meta".into()),
+            AppQuery(PendingQuery {
+                pick: Some("pick-other".into()),
+            }),
+        )
+        .await;
+        assert!(
+            matches!(pending, Err(ApiError::NotFound(_))),
+            "pending must not expose another workspace's pick"
+        );
+
+        let chosen = choose_page(
+            State(state.clone()),
+            editor,
+            Path("meta".into()),
+            AppJson(ChooseBody {
+                pick: "pick-other".into(),
+                external_id: "111".into(),
+            }),
+        )
+        .await;
+        assert!(
+            matches!(chosen, Err(ApiError::NotFound(_))),
+            "cross-workspace choose must be rejected"
+        );
+
+        {
+            let store = state.read().await;
+            assert!(
+                store.oauth_picks.contains_key("pick-other"),
+                "a rejected caller must not consume the pick"
+            );
+            let meta = store
+                .workspace("ws-owner")
+                .unwrap()
+                .connections
+                .iter()
+                .find(|c| c.id == "meta")
+                .unwrap();
+            assert_eq!(meta.status, "disconnected");
+            assert!(!store.has_platform_token("ws-owner", "meta"));
+        }
+
+        // The account that owns the workspace can still see the pick.
+        let listed = pending_pick(
+            State(state),
+            auth_headers(&owner_token),
+            Path("meta".into()),
+            AppQuery(PendingQuery {
+                pick: Some("pick-other".into()),
+            }),
+        )
+        .await;
+        assert!(listed.is_ok(), "the workspace owner keeps access");
     }
 
     #[test]

@@ -60,7 +60,7 @@ async function doLogoutAll(): Promise<void> {
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <span class="text-[11px] uppercase tracking-wider text-muted font-bold">Package</span>
+              <span class="text-[13.2px] uppercase tracking-wider text-muted font-bold">Package</span>
               <span class="px-2 py-0.5 rounded-full text-xs font-bold" :class="planDisplay.badge">
                 {{ planDisplay.name }}
               </span>
@@ -93,7 +93,7 @@ async function doLogoutAll(): Promise<void> {
   <div v-if="guideOpen" class="guide-overlay" @click.self="guideOpen = false">
     <div class="guide-panel" role="dialog" aria-modal="true" aria-label="Guide">
       <div class="guide-head">
-        <strong style="font-size: 20px;">{{ t('nav.guide') }}</strong>
+        <strong style="font-size: 24px;">{{ t('nav.guide') }}</strong>
         <button class="btn" @click="guideOpen = false">{{ t('common.close') }}</button>
       </div>
       <GuideHero />

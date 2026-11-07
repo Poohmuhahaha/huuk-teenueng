@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAds, useDashboard } from '@/core/queries'
+import { useAds, useDashboard, useImportMetrics, usePermission, useSetup } from '@/core/queries'
 import { guardSuppressed } from '@/core/protected'
 import { t } from '@/core/i18n'
 import { useHubTab } from '@/core/subnav'
@@ -12,7 +12,7 @@ import TableFrame from '@/components/tables/TableFrame.vue'
 import DockBar from '@/components/ui/DockBar.vue'
 import KpiCard from '@/components/ui/KpiCard.vue'
 import CountUpNumber from '@/components/ui/CountUpNumber.vue'
-import BarChart from '@/components/ui/BarChart.vue'
+import DonutChart from '@/components/ui/DonutChart.vue'
 import type { BarItem } from '@/components/ui/BarChart.vue'
 import LineChart from '@/components/ui/LineChart.vue'
 import StatusChip from '@/components/ui/StatusChip.vue'
@@ -29,6 +29,16 @@ const month = activeMonth
 const year = activeYear
 const { stats, postsQ, metricsQ } = useDashboard(month, year)
 const { data: adsView } = useAds()
+const { data: setup } = useSetup()
+const importMetrics = useImportMetrics()
+const { can } = usePermission()
+const importingMetrics = ref(false)
+const canImportMetrics = computed(
+  () => can('metrics.import') && (setup.value?.platforms.length ?? 0) > 0,
+)
+const monthLabel = computed(() =>
+  new Date(year.value, month.value - 1, 1).toLocaleString('en-US', { month: 'long' }),
+)
 const guardOpen = ref(false)
 
 const root = ref<HTMLElement | null>(null)
@@ -190,6 +200,7 @@ const pillarBars = computed(() => {
       pending,
       wip,
       sublabel: `${posted} posted · ${pending} pending · ${wip} WIP`,
+      hideSublabel: true,
     }
   })
 })
@@ -218,6 +229,7 @@ const platformBars = computed(() => {
       posted,
       pending: remaining,
       sublabel: `${posted} posted · ${remaining} in progress`,
+      hideSublabel: true,
       platform: brand ? label : undefined,
       color: brand,
     }
@@ -242,6 +254,19 @@ const statusBars = computed(() => {
       total,
       sublabel: descriptions[label] ?? `${value} topics`,
     }))
+})
+
+const workflowStatus = computed(() => {
+  if (!stats.value) return []
+  const total = stats.value.total || 0
+  return [
+    { id: 'posted', label: 'Posted', value: stats.value.posted, color: '#0a0a0a' },
+    { id: 'pending', label: 'Pending', value: stats.value.pending, color: '#6b6b6b' },
+    { id: 'wip', label: 'WIP', value: stats.value.wip, color: '#b3b3b3' },
+  ].map((item) => ({
+    ...item,
+    pct: total ? Math.round((item.value / total) * 100) : 0,
+  }))
 })
 
 // Daily engagement and post volume timeline across the month
@@ -300,6 +325,7 @@ const trendData = computed(() => {
 
   return {
     labels,
+    hasEngagement: dailyViews.some((v) => v > 0) || dailyLikes.some((v) => v > 0),
     series: [
       { label: 'Views', values: dailyViews, area: true },
       { label: 'Likes', values: dailyLikes },
@@ -343,6 +369,21 @@ function askEdit(): void {
 function goMaster(): void {
   guardOpen.value = false
   void router.push(`/planner/${month.value}`)
+}
+
+// A month can have planned posts but no engagement yet (metrics are imported
+// per platform). Offer the same import the Performance tab uses instead of
+// leaving an empty chart behind.
+async function importMonthMetrics(): Promise<void> {
+  if (!canImportMetrics.value || importingMetrics.value) return
+  importingMetrics.value = true
+  try {
+    for (const platform of setup.value?.platforms ?? []) {
+      await importMetrics.mutateAsync({ platform, month: month.value, year: year.value })
+    }
+  } finally {
+    importingMetrics.value = false
+  }
 }
 </script>
 
@@ -686,34 +727,58 @@ function goMaster(): void {
               <div class="flex items-center justify-between mb-2">
                 <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Views & Engagement Growth</h2>
               </div>
-              <LineChart :labels="trendData.labels" :series="trendData.series" :height="160" />
-            </div>
-
-            <div class="mt-6">
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]">Planned vs posted · by pillar</h2>
-                <RouterLink class="text-xs font-semibold text-muted hover:text-ink transition-colors flex items-center gap-1" :to="`/plan?tab=monthly&m=${month}`">
-                  <span>View in Planner</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M7 17L17 7M17 7H7M17 7V17" />
-                  </svg>
-                </RouterLink>
+              <LineChart v-if="trendData.hasEngagement" :labels="trendData.labels" :series="trendData.series" :height="160" />
+              <div v-else class="rounded-xl border border-line bg-surface p-6 text-center shadow-xs">
+                <p class="m-0 text-sm font-semibold text-ink">No engagement data for {{ monthLabel }} {{ year }}.</p>
+                <p class="mt-1 mb-3 text-xs text-muted">Views and likes appear once metrics are imported for this month.</p>
+                <button
+                  v-if="canImportMetrics"
+                  type="button"
+                  class="btn btn-primary w-auto"
+                  :disabled="importingMetrics"
+                  @click="importMonthMetrics"
+                >
+                  {{ importingMetrics ? 'Importing…' : 'Import metrics' }}
+                </button>
+                <p v-else class="m-0 text-xs text-muted">Ask the workspace owner to import metrics.</p>
               </div>
-              <BarChart :items="pillarBars" @select-item="(it) => openBreakdown('pillar', it)" />
             </div>
 
-            <div class="grid2 mt-5">
-              <div>
-                <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center justify-between gap-2 mt-6 mb-2">
+              <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">Content breakdown</h2>
+              <RouterLink class="text-xs font-semibold text-muted hover:text-ink transition-colors flex items-center gap-1" :to="`/plan?tab=monthly&m=${month}`">
+                <span>View in Planner</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M7 17L17 7M17 7H7M17 7V17" />
+                </svg>
+              </RouterLink>
+            </div>
+
+            <div class="dash-breakdown-grid">
+              <div class="flex flex-col">
+                <div class="mb-2">
+                  <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By pillar</h2>
+                </div>
+                <DonutChart class="flex-1" :items="pillarBars" @select-item="(it) => openBreakdown('pillar', it)" />
+              </div>
+              <div class="flex flex-col">
+                <div class="mb-2">
                   <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By platform</h2>
                 </div>
-                <BarChart :items="platformBars" @select-item="(it) => openBreakdown('platform', it)" />
+                <DonutChart class="flex-1" :items="platformBars" @select-item="(it) => openBreakdown('platform', it)" />
               </div>
-              <div>
-                <div class="flex items-center justify-between mb-2">
+              <div class="flex flex-col">
+                <div class="mb-2">
                   <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">By status</h2>
                 </div>
-                <BarChart :items="statusBars" @select-item="(it) => openBreakdown('status', it)" />
+                <DonutChart class="flex-1" :items="statusBars" @select-item="(it) => openBreakdown('status', it)" />
+              </div>
+              <div class="flex flex-col">
+                <div class="mb-2 flex items-center justify-between gap-2">
+                  <h2 class="m-0 text-md font-bold tracking-tight normal-case [font-family:var(--font)]" style="margin-top: 0;">Workflow status</h2>
+                  <span class="text-[12px] font-semibold text-muted">{{ stats.total }} topics</span>
+                </div>
+                <DonutChart class="flex-1" :items="workflowStatus" />
               </div>
             </div>
           </template>

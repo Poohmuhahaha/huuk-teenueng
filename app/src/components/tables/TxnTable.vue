@@ -128,7 +128,7 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
               <!-- Custom Pill for Kind -->
               <template v-if="cell.column.id === 'kind'">
                 <span
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold font-mono tracking-tight"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[13.2px] font-semibold font-mono tracking-tight"
                   :class="row.original.kind === 'IN' ? 'bg-emerald-600 text-white border border-emerald-600' : 'bg-rose-600 text-white border border-rose-600'"
                 >
                   <span class="w-1.5 h-1.5 rounded-full bg-white" />
@@ -213,12 +213,12 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
           </svg>
 
           <div class="flex flex-col min-w-0">
-            <span class="text-[13.5px] font-bold text-ink truncate leading-snug">
+            <span class="text-[16.2px] font-bold text-ink truncate leading-snug">
               {{ row.original.category }}
             </span>
             <span class="text-xs text-muted truncate mt-0.5">
               <span v-if="row.original.sub">{{ row.original.sub }} · </span>
-              <span class="font-mono text-[11px]">{{ row.original.date }}</span>
+              <span class="font-mono text-[13.2px]">{{ row.original.date }}</span>
             </span>
           </div>
         </div>
@@ -226,13 +226,13 @@ function toggleSort(column: { getCanSort: () => boolean; toggleSorting: () => vo
         <!-- Right Column: Amount + Status Pill -->
         <div class="flex flex-col items-end flex-none text-right">
           <span
-            class="text-[14.5px] font-bold font-mono tracking-tight leading-snug"
+            class="text-[17.4px] font-bold font-mono tracking-tight leading-snug"
             :class="row.original.kind === 'IN' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
           >
             {{ row.original.kind === 'IN' ? '+' : '-' }}{{ currency }}{{ row.original.amount.toLocaleString('en-US') }}
           </span>
           <span
-            class="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold font-mono tracking-wide mt-0.5 uppercase"
+            class="inline-flex items-center px-1.5 py-0.2 rounded-full text-[12px] font-bold font-mono tracking-wide mt-0.5 uppercase"
             :class="row.original.kind === 'IN' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'"
           >
             {{ row.original.kind }}

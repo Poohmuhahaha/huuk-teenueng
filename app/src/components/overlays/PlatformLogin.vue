@@ -255,6 +255,11 @@ async function onSync(): Promise<void> {
         </template>
 
         <!-- real OAuth: hand off to the provider -->
+        <template v-else-if="statusReady && mode === 'disabled'">
+          <h3 class="plogin-title">{{ t('slogin.title') }} · {{ meta.name }}</h3>
+          <p class="muted">{{ t('slogin.notConfigured') }}</p>
+        </template>
+
         <template v-else-if="statusReady">
           <h3 class="plogin-title">{{ t('slogin.title') }} · {{ meta.name }}</h3>
           <p class="muted">{{ t('slogin.redirectNote') }}</p>

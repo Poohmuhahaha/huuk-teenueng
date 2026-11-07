@@ -61,11 +61,17 @@ services:
       DEMO_MODE: ${DEMO_MODE:-0}
       AUTH_REQUIRED: ${AUTH_REQUIRED:-1}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-0}
+      SWAGGER_UI: ${SWAGGER_UI:-0}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
-      OAUTH_BASE_URL: ${OAUTH_BASE_URL:-}
+      # Public origin (https://your-domain) used to build OAuth redirect URIs.
+      # OAUTH_BASE_URL is no longer read; PUBLIC_URL replaces it.
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-1}
+      RATE_LIMIT_DISABLED: ${RATE_LIMIT_DISABLED:-0}
       META_APP_ID: ${META_APP_ID:-}
       META_APP_SECRET: ${META_APP_SECRET:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}

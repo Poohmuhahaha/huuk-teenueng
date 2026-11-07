@@ -53,7 +53,7 @@ function pick(value: string, label: string): void {
         v-for="o in filtered"
         :key="o.value"
         type="button"
-        class="flex items-center justify-between w-full bg-transparent border-0 text-ink font-sans text-[13px] px-2.5 py-2 cursor-pointer text-left rounded-none hover:bg-wash"
+        class="flex items-center justify-between w-full bg-transparent border-0 text-ink font-sans text-[15.6px] px-2.5 py-2 cursor-pointer text-left rounded-none hover:bg-wash"
         :class="{ 'font-bold bg-wash': o.value === model }"
         role="option"
         :aria-selected="o.value === model"

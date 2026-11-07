@@ -883,7 +883,7 @@ const PAGES: [string, string, string][] = [
         <div class="gitem"><Tooltip text="Duplicate"><button class="btn">Hover me</button></Tooltip><span class="gcap">Tooltip</span></div>
         <div class="gitem"><HoverCard><template #trigger><span class="wire">@pooh</span></template><strong>Pooh</strong><p class="muted" style="margin:4px 0 0">Creator · 12 workspaces</p></HoverCard><span class="gcap">HoverCard</span></div>
         <div class="gitem"><DropdownMenu v-model="demoMenu" :items="menuItems"><template #trigger><span class="btn">Actions ▾</span></template></DropdownMenu><span class="gcap">DropdownMenu</span></div>
-        <div class="gitem"><ContextMenu :items="menuItems"><div style="border:1px dashed var(--line);padding:18px;text-align:center;font-size:13px;color:var(--muted)">Right-click here</div></ContextMenu><span class="gcap">ContextMenu</span></div>
+        <div class="gitem"><ContextMenu :items="menuItems"><div style="border:1px dashed var(--line);padding:18px;text-align:center;font-size:15.6px;color:var(--muted)">Right-click here</div></ContextMenu><span class="gcap">ContextMenu</span></div>
         <div class="gitem"><button class="btn" @click="demoCmd = true">⌘K Command</button><span class="gcap">CommandPalette</span></div>
         <div class="gitem"><button class="btn" @click="demoDialog = true">Open dialog</button><span class="gcap">Dialog</span></div>
         <div class="gitem"><button class="btn" @click="demoDrawer = true">Open drawer</button><span class="gcap">Drawer</span></div>

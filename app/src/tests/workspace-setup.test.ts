@@ -14,6 +14,7 @@ function mountPage() {
     history: createMemoryHistory(),
     routes: [
       { path: '/', component: { template: '<div />' } },
+      { path: '/branding', component: { template: '<div />' } },
       { path: '/welcome', component: WorkspaceSetupPage },
       { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
     ],
@@ -48,7 +49,8 @@ describe('WorkspaceSetupPage', () => {
     }, { timeout: 5000 })
     expect(activeWorkspaceId.value).toBe(dbWorkspaces[1].id)
     await vi.waitFor(() => {
-      expect(router.currentRoute.value.path).toBe('/')
+      expect(router.currentRoute.value.path).toBe('/branding')
+      expect(router.currentRoute.value.query).toMatchObject({ tab: 'brand', onboarding: '1' })
     }, { timeout: 5000 })
 
     w.unmount()

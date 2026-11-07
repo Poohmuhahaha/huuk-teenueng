@@ -4,7 +4,7 @@
 //! it in an `RwLock`). `Store::save_to` writes an atomic snapshot and
 //! `Store::load_or_seed` restores one, so a deployment can survive restarts
 //! without a database; swapping in a repository later keeps the same surface.
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -95,6 +95,16 @@ pub struct Store {
     pub content: Vec<Content>,
     /// Marketing campaigns (brief, schedule window, targets, linked content).
     pub campaigns: Vec<Campaign>,
+    /// Owning workspace for each entity. Kept beside the model rows so the
+    /// public DTOs stay unchanged while every tenant sees only its own data.
+    pub post_workspace: HashMap<String, String>,
+    pub idea_workspace: HashMap<String, String>,
+    pub hashtag_workspace: HashMap<String, String>,
+    /// Keyed by [`Store::metric_key`] (`post_id:platform`).
+    pub metric_workspace: HashMap<String, String>,
+    pub txn_workspace: HashMap<String, String>,
+    pub content_workspace: HashMap<String, String>,
+    pub campaign_workspace: HashMap<String, String>,
     /// Lowercased email → account (internal only, never serialized).
     pub accounts: HashMap<String, Account>,
     /// Session token → session (random 64-char hex tokens, 7-day TTL).
@@ -1027,6 +1037,22 @@ struct Snapshot {
     content: Vec<Content>,
     #[serde(default)]
     campaigns: Vec<Campaign>,
+    /// Per-entity workspace ownership (v2+; older snapshots backfill to the
+    /// default workspace on load).
+    #[serde(default)]
+    post_workspace: HashMap<String, String>,
+    #[serde(default)]
+    idea_workspace: HashMap<String, String>,
+    #[serde(default)]
+    hashtag_workspace: HashMap<String, String>,
+    #[serde(default)]
+    metric_workspace: HashMap<String, String>,
+    #[serde(default)]
+    txn_workspace: HashMap<String, String>,
+    #[serde(default)]
+    content_workspace: HashMap<String, String>,
+    #[serde(default)]
+    campaign_workspace: HashMap<String, String>,
     /// Sealed provider tokens (`Store::platform_tokens_enc`).
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     platform_tokens_enc: HashMap<String, String>,
@@ -1177,6 +1203,19 @@ impl Store {
         format!("{workspace_id}:{platform}")
     }
 
+    /// Ownership-map key for a metric row (metrics have no id of their own).
+    pub fn metric_key(post_id: &str, platform: &str) -> String {
+        format!("{post_id}:{platform}")
+    }
+
+    /// The workspace that owns `key`, falling back to the default workspace
+    /// for legacy rows written before the ownership maps existed.
+    pub fn scoped_workspace<'a>(map: &'a HashMap<String, String>, key: &str) -> &'a str {
+        map.get(key)
+            .map(String::as_str)
+            .unwrap_or(DEFAULT_WORKSPACE_ID)
+    }
+
     /// Enables encrypted-at-rest token storage with `admin_token` as the
     /// sealing secret. No-op for short/empty secrets (demo mode): tokens then
     /// live in memory only.
@@ -1196,7 +1235,7 @@ impl Store {
     pub fn set_platform_token(&mut self, workspace_id: &str, platform: &str, token: &str) {
         let key = Self::token_key(workspace_id, platform);
         if let Some(sealing) = &self.token_sealing_key {
-            if let Some(sealed) = crate::secrets::seal(sealing, token) {
+            if let Some(sealed) = crate::secrets::seal(sealing, key.as_bytes(), token) {
                 self.platform_tokens_enc.insert(key.clone(), sealed);
             }
         }
@@ -1212,7 +1251,7 @@ impl Store {
         }
         let sealing = self.token_sealing_key?;
         let sealed = self.platform_tokens_enc.get(&key)?.clone();
-        match crate::secrets::open(&sealing, &sealed) {
+        match crate::secrets::open(&sealing, key.as_bytes(), &sealed) {
             Some(token) => {
                 self.platform_tokens.insert(key, token.clone());
                 Some(token)
@@ -1220,7 +1259,7 @@ impl Store {
             None => {
                 tracing::warn!(
                     %key,
-                    "stored provider token cannot be decrypted — ADMIN_TOKEN changed? reconnect the platform"
+                    "stored provider token cannot be decrypted: wrong ADMIN_TOKEN, or the snapshot was sealed before per-workspace token binding (AAD). The token is not used — reconnect the platform to store a fresh one"
                 );
                 None
             }
@@ -1253,6 +1292,85 @@ impl Store {
             .retain(|key, _| !key.starts_with(&prefix));
         self.platform_tokens_enc
             .retain(|key, _| !key.starts_with(&prefix));
+    }
+
+    /// Drops every planning/content/finance/marketing row owned by
+    /// `workspace_id`, together with its ownership mapping. Workspace deletion
+    /// should call this before removing the workspace itself.
+    pub fn clear_workspace_data(&mut self, workspace_id: &str) {
+        let owned = |map: &HashMap<String, String>| -> HashSet<String> {
+            map.iter()
+                .filter(|(_, ws)| ws.as_str() == workspace_id)
+                .map(|(id, _)| id.clone())
+                .collect()
+        };
+        let post_ids = owned(&self.post_workspace);
+        self.posts.retain(|p| !post_ids.contains(&p.id));
+        self.post_workspace.retain(|_, ws| ws != workspace_id);
+
+        let idea_ids = owned(&self.idea_workspace);
+        self.ideas.retain(|i| !idea_ids.contains(&i.id));
+        self.idea_workspace.retain(|_, ws| ws != workspace_id);
+
+        let hashtag_ids = owned(&self.hashtag_workspace);
+        self.hashtags.retain(|g| !hashtag_ids.contains(&g.id));
+        self.hashtag_workspace.retain(|_, ws| ws != workspace_id);
+
+        let metric_keys = owned(&self.metric_workspace);
+        self.metrics
+            .retain(|m| !metric_keys.contains(&Self::metric_key(&m.post_id, &m.platform)));
+        self.metric_workspace.retain(|_, ws| ws != workspace_id);
+
+        let txn_ids = owned(&self.txn_workspace);
+        self.txns.retain(|t| !txn_ids.contains(&t.id));
+        self.txn_workspace.retain(|_, ws| ws != workspace_id);
+
+        let content_ids = owned(&self.content_workspace);
+        self.content.retain(|c| !content_ids.contains(&c.id));
+        self.content_workspace.retain(|_, ws| ws != workspace_id);
+
+        let campaign_ids = owned(&self.campaign_workspace);
+        self.campaigns.retain(|c| !campaign_ids.contains(&c.id));
+        self.campaign_workspace.retain(|_, ws| ws != workspace_id);
+    }
+
+    /// Backfills ownership for rows that predate the per-entity maps.
+    fn backfill_workspace_maps(&mut self, fallback: &str) {
+        for post in &self.posts {
+            self.post_workspace
+                .entry(post.id.clone())
+                .or_insert_with(|| fallback.to_string());
+        }
+        for idea in &self.ideas {
+            self.idea_workspace
+                .entry(idea.id.clone())
+                .or_insert_with(|| fallback.to_string());
+        }
+        for group in &self.hashtags {
+            self.hashtag_workspace
+                .entry(group.id.clone())
+                .or_insert_with(|| fallback.to_string());
+        }
+        for metric in &self.metrics {
+            self.metric_workspace
+                .entry(Self::metric_key(&metric.post_id, &metric.platform))
+                .or_insert_with(|| fallback.to_string());
+        }
+        for txn in &self.txns {
+            self.txn_workspace
+                .entry(txn.id.clone())
+                .or_insert_with(|| fallback.to_string());
+        }
+        for content in &self.content {
+            self.content_workspace
+                .entry(content.id.clone())
+                .or_insert_with(|| fallback.to_string());
+        }
+        for campaign in &self.campaigns {
+            self.campaign_workspace
+                .entry(campaign.id.clone())
+                .or_insert_with(|| fallback.to_string());
+        }
     }
 
     /// Starts a session for the account with `email` and returns the token.
@@ -1367,6 +1485,13 @@ impl Store {
             connections: None,
             content: self.content.clone(),
             campaigns: self.campaigns.clone(),
+            post_workspace: self.post_workspace.clone(),
+            idea_workspace: self.idea_workspace.clone(),
+            hashtag_workspace: self.hashtag_workspace.clone(),
+            metric_workspace: self.metric_workspace.clone(),
+            txn_workspace: self.txn_workspace.clone(),
+            content_workspace: self.content_workspace.clone(),
+            campaign_workspace: self.campaign_workspace.clone(),
             platform_tokens_enc: self.platform_tokens_enc.clone(),
             token_salt: self.token_salt.clone(),
             accounts: self.accounts.values().cloned().collect(),
@@ -1437,6 +1562,24 @@ impl Store {
         }
         store.content = snapshot.content;
         store.campaigns = snapshot.campaigns;
+        store.post_workspace = snapshot.post_workspace;
+        store.idea_workspace = snapshot.idea_workspace;
+        store.hashtag_workspace = snapshot.hashtag_workspace;
+        store.metric_workspace = snapshot.metric_workspace;
+        store.txn_workspace = snapshot.txn_workspace;
+        store.content_workspace = snapshot.content_workspace;
+        store.campaign_workspace = snapshot.campaign_workspace;
+        // Snapshots written before per-entity ownership have no map entries;
+        // attribute those legacy rows to the default/first workspace so they
+        // stay readable without becoming visible to every tenant.
+        let fallback = store
+            .workspaces
+            .iter()
+            .find(|w| w.id == DEFAULT_WORKSPACE_ID)
+            .map(|w| w.id.clone())
+            .or_else(|| store.workspaces.first().map(|w| w.id.clone()))
+            .unwrap_or_else(|| DEFAULT_WORKSPACE_ID.to_string());
+        store.backfill_workspace_maps(&fallback);
         store.platform_tokens_enc = snapshot.platform_tokens_enc;
         store.token_salt = snapshot.token_salt;
         if store.token_salt.is_empty() {
@@ -1552,6 +1695,16 @@ impl Store {
                     owner.permissions.push(perm.to_string());
                 }
             }
+        }
+        // Older snapshots predate the self-serve workspace-owner role. Add it
+        // on boot so the first-workspace bootstrap can assign a safe role.
+        if !self
+            .setup
+            .roles
+            .iter()
+            .any(|r| r.name == WORKSPACE_OWNER_ROLE)
+        {
+            self.setup.roles.push(workspace_owner_role());
         }
 
         let demo = env_bool("DEMO_MODE", false);
@@ -1681,7 +1834,7 @@ impl Store {
     }
 
     pub fn seed() -> Self {
-        Self {
+        let mut store = Self {
             setup: SetupConfig {
                 language: "EN".into(),
                 year: 2026,
@@ -1715,6 +1868,7 @@ impl Store {
                         name: "Owner".into(),
                         permissions: KNOWN_PERMISSIONS.iter().map(|p| p.to_string()).collect(),
                     },
+                    workspace_owner_role(),
                     Role {
                         name: "Editor".into(),
                         permissions: [
@@ -1858,6 +2012,7 @@ impl Store {
                 ];
                 // Rich demo feed: a busy current quarter so every dashboard view has data.
                 // (id, month, day, topic, pillar, format, time, status, hook, group, tags, platforms)
+                #[allow(clippy::type_complexity)]
                 let more: &[(
                     &str,
                     u32,
@@ -2709,6 +2864,13 @@ impl Store {
             }],
             content: seed_content(),
             campaigns: seed_campaigns(),
+            post_workspace: HashMap::new(),
+            idea_workspace: HashMap::new(),
+            hashtag_workspace: HashMap::new(),
+            metric_workspace: HashMap::new(),
+            txn_workspace: HashMap::new(),
+            content_workspace: HashMap::new(),
+            campaign_workspace: HashMap::new(),
             accounts: {
                 let mut accounts = HashMap::new();
                 for (name, email) in [
@@ -2743,7 +2905,9 @@ impl Store {
             fonts_dir: None,
             images_dir: None,
             db: None,
-        }
+        };
+        store.backfill_workspace_maps(DEFAULT_WORKSPACE_ID);
+        store
     }
 
     /// A clean production workspace: the same config defaults as [`Self::seed`]
@@ -2759,6 +2923,13 @@ impl Store {
         store.txns.clear();
         store.content.clear();
         store.campaigns.clear();
+        store.post_workspace.clear();
+        store.idea_workspace.clear();
+        store.hashtag_workspace.clear();
+        store.metric_workspace.clear();
+        store.txn_workspace.clear();
+        store.content_workspace.clear();
+        store.campaign_workspace.clear();
         // Keep one disconnected stub per platform so the UI can connect them
         // (the demo handles/tokens are dropped).
         for workspace in &mut store.workspaces {
@@ -2928,6 +3099,28 @@ mod tests {
         assert!(
             !json.contains("platform_tokens_enc"),
             "nothing sealed without a vault"
+        );
+    }
+
+    #[test]
+    fn sealed_tokens_cannot_be_swapped_between_workspace_slots() {
+        let mut store = Store::seed();
+        store.enable_token_vault("unit-test-admin-secret-0123456789");
+        store.set_platform_token(DEFAULT_WORKSPACE_ID, "meta", "EAAB-page-token");
+
+        let source = Store::token_key(DEFAULT_WORKSPACE_ID, "meta");
+        let sealed = store.platform_tokens_enc.remove(&source).unwrap();
+        store.platform_tokens.clear();
+        let other = Store::token_key("ws-other", "meta");
+        store.platform_tokens_enc.insert(other.clone(), sealed);
+
+        assert!(
+            store.platform_token("ws-other", "meta").is_none(),
+            "a sealed token moved to another workspace must fail closed"
+        );
+        assert!(
+            !store.platform_tokens.contains_key(&other),
+            "a failed open must not cache a token"
         );
     }
 

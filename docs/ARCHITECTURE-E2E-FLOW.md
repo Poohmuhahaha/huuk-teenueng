@@ -1,5 +1,11 @@
 # Huuk — System Architecture & End-to-End Workflow (Reverse-Engineered)
 
+> **Update 2026-11-04:** the runtime now supports an optional PostgreSQL
+> snapshot (`DATABASE_URL`) and SSE change notifications (`/api/events`); the
+> beta deployment uses a PostgreSQL container. The JSON-only / no-realtime
+> statements below describe the pre-update implementation.
+
+
 > Generated from a full read of `app/` (Vue 3), `server/` (Rust/Axum) and `desktop/` (Tauri).
 > Every diagram below reflects the code **as it exists today**, not an intended design.
 
@@ -9,12 +15,11 @@
 
 | ประเด็น | ข้อเท็จจริงจากโค้ด |
 |---|---|
-| **Data Store** | **ไม่ใช่ PostgreSQL** — เป็น `Store` ในหน่วยความจำ (`tokio::sync::RwLock<Store>`) + atomic JSON snapshot (`DATA_FILE`, `write_atomic`, 0600) เขียนทุก 5 วินาที (`server/src/store.rs`, `server/src/main.rs:157`) |
-| **`deploy/postgres/`, `ops/deploy/postgres/`** | โฟลเดอร์ว่าง/มีแค่ `DATABASE_URL`, `password` ที่ตกค้าง — **ไม่มีโค้ดเชื่อม Postgres เลย** (ไม่มี `sqlx`/`diesel` ใน `Cargo.toml`) |
-| **Postgres** | ถูกกล่าวถึงเฉพาะใน `server/README.md:565` และ prompt ว่า *"อนาคต"* เท่านั้น |
+| **Data Store** | `Store` ในหน่วยความจำ (`tokio::sync::RwLock<Store>`) + durable snapshot ทุก 5 วินาที; beta deployment ใช้ **PostgreSQL container** (`app_state_snapshots`, JSONB) และยังมี atomic JSON snapshot (`DATA_FILE`) เป็น fallback/สื่อ (`server/src/store.rs`, `server/src/main.rs`) |
+| **PostgreSQL** | มี `sqlx` + migrations + snapshot persistence (`server/src/db.rs`); เปิดใช้เมื่อมี `DATABASE_URL` |
 | **Multi-tenancy** | Workspace แยกเฉพาะ `brand`, `connections`, `live`, `ads` — ส่วน `posts/ideas/hashtags/metrics/txns/content/campaigns` เป็น **global** ไม่ผูก workspace |
 | **Auth** | Argon2id + opaque session token (random 64-hex, hash ด้วย Blake2b-256 เก็บใน snapshot, TTL 7 วัน) |
-| **Realtime** | **ไม่มี polling** — Live/Ads refresh เฉพาะกด Sync หรือ background loop ฝั่ง server |
+| **Realtime** | **มี SSE** ที่ `/api/events` + Vue Query invalidation เมื่อ revision เปลี่ยน; Live/Ads ยังมี background refresh ของตัวเอง |
 | **Risk สูงสุด** | 1) Privilege escalation ผ่านชื่อ display ตอน `register` 2) `set_plan` อัปเกรดแพ็กเกจตัวเองฟรี 3) workspace isolation ไม่ครบ 4) ads hierarchy พังเพราะ field หาย |
 
 ---

@@ -23,21 +23,21 @@ const current = computed(() => props.options.find((o) => o.value === model.value
     <button
       type="button"
       class="flex items-center justify-between gap-2.5 w-full bg-surface border border-line text-ink font-sans cursor-pointer text-left transition-colors rounded-none focus-visible:outline-none focus-visible:border-ink disabled:opacity-50 disabled:cursor-not-allowed"
-      :class="size === 'sm' ? 'px-2.5 py-1.5 text-[13px]' : 'px-3 py-[9px] text-sm'"
+      :class="size === 'sm' ? 'px-2.5 py-1.5 text-[15.6px]' : 'px-3 py-[9px] text-sm'"
       :disabled="disabled"
       :aria-expanded="open"
       aria-haspopup="listbox"
       @click="open = !open"
     >
       <span class="overflow-hidden text-ellipsis whitespace-nowrap" :class="{ 'text-faint': !current }">{{ current ?? placeholder }}</span>
-      <span class="text-muted text-[11px]" aria-hidden="true">▾</span>
+      <span class="text-muted text-[13.2px]" aria-hidden="true">▾</span>
     </button>
     <div v-if="open" class="absolute z-[60] top-[calc(100%+4px)] left-0 right-0 bg-surface border border-ink max-h-[240px] overflow-y-auto p-1 shadow-md rounded-none" role="listbox">
       <button
         v-for="o in options"
         :key="o.value"
         type="button"
-        class="flex items-center justify-between w-full bg-transparent border-0 text-ink font-sans text-[13px] px-2.5 py-2 cursor-pointer text-left rounded-none hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed"
+        class="flex items-center justify-between w-full bg-transparent border-0 text-ink font-sans text-[15.6px] px-2.5 py-2 cursor-pointer text-left rounded-none hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed"
         :class="{ 'font-bold bg-wash': o.value === model }"
         role="option"
         :aria-selected="o.value === model"

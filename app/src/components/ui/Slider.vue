@@ -13,6 +13,6 @@ withDefaults(defineProps<{ min?: number; max?: number; step?: number; showValue?
       :max="max"
       :step="step"
     />
-    <span v-if="showValue" class="min-w-[3ch] text-right text-[13px] font-semibold text-ink tabular-nums">{{ model }}</span>
+    <span v-if="showValue" class="min-w-[3ch] text-right text-[15.6px] font-semibold text-ink tabular-nums">{{ model }}</span>
   </div>
 </template>

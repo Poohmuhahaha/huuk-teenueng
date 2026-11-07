@@ -23,7 +23,7 @@ export interface ImportResult {
   metrics: Metric[]
 }
 
-export type OauthMode = 'mock' | 'redirect'
+export type OauthMode = 'mock' | 'redirect' | 'disabled'
 
 export interface OauthStatus {
   platform: PlatformId

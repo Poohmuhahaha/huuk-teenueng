@@ -32,7 +32,7 @@ const toneClasses: Record<string, string> = {
     role="status"
   >
     <div class="flex flex-col gap-0.5 flex-1 text-left">
-      <strong v-if="title" class="text-[13px] font-semibold text-ink">{{ title }}</strong>
+      <strong v-if="title" class="text-[15.6px] font-semibold text-ink">{{ title }}</strong>
       <span v-if="message" class="text-xs text-muted">{{ message }}</span>
       <slot />
     </div>

@@ -55,7 +55,7 @@ describe('plans page', () => {
     await router.isReady()
     const w = mountPage(PlansPage)
 
-    await w.find('.plan-card .btn-primary').trigger('click')
+    await w.find('[data-testid="plan-free-cta"]').trigger('click')
     // '/' redirects into the compact IA: the first-run setup lands on Branding › Brand.
     await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/branding'), { timeout: 5000 })
     expect(router.currentRoute.value.query.tab).toBe('brand')
@@ -70,7 +70,7 @@ describe('plans page', () => {
     await router.isReady()
     const w = mountPage(PlansPage)
 
-    await w.find('.plan-card .btn-primary').trigger('click')
+    await w.find('[data-testid="plan-free-cta"]').trigger('click')
     await flushPromises()
     await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/register'), { timeout: 5000 })
     w.unmount()

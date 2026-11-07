@@ -106,7 +106,7 @@ function handleApplyUrl(): void {
         :style="customBgDesktop ? { backgroundImage: `url(${customBgDesktop})` } : {}"
       >
         <div class="edit-preview-badge">16 : 9</div>
-        <div v-if="!customBgDesktop" class="edit-preview-empty">Default background active</div>
+        <div v-if="!customBgDesktop" class="edit-preview-empty">No background selected</div>
       </div>
       <!-- Mobile preview -->
       <div
@@ -115,7 +115,7 @@ function handleApplyUrl(): void {
         :style="customBgMobile ? { backgroundImage: `url(${customBgMobile})` } : {}"
       >
         <div class="edit-preview-badge">9 : 16</div>
-        <div v-if="!customBgMobile" class="edit-preview-empty">Default mobile background</div>
+        <div v-if="!customBgMobile" class="edit-preview-empty">No mobile background</div>
       </div>
     </div>
 

@@ -59,42 +59,47 @@ const trendFormatted = computed(() => {
     @keydown.space.prevent="interactive ? pick() : undefined"
   >
     <div class="relative z-10">
-      <!-- Header row: Label + Trend Pill / Action -->
-      <div class="flex items-center justify-between gap-2">
-        <h3 class="flex items-center gap-1.5 text-[12.5px] font-medium text-ink-soft tracking-tight m-0 leading-none">
-          <span>{{ label }}</span>
-          <button
-            v-if="info"
-            type="button"
-            class="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted/60 transition hover:bg-wash hover:text-ink focus-visible:outline-none"
-            :title="info"
-            :aria-label="info"
-            @click.stop
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="opacity-70 hover:opacity-100"
-              aria-hidden="true"
+      <div class="flex items-start justify-between gap-2">
+        <!-- Value + label read as one phrase: "4 Total" -->
+        <div class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <p class="tabular text-[30px] sm:text-[32.4px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono m-0">
+            {{ displayValue }}
+          </p>
+          <h3 class="flex items-center gap-1.5 text-[15px] font-medium text-ink-soft tracking-tight m-0 leading-none">
+            <span>{{ label }}</span>
+            <button
+              v-if="info"
+              type="button"
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted/60 transition hover:bg-wash hover:text-ink focus-visible:outline-none"
+              :title="info"
+              :aria-label="info"
+              @click.stop
             >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 16v-4" />
-              <path d="M12 8h.01" />
-            </svg>
-          </button>
-        </h3>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="opacity-70 hover:opacity-100"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
+            </button>
+          </h3>
+        </div>
 
         <!-- Trend Pill -->
         <span
           v-if="trendFormatted"
-          class="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] tracking-tight bg-black text-white font-semibold transition-transform duration-200 group-hover:scale-105"
+          class="inline-flex flex-none items-center gap-0.5 rounded-full px-2 py-0.5 text-[13.2px] tracking-tight bg-black text-white font-semibold transition-transform duration-200 group-hover:scale-105"
         >
           <svg
             v-if="isPositiveTrend"
@@ -134,7 +139,7 @@ const trendFormatted = computed(() => {
         <!-- Alternative: Alert pill when hint specifies alert (e.g. over budget) -->
         <span
           v-else-if="hint && hint.toLowerCase().includes('over')"
-          class="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-rose-50 text-rose-600 border border-rose-200"
+          class="inline-flex flex-none items-center px-2 py-0.5 rounded-full text-[12.6px] font-semibold bg-rose-50 text-rose-600 border border-rose-200"
         >
           {{ hint }}
         </span>
@@ -142,7 +147,7 @@ const trendFormatted = computed(() => {
         <!-- Navigation Arrow if linkable and no trend -->
         <svg
           v-else-if="to"
-          class="opacity-0 transition-all transform group-hover:opacity-60 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-muted"
+          class="flex-none opacity-0 transition-all transform group-hover:opacity-60 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-muted"
           viewBox="0 0 16 16"
           width="13"
           height="13"
@@ -157,18 +162,12 @@ const trendFormatted = computed(() => {
         </svg>
       </div>
 
-      <!-- Value row: Metric with CountUp Animation + Subtitle -->
-      <div class="mt-2.5 flex items-baseline justify-between gap-2">
-        <p class="tabular text-[25px] sm:text-[27px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono m-0">
-          {{ displayValue }}
-        </p>
-        <p
-          v-if="hint && !hint.toLowerCase().includes('over')"
-          class="truncate text-[11px] font-medium text-muted m-0"
-        >
-          {{ hint }}
-        </p>
-      </div>
+      <p
+        v-if="hint && !hint.toLowerCase().includes('over')"
+        class="mt-1.5 mb-0 truncate text-[13.2px] font-medium text-muted"
+      >
+        {{ hint }}
+      </p>
     </div>
 
     <!-- Full-width 1:1 square matrix spanning across card base -->

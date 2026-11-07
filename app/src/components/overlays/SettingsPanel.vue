@@ -502,7 +502,7 @@ const setupError = computed(() => {
               <th scope="col" v-for="r in roleDraft" :key="r.name">
                 <div class="flex items-center justify-between gap-1">
                   <span>{{ r.name }}</span>
-                  <button class="settings-del-btn" style="width: 22px !important; height: 22px !important; min-width: 22px !important; font-size: 13px !important; margin-left: 6px;"
+                  <button class="settings-del-btn" style="width: 22px !important; height: 22px !important; min-width: 22px !important; font-size: 15.6px !important; margin-left: 6px;"
                     :class="{ confirming: confirmId === `role:${r.name}` }"
                     :disabled="!canManage || roleDraft.length <= 1 || roleInUse(r.name) || removeRole.isPending.value"
                     :title="canManage ? (roleInUse(r.name) ? 'Role is in use' : '') : t('auth.noPerm')"

@@ -188,7 +188,7 @@ function onToggleActive(id: PlatformId, event: Event): void {
                     :href="profileUrl(p.id, connectionOf(p.id)?.handle) as string"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="text-2xl sm:text-[26px] font-extrabold text-ink font-sans tracking-tight leading-tight hover:underline inline-flex items-center gap-2"
+                    class="text-2xl sm:text-[31.2px] font-extrabold text-ink font-sans tracking-tight leading-tight hover:underline inline-flex items-center gap-2"
                     :title="`${pageNameOf(p.id)} — open profile`"
                   >
                     <span>{{ pageNameOf(p.id) }}</span>
@@ -198,7 +198,7 @@ function onToggleActive(id: PlatformId, event: Event): void {
                       <line x1="10" y1="14" x2="21" y2="3" />
                     </svg>
                   </a>
-                  <span v-else class="text-2xl sm:text-[26px] font-extrabold text-ink font-sans tracking-tight leading-tight">{{ pageNameOf(p.id) }}</span>
+                  <span v-else class="text-2xl sm:text-[31.2px] font-extrabold text-ink font-sans tracking-tight leading-tight">{{ pageNameOf(p.id) }}</span>
                 </div>
 
                 <div class="flex items-center gap-2 text-xs text-muted flex-wrap mt-0.5">

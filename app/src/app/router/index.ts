@@ -84,6 +84,20 @@ const router = createRouter({ history: createWebHashHistory(), routes })
 // Signed-in users skip the onboarding pages (but may revisit /plans).
 router.beforeEach((to) => {
   if (currentUser.value && (to.path === '/login' || to.path === '/register')) return '/'
+
+  // Screen-local query flags must not ride into another hub. Studio ids leak
+  // into Dashboard/Plan URLs and onboarding=1 belongs only to Branding.
+  const query = { ...to.query }
+  let changed = false
+  if (to.path !== '/branding' && query.onboarding !== undefined) {
+    delete query.onboarding
+    changed = true
+  }
+  if (!['/content', '/promote'].includes(to.path) && query.id !== undefined) {
+    delete query.id
+    changed = true
+  }
+  if (changed) return { path: to.path, query, hash: to.hash }
   return true
 })
 

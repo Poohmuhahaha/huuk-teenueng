@@ -112,7 +112,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </button>
         </div>
         <div class="actions flex justify-end gap-2 mt-4">
-          <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" @click="close">{{ t('common.close') }}</button>
+          <button type="button" class="btn flex-1 min-w-0 font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" @click="close">{{ t('common.close') }}</button>
         </div>
         </div>
       </div>

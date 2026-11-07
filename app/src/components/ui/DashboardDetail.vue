@@ -194,10 +194,10 @@ const crossLink = computed(() =>
         </label>
       </div>
     </div>
-    <p v-if="nError" class="text-danger text-[13.5px] font-semibold mt-2.5" role="alert">{{ nError }}</p>
+    <p v-if="nError" class="text-danger text-[16.2px] font-semibold mt-2.5" role="alert">{{ nError }}</p>
     <p v-if="nNotice" class="text-muted text-sm" role="status">{{ nNotice }}</p>
     <div class="flex gap-2">
-      <button class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" :disabled="!canWrite || addPost.isPending.value || !nTopic.trim()"
+      <button class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" :disabled="!canWrite || addPost.isPending.value || !nTopic.trim()"
         :title="canWrite ? '' : t('auth.noPerm')" @click="addTopic">
         {{ t('dash.newTopic') }}
       </button>
@@ -213,7 +213,7 @@ const crossLink = computed(() =>
       </select>
     </div>
     <div class="flex gap-2">
-      <button class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" :disabled="!iPlatform || imp.isPending.value || !canImport"
+      <button class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" :disabled="!iPlatform || imp.isPending.value || !canImport"
         :title="canImport ? '' : t('auth.noPerm')" @click="imp.mutate({ platform: iPlatform, month, year })">
         {{ imp.isPending.value ? t('common.loading') : t('dash.import') }}
       </button>
@@ -221,7 +221,7 @@ const crossLink = computed(() =>
     <p v-if="imp.data.value" class="text-muted text-sm" role="status">
       {{ t('dash.imported', { count: imp.data.value.imported, platform: iPlatform }) }}
     </p>
-    <p v-if="imp.error.value" class="text-danger text-[13.5px] font-semibold mt-2.5" role="alert">
+    <p v-if="imp.error.value" class="text-danger text-[16.2px] font-semibold mt-2.5" role="alert">
       {{ imp.error.value instanceof Error ? imp.error.value.message : imp.error.value }}
     </p>
   </div>
@@ -232,7 +232,7 @@ const crossLink = computed(() =>
     <ul v-if="kpiRows.length" class="list-none m-0 p-0 grid gap-0.5 max-h-[320px] overflow-auto">
       <li v-for="r in kpiRows" :key="r.id" class="grid gap-0.5 px-0.5 py-2 border-b border-faint">
         <span class="text-md font-semibold">{{ r.topic }}</span>
-        <span class="text-muted text-[12.5px]">
+        <span class="text-muted text-[15px]">
           {{ r.date ?? '—' }} · {{ r.status }}
           <template v-if="showMetrics"> · {{ r.views.toLocaleString('en-US') }} views · {{ r.likes.toLocaleString('en-US') }} likes</template>
         </span>
@@ -240,8 +240,8 @@ const crossLink = computed(() =>
     </ul>
     <p v-else class="text-muted text-sm">{{ t('dash.noRows') }}</p>
     <div class="flex gap-2">
-      <RouterLink class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default text-center no-underline" :to="crossLink.to">{{ crossLink.label }}</RouterLink>
-      <button class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-line bg-transparent text-muted cursor-pointer shadow-none hover:border-ink hover:text-ink" @click="$emit('close')">{{ t('common.close') }}</button>
+      <RouterLink class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-ink bg-transparent text-ink cursor-pointer shadow-none hover:bg-ink hover:text-white hover:border-ink active:transform-none disabled:opacity-50 disabled:cursor-default text-center no-underline" :to="crossLink.to">{{ crossLink.label }}</RouterLink>
+      <button class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-line bg-transparent text-muted cursor-pointer shadow-none hover:border-ink hover:text-ink" @click="$emit('close')">{{ t('common.close') }}</button>
     </div>
   </div>
 

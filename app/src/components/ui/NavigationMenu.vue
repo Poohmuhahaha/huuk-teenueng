@@ -16,7 +16,7 @@ const emit = defineEmits<{ select: [string] }>()
     <div v-for="it in items" :key="it.id" class="group relative">
       <a
         v-if="it.href && !it.children"
-        class="inline-flex items-center gap-1 w-auto bg-transparent border-0 font-sans text-[13px] font-semibold py-2 px-3 cursor-pointer no-underline transition-colors rounded-none hover:text-ink"
+        class="inline-flex items-center gap-1 w-auto bg-transparent border-0 font-sans text-[15.6px] font-semibold py-2 px-3 cursor-pointer no-underline transition-colors rounded-none hover:text-ink"
         :class="active === it.id ? 'text-ink underline underline-offset-4' : 'text-muted'"
         :href="it.href"
         @click="emit('select', it.id)"
@@ -26,7 +26,7 @@ const emit = defineEmits<{ select: [string] }>()
       <button
         v-else
         type="button"
-        class="inline-flex items-center gap-1 w-auto bg-transparent border-0 font-sans text-[13px] font-semibold py-2 px-3 cursor-pointer no-underline transition-colors rounded-none hover:text-ink"
+        class="inline-flex items-center gap-1 w-auto bg-transparent border-0 font-sans text-[15.6px] font-semibold py-2 px-3 cursor-pointer no-underline transition-colors rounded-none hover:text-ink"
         :class="active === it.id ? 'text-ink underline underline-offset-4' : 'text-muted'"
       >
         {{ it.label }} <span aria-hidden="true">▾</span>
@@ -38,12 +38,12 @@ const emit = defineEmits<{ select: [string] }>()
         <a
           v-for="child in it.children"
           :key="child.id"
-          class="flex flex-col gap-0.5 p-2 px-2.5 text-ink text-[13px] no-underline rounded-none hover:bg-wash"
+          class="flex flex-col gap-0.5 p-2 px-2.5 text-ink text-[15.6px] no-underline rounded-none hover:bg-wash"
           :href="child.href"
           @click="emit('select', child.id)"
         >
           <strong class="font-semibold">{{ child.label }}</strong>
-          <span v-if="child.description" class="text-[11px] text-muted">{{ child.description }}</span>
+          <span v-if="child.description" class="text-[13.2px] text-muted">{{ child.description }}</span>
         </a>
       </div>
     </div>

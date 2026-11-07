@@ -143,6 +143,38 @@ pub struct Role {
     pub permissions: Vec<String>,
 }
 
+/// Built-in role for the creator of a self-serve workspace. It owns the
+/// workspace (brand, connections, content, planner) without granting
+/// deployment-wide setup/user administration.
+pub const WORKSPACE_OWNER_ROLE: &str = "Workspace Owner";
+
+pub const WORKSPACE_OWNER_PERMISSIONS: [&str; 13] = [
+    "posts.write",
+    "posts.lock",
+    "metrics.import",
+    "finance.write",
+    "brand.write",
+    "ideas.write",
+    "hashtags.write",
+    "platforms.manage",
+    "content.write",
+    "content.publish",
+    "content.delete",
+    "campaigns.write",
+    "campaigns.delete",
+];
+
+/// The built-in workspace-owner role payload.
+pub fn workspace_owner_role() -> Role {
+    Role {
+        name: WORKSPACE_OWNER_ROLE.into(),
+        permissions: WORKSPACE_OWNER_PERMISSIONS
+            .iter()
+            .map(|p| p.to_string())
+            .collect(),
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(

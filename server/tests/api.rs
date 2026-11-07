@@ -1288,11 +1288,9 @@ async fn register_validates_and_creates_an_account() {
 }
 
 #[tokio::test]
-async fn register_uses_directory_role_or_defaults_to_viewer() {
+async fn register_rejects_directory_names() {
     let app = app(new_state());
 
-    // role mapping only applies when the name is not already an account: add a
-    // fresh directory entry, then register an account with that exact name.
     let listed = send(
         app.clone(),
         "POST",
@@ -1304,17 +1302,132 @@ async fn register_uses_directory_role_or_defaults_to_viewer() {
     .await;
     assert_eq!(listed.status(), StatusCode::OK);
 
-    let editor = send(
+    let hijack = send(
         app.clone(),
         "POST",
         "/api/auth/register",
         serde_json::json!({
-            "name": "Dir Editor", "email": "dir@test.local", "password": "longenough123"
+            "name": "dir editor", "email": "dir@test.local", "password": "longenough123"
         }),
     )
     .await;
-    assert_eq!(editor.status(), StatusCode::OK);
-    assert_eq!(body_json(editor).await["user"]["role"], "Editor");
+    assert_eq!(hijack.status(), StatusCode::CONFLICT);
+    assert!(body_json(hijack).await["error"]
+        .as_str()
+        .unwrap()
+        .contains("directory"));
+
+    let setup = body_json(get(app, "/api/setup").await).await;
+    let user = setup["users"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|u| u["name"] == "Dir Editor")
+        .unwrap();
+    assert_eq!(user["role"], "Editor");
+}
+
+#[tokio::test]
+async fn deleted_account_name_cannot_reclaim_its_role() {
+    let app = app(new_state());
+
+    let created = send(
+        app.clone(),
+        "POST",
+        "/api/auth/accounts",
+        serde_json::json!({
+            "name": "Claim Target", "email": "claim@test.local",
+            "role": "Editor", "password": "longenough123"
+        }),
+    )
+    .await;
+    assert_eq!(created.status(), StatusCode::OK);
+
+    let enabled = send(
+        app.clone(),
+        "PATCH",
+        "/api/setup",
+        serde_json::json!({ "authRequired": true }),
+    )
+    .await;
+    assert_eq!(enabled.status(), StatusCode::OK);
+
+    let owner = login(app.clone(), "owner@studio.local", "demo1234").await;
+    let target = login(app.clone(), "claim@test.local", "longenough123").await;
+
+    let locked = send_auth(
+        app.clone(),
+        "POST",
+        "/api/posts/p-desk/lock",
+        Some(&target),
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(locked.status(), StatusCode::OK);
+    assert_eq!(body_json(locked).await["lockedBy"], "Claim Target");
+
+    let deleted = send_auth(
+        app.clone(),
+        "DELETE",
+        "/api/auth/accounts/claim%40test.local",
+        Some(&owner),
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(deleted.status(), StatusCode::OK);
+
+    let setup = body_json(
+        send_auth(
+            app.clone(),
+            "GET",
+            "/api/setup",
+            Some(&owner),
+            serde_json::json!({}),
+        )
+        .await,
+    )
+    .await;
+    assert!(!setup["users"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|u| u["name"] == "Claim Target"));
+
+    let posts = body_json(
+        send_auth(
+            app.clone(),
+            "GET",
+            "/api/posts?month=2",
+            Some(&owner),
+            serde_json::json!({}),
+        )
+        .await,
+    )
+    .await;
+    let post = posts
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["id"] == "p-desk")
+        .unwrap();
+    assert!(post["lockedBy"].is_null());
+
+    let reclaim = send(
+        app,
+        "POST",
+        "/api/auth/register",
+        serde_json::json!({
+            "name": "claim target", "email": "reclaim@test.local", "password": "longenough123"
+        }),
+    )
+    .await;
+    assert_eq!(reclaim.status(), StatusCode::OK);
+    assert_eq!(body_json(reclaim).await["user"]["role"], "Viewer");
+}
+
+#[tokio::test]
+async fn normal_registration_gets_viewer() {
+    let app = app(new_state());
 
     let fresh = send(
         app.clone(),
@@ -1327,7 +1440,6 @@ async fn register_uses_directory_role_or_defaults_to_viewer() {
     .await;
     assert_eq!(fresh.status(), StatusCode::OK);
     let fresh_body = body_json(fresh).await;
-    // self-serve signup is least-privilege: never Owner/Editor
     assert_eq!(fresh_body["user"]["role"], "Viewer");
     assert_eq!(fresh_body["user"]["plan"], "free");
 
@@ -1461,6 +1573,68 @@ async fn plan_is_selectable_per_account() {
     )
     .await;
     assert_eq!(body_json(me).await["user"]["plan"], "pro");
+}
+
+#[tokio::test]
+async fn plan_changes_require_users_manage() {
+    let app = app(new_state());
+    let enabled = send(
+        app.clone(),
+        "PATCH",
+        "/api/setup",
+        serde_json::json!({ "authRequired": true }),
+    )
+    .await;
+    assert_eq!(enabled.status(), StatusCode::OK);
+
+    let registered = send(
+        app.clone(),
+        "POST",
+        "/api/auth/register",
+        serde_json::json!({
+            "name": "Plan Viewer", "email": "plan-viewer@test.local",
+            "password": "longenough123"
+        }),
+    )
+    .await;
+    assert_eq!(registered.status(), StatusCode::OK);
+    let registered_body = body_json(registered).await;
+    assert_eq!(registered_body["user"]["role"], "Viewer");
+    let viewer = registered_body["token"].as_str().unwrap().to_string();
+
+    // Free is the self-serve onboarding choice, so a Viewer can select it.
+    let free = send_auth(
+        app.clone(),
+        "POST",
+        "/api/auth/plan",
+        Some(&viewer),
+        serde_json::json!({ "plan": "free" }),
+    )
+    .await;
+    assert_eq!(free.status(), StatusCode::OK);
+    assert_eq!(body_json(free).await["user"]["plan"], "free");
+
+    let denied = send_auth(
+        app.clone(),
+        "POST",
+        "/api/auth/plan",
+        Some(&viewer),
+        serde_json::json!({ "plan": "enterprise" }),
+    )
+    .await;
+    assert_eq!(denied.status(), StatusCode::FORBIDDEN);
+
+    let owner = login(app.clone(), "owner@studio.local", "demo1234").await;
+    let allowed = send_auth(
+        app.clone(),
+        "POST",
+        "/api/auth/plan",
+        Some(&owner),
+        serde_json::json!({ "plan": "enterprise" }),
+    )
+    .await;
+    assert_eq!(allowed.status(), StatusCode::OK);
+    assert_eq!(body_json(allowed).await["user"]["plan"], "enterprise");
 }
 
 #[tokio::test]
@@ -1937,19 +2111,6 @@ async fn role_permissions_are_enforced() {
     .await;
     assert_eq!(enabled.status(), StatusCode::OK);
 
-    let owner = login(app.clone(), "owner@studio.local", "demo1234").await;
-    let added = send_auth(
-        app.clone(),
-        "POST",
-        "/api/setup/users",
-        Some(&owner),
-        serde_json::json!({
-            "name": "Viewer Val", "role": "Viewer"
-        }),
-    )
-    .await;
-    assert_eq!(added.status(), StatusCode::OK);
-    // registering an account for that directory user keeps the Viewer role
     let registered = send(
         app.clone(),
         "POST",
@@ -3295,6 +3456,32 @@ async fn connect_is_blocked_when_the_provider_uses_oauth() {
 }
 
 #[tokio::test]
+async fn connect_fails_closed_when_oauth_is_unconfigured_and_auth_is_required() {
+    let state = new_state();
+    {
+        let mut store = state.write().await;
+        store.setup.auth_required = true;
+        store.demo_mode = false;
+    }
+    let app = app(state);
+    let owner = login(app.clone(), "owner@studio.local", "demo1234").await;
+    let res = send_auth(
+        app,
+        "POST",
+        "/api/platforms/tiktok/connect",
+        Some(&owner),
+        serde_json::json!({ "handle": "@nope" }),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    assert!(body_json(res).await["error"]
+        .as_str()
+        .unwrap()
+        .to_lowercase()
+        .contains("oauth"));
+}
+
+#[tokio::test]
 async fn profile_rename_rewrites_post_locks() {
     let app = app(new_state());
     let enabled = send(
@@ -3625,6 +3812,67 @@ async fn content_studio_lifecycle() {
     assert_eq!(body_json(unpublished).await["status"], "draft");
     let gone = get(app, "/api/public/content/new-studio-piece").await;
     assert_eq!(gone.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn published_content_from_a_non_default_workspace_is_public_by_slug() {
+    let app = app(new_state());
+
+    // Demo mode: create a second workspace and publish content inside it.
+    let workspace = body_json(
+        send(
+            app.clone(),
+            "POST",
+            "/api/workspaces",
+            serde_json::json!({ "name": "Private Brand" }),
+        )
+        .await,
+    )
+    .await;
+    let ws = workspace["id"].as_str().unwrap();
+
+    let created = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/content",
+            None,
+            ws,
+            serde_json::json!({
+                "title": "Tenant Launch", "slug": "tenant-launch", "kind": "article",
+                "status": "draft", "body": "Tenant **post**.", "excerpt": "Tenant excerpt.",
+                "heroImageUrl": "", "tags": [], "seoTitle": "", "seoDescription": "",
+                "author": "", "createdAt": "", "updatedAt": "", "publishedAt": null,
+                "scheduledFor": null, "version": 0, "revisions": []
+            }),
+        )
+        .await,
+    )
+    .await;
+    let id = created["id"].as_str().unwrap();
+    let published = send_auth_ws(
+        app.clone(),
+        "POST",
+        &format!("/api/content/{id}/publish"),
+        None,
+        ws,
+        serde_json::json!({ "version": 1 }),
+    )
+    .await;
+    assert_eq!(published.status(), StatusCode::OK);
+
+    // Direct public link resolves the published slug across workspaces.
+    let public_item = body_json(get(app.clone(), "/api/public/content/tenant-launch").await).await;
+    assert_eq!(public_item["title"], "Tenant Launch");
+    assert_eq!(public_item["body"], "Tenant **post**.");
+
+    // The shared public index remains default-workspace-only for now.
+    let public_list = body_json(get(app, "/api/public/content").await).await;
+    assert!(public_list
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|c| c["slug"] != "tenant-launch"));
 }
 
 #[tokio::test]
@@ -4328,16 +4576,6 @@ async fn campaign_writes_need_permission_when_auth_is_on() {
     assert_eq!(anonymous.status(), StatusCode::UNAUTHORIZED);
 
     // A Viewer cannot create campaigns…
-    let owner = login(app.clone(), "owner@studio.local", "demo1234").await;
-    let added = send_auth(
-        app.clone(),
-        "POST",
-        "/api/setup/users",
-        Some(&owner),
-        serde_json::json!({ "name": "Viewer V", "role": "Viewer" }),
-    )
-    .await;
-    assert_eq!(added.status(), StatusCode::OK);
     let viewer = send(
         app.clone(),
         "POST",
@@ -4558,6 +4796,103 @@ async fn workspaces_crud_scopes_brand_and_platforms() {
 }
 
 #[tokio::test]
+async fn first_workspace_bootstraps_viewer_into_workspace_owner() {
+    use content_planner_server::model::User;
+    use content_planner_server::store::{hash_password, Account};
+
+    let state = new_state();
+    let token = {
+        let mut store = state.write().await;
+        store.setup.auth_required = true;
+        // Keep the seeded workspace away from this fresh account so it is a
+        // genuine first-run onboarding case.
+        store.workspaces[0].owner = "someone-else@example.com".into();
+        store.accounts.insert(
+            "viewer@example.com".into(),
+            Account {
+                name: "Viewer Val".into(),
+                email: "viewer@example.com".into(),
+                password_hash: hash_password("longenough123"),
+                plan: "free".into(),
+                last_active: None,
+            },
+        );
+        store.setup.users.push(User {
+            name: "Viewer Val".into(),
+            role: "Viewer".into(),
+        });
+        store.open_session("viewer@example.com")
+    };
+    let app = app(state.clone());
+
+    // A Viewer with no workspace may create its first one.
+    let created = send_auth(
+        app.clone(),
+        "POST",
+        "/api/workspaces",
+        Some(&token),
+        serde_json::json!({ "name": "Viewer Studio" }),
+    )
+    .await;
+    assert_eq!(created.status(), StatusCode::OK);
+    let ws = body_json(created).await["id"].as_str().unwrap().to_string();
+
+    // The creator is upgraded to the workspace-scoped owner role.
+    let setup = body_json(
+        send_auth(
+            app.clone(),
+            "GET",
+            "/api/setup",
+            Some(&token),
+            serde_json::json!({}),
+        )
+        .await,
+    )
+    .await;
+    let user = setup["users"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|u| u["name"] == "Viewer Val")
+        .unwrap();
+    assert_eq!(user["role"], "Workspace Owner");
+    let role = setup["roles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["name"] == "Workspace Owner")
+        .unwrap();
+    let permissions = role["permissions"].as_array().unwrap();
+    assert!(permissions.iter().any(|p| p == "brand.write"));
+    assert!(permissions.iter().any(|p| p == "platforms.manage"));
+    assert!(!permissions.iter().any(|p| p == "setup.write"));
+    assert!(!permissions.iter().any(|p| p == "users.manage"));
+
+    // The upgraded account can configure its brand…
+    let saved = send_auth_ws(
+        app.clone(),
+        "PATCH",
+        "/api/brand",
+        Some(&token),
+        &ws,
+        serde_json::json!({ "channel": "Viewer Channel" }),
+    )
+    .await;
+    assert_eq!(saved.status(), StatusCode::OK);
+
+    // …but cannot administer deployment-wide setup.
+    let denied = send_auth(
+        app,
+        "PATCH",
+        "/api/setup",
+        Some(&token),
+        serde_json::json!({ "workspaceName": "Hijack" }),
+    )
+    .await;
+    assert_eq!(denied.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
 async fn last_workspace_cannot_be_deleted_and_rename_validates() {
     let state = new_state();
     let app = app(state);
@@ -4589,6 +4924,58 @@ async fn last_workspace_cannot_be_deleted_and_rename_validates() {
     )
     .await;
     assert_eq!(unknown.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn deleting_a_workspace_drops_its_scoped_rows() {
+    let (state, owner_token, _, _) = member_test_state().await;
+    let app = app(state.clone());
+    let ws = create_owned_workspace(app.clone(), &owner_token, "Doomed").await;
+
+    let created = send_auth_ws(
+        app.clone(),
+        "POST",
+        "/api/posts",
+        Some(&owner_token),
+        &ws,
+        serde_json::json!({
+            "month": 7,
+            "topic": "Doomed post",
+            "pillar": "Promo",
+            "format": "Reel",
+            "goal": "Views",
+            "date": "2026-07-01",
+            "time": "18:00",
+            "status": "Start",
+            "hook": "", "caption": "", "cta": "", "hashtagGroup": "",
+            "hashtags": [], "imageUrl": "", "note": "", "done": false,
+            "platforms": ["Facebook"]
+        }),
+    )
+    .await;
+    assert_eq!(created.status(), StatusCode::OK);
+    let post_id = body_json(created).await["id"].as_str().unwrap().to_string();
+    {
+        let store = state.read().await;
+        assert_eq!(
+            store.post_workspace.get(&post_id).map(String::as_str),
+            Some(ws.as_str())
+        );
+    }
+
+    let deleted = send_auth(
+        app,
+        "DELETE",
+        &format!("/api/workspaces/{ws}"),
+        Some(&owner_token),
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(deleted.status(), StatusCode::OK);
+
+    let store = state.read().await;
+    assert!(!store.posts.iter().any(|p| p.id == post_id));
+    assert!(!store.post_workspace.contains_key(&post_id));
 }
 
 #[tokio::test]
@@ -4745,6 +5132,7 @@ async fn workspaces_are_isolated_per_account() {
     let (token_a, token_b) = {
         let mut store = state.write().await;
         store.apply_env(); // auth on, demo accounts purged
+        store.demo_mode = true;
         for (name, email) in [
             ("Account A", "a@example.com"),
             ("Account B", "b@example.com"),
@@ -5325,6 +5713,67 @@ async fn workspace_member_removal_revokes_visibility() {
 }
 
 #[tokio::test]
+async fn anonymous_reads_ignore_cross_workspace_header() {
+    let (state, owner_token, member_token, _) = member_test_state().await;
+    let app = app(state);
+
+    let ws = create_owned_workspace(app.clone(), &owner_token, "Victim Workspace").await;
+    let saved = send_auth_ws(
+        app.clone(),
+        "PATCH",
+        "/api/brand",
+        Some(&owner_token),
+        &ws,
+        serde_json::json!({ "channel": "Victim Brand" }),
+    )
+    .await;
+    assert_eq!(saved.status(), StatusCode::OK);
+    let added = send_auth(
+        app.clone(),
+        "POST",
+        &format!("/api/workspaces/{ws}/members"),
+        Some(&owner_token),
+        serde_json::json!({ "email": "member@example.com" }),
+    )
+    .await;
+    assert_eq!(added.status(), StatusCode::OK);
+
+    let anon_brand = body_json(get_ws(app.clone(), "/api/brand", &ws).await).await;
+    assert_ne!(anon_brand["channel"], "Victim Brand");
+    let anon_setup = body_json(get_ws(app.clone(), "/api/setup", &ws).await).await;
+    assert_ne!(anon_setup["workspaceName"], "Victim Workspace");
+    let default_setup = body_json(get(app.clone(), "/api/setup").await).await;
+    assert_eq!(anon_setup["workspaceName"], default_setup["workspaceName"]);
+
+    let member_brand = body_json(
+        send_auth_ws(
+            app.clone(),
+            "GET",
+            "/api/brand",
+            Some(&member_token),
+            &ws,
+            serde_json::json!({}),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(member_brand["channel"], "Victim Brand");
+    let member_setup = body_json(
+        send_auth_ws(
+            app.clone(),
+            "GET",
+            "/api/setup",
+            Some(&member_token),
+            &ws,
+            serde_json::json!({}),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(member_setup["workspaceName"], "Victim Workspace");
+}
+
+#[tokio::test]
 async fn workspace_member_endpoints_404_unknown_workspace() {
     let (state, owner_token, _, _) = member_test_state().await;
     let app = app(state);
@@ -5373,4 +5822,787 @@ async fn workspace_member_endpoints_404_unknown_workspace() {
     let legacy = body_json(legacy).await;
     assert_eq!(legacy["owner"]["email"], "");
     assert!(legacy["members"].as_array().unwrap().is_empty());
+}
+
+// ---- tenant data scoping (posts, ideas, tags, metrics, finance, content, campaigns) ----
+
+/// Auth-on state with two Owner accounts, each able to create its own workspace.
+async fn tenant_test_state() -> (content_planner_server::AppState, String, String) {
+    use content_planner_server::model::User;
+    use content_planner_server::store::{hash_password, Account};
+
+    let state = new_state();
+    let (token_a, token_b) = {
+        let mut store = state.write().await;
+        store.apply_env();
+        store.demo_mode = true;
+        for (name, email) in [
+            ("Tenant A", "tenant-a@example.com"),
+            ("Tenant B", "tenant-b@example.com"),
+        ] {
+            store.accounts.insert(
+                email.into(),
+                Account {
+                    name: name.into(),
+                    email: email.into(),
+                    password_hash: hash_password("longenough123"),
+                    plan: "free".into(),
+                    last_active: None,
+                },
+            );
+            store.setup.users.push(User {
+                name: name.into(),
+                role: "Owner".into(),
+            });
+        }
+        (
+            store.open_session("tenant-a@example.com"),
+            store.open_session("tenant-b@example.com"),
+        )
+    };
+    (state, token_a, token_b)
+}
+
+async fn tenant_workspaces() -> (
+    content_planner_server::AppState,
+    axum::Router,
+    String,
+    String,
+    String,
+    String,
+) {
+    let (state, token_a, token_b) = tenant_test_state().await;
+    let app = app(state.clone());
+    let ws_a = create_owned_workspace(app.clone(), &token_a, "Tenant A space").await;
+    let ws_b = create_owned_workspace(app.clone(), &token_b, "Tenant B space").await;
+    (state, app, token_a, token_b, ws_a, ws_b)
+}
+
+async fn list_ws(app: axum::Router, token: &str, workspace: &str, uri: &str) -> serde_json::Value {
+    body_json(
+        send_auth_ws(
+            app,
+            "GET",
+            uri,
+            Some(token),
+            workspace,
+            serde_json::json!({}),
+        )
+        .await,
+    )
+    .await
+}
+
+fn has_id(rows: &serde_json::Value, id: &str) -> bool {
+    rows.as_array().unwrap().iter().any(|row| row["id"] == id)
+}
+
+#[tokio::test]
+async fn tenant_lists_only_show_their_own_rows() {
+    use content_planner_server::model::HashtagGroup;
+
+    let (state, app, token_a, token_b, ws_a, ws_b) = tenant_workspaces().await;
+    let post_body = |topic: &str| {
+        serde_json::json!({
+            "month": 7, "year": 2026, "topic": topic, "pillar": "Pillar I",
+            "format": "Short-video", "goal": "Views", "date": "2026-07-01",
+            "time": "09:00", "status": "Start", "hook": "", "caption": "",
+            "cta": "", "hashtagGroup": "", "hashtags": [], "imageUrl": "",
+            "note": "", "done": false, "platforms": ["Instagram"]
+        })
+    };
+
+    let a_post = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/posts",
+            Some(&token_a),
+            &ws_a,
+            post_body("A post"),
+        )
+        .await,
+    )
+    .await;
+    let b_post = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/posts",
+            Some(&token_b),
+            &ws_b,
+            post_body("B post"),
+        )
+        .await,
+    )
+    .await;
+    let a_post_id = a_post["id"].as_str().unwrap().to_string();
+    let b_post_id = b_post["id"].as_str().unwrap().to_string();
+
+    let a_content = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/content",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({ "title": "A article", "body": "A body" }),
+        )
+        .await,
+    )
+    .await;
+    let b_content = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/content",
+            Some(&token_b),
+            &ws_b,
+            serde_json::json!({ "title": "B article", "body": "B body" }),
+        )
+        .await,
+    )
+    .await;
+    let a_content_id = a_content["id"].as_str().unwrap().to_string();
+    let b_content_id = b_content["id"].as_str().unwrap().to_string();
+
+    let a_campaign = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/campaigns",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({ "name": "A campaign" }),
+        )
+        .await,
+    )
+    .await;
+    let b_campaign = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/campaigns",
+            Some(&token_b),
+            &ws_b,
+            serde_json::json!({ "name": "B campaign" }),
+        )
+        .await,
+    )
+    .await;
+    let a_campaign_id = a_campaign["id"].as_str().unwrap().to_string();
+    let b_campaign_id = b_campaign["id"].as_str().unwrap().to_string();
+
+    let a_txn = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/txns",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({
+                "date": "2026-07-01", "amount": 100, "kind": "IN",
+                "category": "A income", "sub": "Client A"
+            }),
+        )
+        .await,
+    )
+    .await;
+    let b_txn = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/txns",
+            Some(&token_b),
+            &ws_b,
+            serde_json::json!({
+                "date": "2026-07-01", "amount": 200, "kind": "IN",
+                "category": "B income", "sub": "Client B"
+            }),
+        )
+        .await,
+    )
+    .await;
+    let a_txn_id = a_txn["id"].as_str().unwrap().to_string();
+    let b_txn_id = b_txn["id"].as_str().unwrap().to_string();
+
+    let a_idea = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/ideas",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({
+                "topic": "A idea", "format": "Short-video", "idea": "A",
+                "link": "", "done": false
+            }),
+        )
+        .await,
+    )
+    .await;
+    let b_idea = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/ideas",
+            Some(&token_b),
+            &ws_b,
+            serde_json::json!({
+                "topic": "B idea", "format": "Short-video", "idea": "B",
+                "link": "", "done": false
+            }),
+        )
+        .await,
+    )
+    .await;
+    let a_idea_id = a_idea["id"].as_str().unwrap().to_string();
+    let b_idea_id = b_idea["id"].as_str().unwrap().to_string();
+
+    {
+        let mut store = state.write().await;
+        for (id, title, tag, workspace) in [
+            ("g-tenant-a", "Tenant A tags", "alpha", ws_a.as_str()),
+            ("g-tenant-b", "Tenant B tags", "beta", ws_b.as_str()),
+        ] {
+            store.hashtags.push(HashtagGroup {
+                id: id.into(),
+                title: title.into(),
+                tags: vec![tag.into()],
+            });
+            store.hashtag_workspace.insert(id.into(), workspace.into());
+        }
+    }
+
+    let a_import = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/metrics/import",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({ "platform": "Instagram", "month": 7, "year": 2026 }),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(a_import["imported"], 1);
+    assert_eq!(a_import["metrics"][0]["postId"], a_post_id);
+
+    let b_import = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/metrics/import",
+            Some(&token_b),
+            &ws_b,
+            serde_json::json!({ "platform": "Instagram", "month": 7, "year": 2026 }),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(b_import["imported"], 1);
+    assert_eq!(b_import["metrics"][0]["postId"], b_post_id);
+
+    let a_posts = list_ws(app.clone(), &token_a, &ws_a, "/api/posts?month=7").await;
+    assert!(has_id(&a_posts, &a_post_id));
+    assert!(!has_id(&a_posts, &b_post_id));
+    let b_posts = list_ws(app.clone(), &token_b, &ws_b, "/api/posts?month=7").await;
+    assert!(has_id(&b_posts, &b_post_id));
+    assert!(!has_id(&b_posts, &a_post_id));
+
+    let a_content = list_ws(app.clone(), &token_a, &ws_a, "/api/content").await;
+    assert!(has_id(&a_content, &a_content_id));
+    assert!(!has_id(&a_content, &b_content_id));
+    let b_content = list_ws(app.clone(), &token_b, &ws_b, "/api/content").await;
+    assert!(has_id(&b_content, &b_content_id));
+    assert!(!has_id(&b_content, &a_content_id));
+
+    let a_campaigns = list_ws(app.clone(), &token_a, &ws_a, "/api/campaigns").await;
+    assert!(has_id(&a_campaigns, &a_campaign_id));
+    assert!(!has_id(&a_campaigns, &b_campaign_id));
+    let b_campaigns = list_ws(app.clone(), &token_b, &ws_b, "/api/campaigns").await;
+    assert!(has_id(&b_campaigns, &b_campaign_id));
+    assert!(!has_id(&b_campaigns, &a_campaign_id));
+
+    let a_txns = list_ws(app.clone(), &token_a, &ws_a, "/api/txns").await;
+    assert!(has_id(&a_txns, &a_txn_id));
+    assert!(!has_id(&a_txns, &b_txn_id));
+    let b_txns = list_ws(app.clone(), &token_b, &ws_b, "/api/txns").await;
+    assert!(has_id(&b_txns, &b_txn_id));
+    assert!(!has_id(&b_txns, &a_txn_id));
+
+    let a_ideas = list_ws(app.clone(), &token_a, &ws_a, "/api/ideas").await;
+    assert!(has_id(&a_ideas, &a_idea_id));
+    assert!(!has_id(&a_ideas, &b_idea_id));
+    let b_ideas = list_ws(app.clone(), &token_b, &ws_b, "/api/ideas").await;
+    assert!(has_id(&b_ideas, &b_idea_id));
+    assert!(!has_id(&b_ideas, &a_idea_id));
+
+    let a_tags = list_ws(app.clone(), &token_a, &ws_a, "/api/tags").await;
+    assert!(has_id(&a_tags, "g-tenant-a"));
+    assert!(!has_id(&a_tags, "g-tenant-b"));
+    let b_tags = list_ws(app.clone(), &token_b, &ws_b, "/api/tags").await;
+    assert!(has_id(&b_tags, "g-tenant-b"));
+    assert!(!has_id(&b_tags, "g-tenant-a"));
+
+    let a_metrics = list_ws(app.clone(), &token_a, &ws_a, "/api/metrics").await;
+    assert!(a_metrics
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|m| m["postId"] == a_post_id));
+    assert!(a_metrics
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|m| m["postId"] != b_post_id));
+    let b_metrics = list_ws(app, &token_b, &ws_b, "/api/metrics").await;
+    assert!(b_metrics
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|m| m["postId"] == b_post_id));
+    assert!(b_metrics
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|m| m["postId"] != a_post_id));
+}
+
+#[tokio::test]
+async fn cross_workspace_ids_return_not_found() {
+    use content_planner_server::model::HashtagGroup;
+
+    let (state, app, token_a, token_b, ws_a, ws_b) = tenant_workspaces().await;
+
+    let a_post = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/posts",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({
+                "month": 7, "year": 2026, "topic": "A private post",
+                "pillar": "Pillar I", "format": "Short-video", "goal": "Views",
+                "date": "2026-07-01", "time": "09:00", "status": "Start",
+                "hook": "", "caption": "", "cta": "", "hashtagGroup": "",
+                "hashtags": [], "imageUrl": "", "note": "", "done": false,
+                "platforms": []
+            }),
+        )
+        .await,
+    )
+    .await;
+    let post_id = a_post["id"].as_str().unwrap().to_string();
+
+    let a_idea = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/ideas",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({
+                "topic": "A private idea", "format": "Short-video",
+                "idea": "secret", "link": "", "done": false
+            }),
+        )
+        .await,
+    )
+    .await;
+    let idea_id = a_idea["id"].as_str().unwrap().to_string();
+
+    let a_content = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/content",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({ "title": "A private article", "body": "secret" }),
+        )
+        .await,
+    )
+    .await;
+    let content_id = a_content["id"].as_str().unwrap().to_string();
+    assert_eq!(a_content["version"], 1);
+
+    let a_campaign = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/campaigns",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({ "name": "A private campaign" }),
+        )
+        .await,
+    )
+    .await;
+    let campaign_id = a_campaign["id"].as_str().unwrap().to_string();
+
+    {
+        let mut store = state.write().await;
+        store.hashtags.push(HashtagGroup {
+            id: "g-private-a".into(),
+            title: "A private tags".into(),
+            tags: vec!["secret".into()],
+        });
+        store
+            .hashtag_workspace
+            .insert("g-private-a".into(), ws_a.clone());
+    }
+
+    let cases: Vec<(&str, String, serde_json::Value)> = vec![
+        (
+            "PATCH",
+            format!("/api/posts/{post_id}"),
+            serde_json::json!({ "topic": "hijacked" }),
+        ),
+        (
+            "DELETE",
+            format!("/api/posts/{post_id}"),
+            serde_json::json!({}),
+        ),
+        (
+            "POST",
+            format!("/api/posts/{post_id}/lock"),
+            serde_json::json!({ "user": "B" }),
+        ),
+        (
+            "POST",
+            format!("/api/posts/{post_id}/unlock"),
+            serde_json::json!({ "user": "B" }),
+        ),
+        (
+            "POST",
+            format!("/api/ideas/{idea_id}/toggle"),
+            serde_json::json!({}),
+        ),
+        (
+            "POST",
+            format!("/api/ideas/{idea_id}/promote?month=7"),
+            serde_json::json!({}),
+        ),
+        (
+            "POST",
+            "/api/tags/g-private-a".to_string(),
+            serde_json::json!({ "tag": "hijacked" }),
+        ),
+        (
+            "GET",
+            format!("/api/content/{content_id}"),
+            serde_json::json!({}),
+        ),
+        (
+            "PATCH",
+            format!("/api/content/{content_id}"),
+            serde_json::json!({ "version": 1, "title": "hijacked" }),
+        ),
+        (
+            "POST",
+            format!("/api/content/{content_id}/publish"),
+            serde_json::json!({ "version": 1 }),
+        ),
+        (
+            "POST",
+            format!("/api/content/{content_id}/unpublish"),
+            serde_json::json!({ "version": 1 }),
+        ),
+        (
+            "POST",
+            format!("/api/content/{content_id}/schedule"),
+            serde_json::json!({
+                "version": 1, "scheduledFor": "2099-01-01T00:00:00Z"
+            }),
+        ),
+        (
+            "POST",
+            format!("/api/content/{content_id}/duplicate"),
+            serde_json::json!({}),
+        ),
+        (
+            "GET",
+            format!("/api/content/{content_id}/revisions"),
+            serde_json::json!({}),
+        ),
+        (
+            "GET",
+            format!("/api/content/{content_id}/revisions/1"),
+            serde_json::json!({}),
+        ),
+        (
+            "POST",
+            format!("/api/content/{content_id}/revisions/1/restore"),
+            serde_json::json!({ "version": 1 }),
+        ),
+        (
+            "DELETE",
+            format!("/api/content/{content_id}"),
+            serde_json::json!({}),
+        ),
+        (
+            "GET",
+            format!("/api/campaigns/{campaign_id}"),
+            serde_json::json!({}),
+        ),
+        (
+            "PATCH",
+            format!("/api/campaigns/{campaign_id}"),
+            serde_json::json!({ "name": "hijacked" }),
+        ),
+        (
+            "DELETE",
+            format!("/api/campaigns/{campaign_id}"),
+            serde_json::json!({}),
+        ),
+    ];
+    for (method, uri, body) in cases {
+        let res = send_auth_ws(app.clone(), method, &uri, Some(&token_b), &ws_b, body).await;
+        assert_eq!(res.status(), StatusCode::NOT_FOUND, "{method} {uri}");
+    }
+
+    // The failed cross-tenant writes must not have changed A's data.
+    let posts = list_ws(app.clone(), &token_a, &ws_a, "/api/posts?month=7").await;
+    assert!(has_id(&posts, &post_id));
+    let content = send_auth_ws(
+        app.clone(),
+        "GET",
+        &format!("/api/content/{content_id}"),
+        Some(&token_a),
+        &ws_a,
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(content.status(), StatusCode::OK);
+    let content = body_json(content).await;
+    assert_eq!(content["title"], "A private article");
+    let campaign = send_auth_ws(
+        app,
+        "GET",
+        &format!("/api/campaigns/{campaign_id}"),
+        Some(&token_a),
+        &ws_a,
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(campaign.status(), StatusCode::OK);
+    assert_eq!(body_json(campaign).await["name"], "A private campaign");
+}
+
+#[tokio::test]
+async fn promoted_ideas_and_imported_metrics_stay_in_their_workspace() {
+    let (_, app, token_a, token_b, ws_a, ws_b) = tenant_workspaces().await;
+    let post_body = |topic: &str| {
+        serde_json::json!({
+            "month": 9, "year": 2026, "topic": topic, "pillar": "Pillar I",
+            "format": "Short-video", "goal": "Views", "date": "2026-09-01",
+            "time": "09:00", "status": "Start", "hook": "", "caption": "",
+            "cta": "", "hashtagGroup": "", "hashtags": [], "imageUrl": "",
+            "note": "", "done": false, "platforms": ["Instagram"]
+        })
+    };
+    let a_post = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/posts",
+            Some(&token_a),
+            &ws_a,
+            post_body("A metric post"),
+        )
+        .await,
+    )
+    .await;
+    let b_post = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/posts",
+            Some(&token_b),
+            &ws_b,
+            post_body("B metric post"),
+        )
+        .await,
+    )
+    .await;
+    let a_post_id = a_post["id"].as_str().unwrap().to_string();
+    let b_post_id = b_post["id"].as_str().unwrap().to_string();
+
+    let a_idea = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/ideas",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({
+                "topic": "A promoted idea", "format": "Short-video",
+                "idea": "A", "link": "", "done": false
+            }),
+        )
+        .await,
+    )
+    .await;
+    let b_idea = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/ideas",
+            Some(&token_b),
+            &ws_b,
+            serde_json::json!({
+                "topic": "B promoted idea", "format": "Short-video",
+                "idea": "B", "link": "", "done": false
+            }),
+        )
+        .await,
+    )
+    .await;
+    let a_idea_id = a_idea["id"].as_str().unwrap().to_string();
+    let b_idea_id = b_idea["id"].as_str().unwrap().to_string();
+
+    let a_promoted = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            &format!("/api/ideas/{a_idea_id}/promote?month=9&year=2026"),
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({}),
+        )
+        .await,
+    )
+    .await;
+    let a_promoted_id = a_promoted["id"].as_str().unwrap().to_string();
+    let b_promoted = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            &format!("/api/ideas/{b_idea_id}/promote?month=9&year=2026"),
+            Some(&token_b),
+            &ws_b,
+            serde_json::json!({}),
+        )
+        .await,
+    )
+    .await;
+    let b_promoted_id = b_promoted["id"].as_str().unwrap().to_string();
+
+    let a_posts = list_ws(app.clone(), &token_a, &ws_a, "/api/posts?month=9").await;
+    assert!(has_id(&a_posts, &a_post_id));
+    assert!(has_id(&a_posts, &a_promoted_id));
+    assert!(!has_id(&a_posts, &b_post_id));
+    assert!(!has_id(&a_posts, &b_promoted_id));
+    let b_posts = list_ws(app.clone(), &token_b, &ws_b, "/api/posts?month=9").await;
+    assert!(has_id(&b_posts, &b_post_id));
+    assert!(has_id(&b_posts, &b_promoted_id));
+    assert!(!has_id(&b_posts, &a_post_id));
+    assert!(!has_id(&b_posts, &a_promoted_id));
+
+    let a_import = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/metrics/import",
+            Some(&token_a),
+            &ws_a,
+            serde_json::json!({ "platform": "Instagram", "month": 9, "year": 2026 }),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(a_import["imported"], 1);
+    assert_eq!(a_import["metrics"][0]["postId"], a_post_id);
+
+    let b_import = body_json(
+        send_auth_ws(
+            app.clone(),
+            "POST",
+            "/api/metrics/import",
+            Some(&token_b),
+            &ws_b,
+            serde_json::json!({ "platform": "Instagram", "month": 9, "year": 2026 }),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(b_import["imported"], 1);
+    assert_eq!(b_import["metrics"][0]["postId"], b_post_id);
+
+    let a_metrics = list_ws(app.clone(), &token_a, &ws_a, "/api/metrics").await;
+    assert!(a_metrics
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|m| m["postId"] == a_post_id));
+    assert!(a_metrics
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|m| m["postId"] != b_post_id));
+    let b_metrics = list_ws(app, &token_b, &ws_b, "/api/metrics").await;
+    assert!(b_metrics
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|m| m["postId"] == b_post_id));
+    assert!(b_metrics
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|m| m["postId"] != a_post_id));
+}
+
+#[tokio::test]
+async fn legacy_rows_without_workspace_maps_fall_back_to_default() {
+    use content_planner_server::store::{Store, DEFAULT_WORKSPACE_ID};
+
+    let state = new_state();
+    {
+        let mut store = state.write().await;
+        store.post_workspace.remove("p-desk");
+        store.content_workspace.remove("c-welcome");
+
+        // Simulate an older snapshot that has no ownership maps at all.
+        let mut snapshot: serde_json::Value =
+            serde_json::from_slice(&store.snapshot_bytes().unwrap()).unwrap();
+        let object = snapshot.as_object_mut().unwrap();
+        for key in [
+            "post_workspace",
+            "idea_workspace",
+            "hashtag_workspace",
+            "metric_workspace",
+            "txn_workspace",
+            "content_workspace",
+            "campaign_workspace",
+        ] {
+            object.remove(key);
+        }
+        let restored = Store::from_snapshot_bytes(&serde_json::to_vec(&snapshot).unwrap()).unwrap();
+        assert_eq!(
+            restored.post_workspace.get("p-desk").map(String::as_str),
+            Some(DEFAULT_WORKSPACE_ID)
+        );
+        assert_eq!(
+            restored
+                .content_workspace
+                .get("c-welcome")
+                .map(String::as_str),
+            Some(DEFAULT_WORKSPACE_ID)
+        );
+        assert!(restored
+            .metric_workspace
+            .values()
+            .all(|ws| ws == DEFAULT_WORKSPACE_ID));
+    }
+
+    let app = app(state);
+    let posts = body_json(get(app.clone(), "/api/posts?month=2").await).await;
+    assert!(has_id(&posts, "p-desk"));
+    let content = get(app, "/api/content/c-welcome").await;
+    assert_eq!(content.status(), StatusCode::OK);
+    assert_eq!(body_json(content).await["id"], "c-welcome");
 }

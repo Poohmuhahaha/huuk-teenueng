@@ -88,10 +88,10 @@ function hasData(s: { values: number[] }): boolean {
           </template>
         </svg>
         <!-- Clean Axis labels -->
-        <span class="absolute top-1 left-1.5 text-[10.5px] leading-none font-mono font-medium text-muted/80 pointer-events-none select-none">
+        <span class="absolute top-1 left-1.5 text-[12.6px] leading-none font-mono font-medium text-muted/80 pointer-events-none select-none">
           Peak: {{ max.toLocaleString('en-US') }}
         </span>
-        <span class="absolute bottom-2 left-1.5 text-[10.5px] leading-none font-mono font-medium text-muted/60 pointer-events-none select-none">
+        <span class="absolute bottom-2 left-1.5 text-[12.6px] leading-none font-mono font-medium text-muted/60 pointer-events-none select-none">
           0
         </span>
       </div>
@@ -103,7 +103,7 @@ function hasData(s: { values: number[] }): boolean {
             <strong class="font-bold font-mono text-ink">{{ (totals[si] ?? 0).toLocaleString('en-US') }}</strong>
           </span>
         </div>
-        <div class="flex gap-3 text-[11px] font-mono text-muted/70">
+        <div class="flex gap-3 text-[13.2px] font-mono text-muted/70">
           <span v-for="o in shownLabels" :key="o.i">{{ o.l }}</span>
         </div>
       </div>

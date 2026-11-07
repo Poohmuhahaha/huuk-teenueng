@@ -275,7 +275,7 @@ onBeforeUnmount(() => {
         >
           ‹
         </button>
-        <strong class="text-sm sm:text-[15px] font-bold text-ink tracking-tight min-w-[124px] text-center">
+        <strong class="text-sm sm:text-[18px] font-bold text-ink tracking-tight min-w-[124px] text-center">
           {{ monthName(viewM) }} {{ viewY }}
         </strong>
         <button
@@ -301,7 +301,7 @@ onBeforeUnmount(() => {
         </span>
         <button
           type="button"
-          class="cal-nav-btn w-auto h-9 inline-flex items-center justify-center px-4 rounded-full text-xs sm:text-[13px] font-semibold border border-[#ded9d1] bg-white text-black/80 hover:border-[#111] hover:text-black transition cursor-pointer"
+          class="cal-nav-btn w-auto h-9 inline-flex items-center justify-center px-4 rounded-full text-xs sm:text-[15.6px] font-semibold border border-[#ded9d1] bg-white text-black/80 hover:border-[#111] hover:text-black transition cursor-pointer"
           :disabled="disabled"
           @click="selectToday"
         >
@@ -310,7 +310,7 @@ onBeforeUnmount(() => {
         <button
           v-if="startDate || endDate"
           type="button"
-          class="cal-nav-btn w-auto h-9 inline-flex items-center justify-center px-4 rounded-full text-xs sm:text-[13px] font-semibold border border-[#ded9d1] bg-white text-black/80 hover:border-[#111] hover:text-black transition cursor-pointer"
+          class="cal-nav-btn w-auto h-9 inline-flex items-center justify-center px-4 rounded-full text-xs sm:text-[15.6px] font-semibold border border-[#ded9d1] bg-white text-black/80 hover:border-[#111] hover:text-black transition cursor-pointer"
           :disabled="disabled"
           @click="clearDates"
         >
@@ -324,7 +324,7 @@ onBeforeUnmount(() => {
       <span
         v-for="d in DOW"
         :key="d"
-        class="text-center text-[10.5px] font-bold uppercase tracking-wider text-muted py-1"
+        class="text-center text-[12.6px] font-bold uppercase tracking-wider text-muted py-1"
       >
         {{ d }}
       </span>
@@ -392,7 +392,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div class="mt-2.5 pt-2 border-t border-black/[0.05] flex items-center justify-between text-[11px] text-muted">
+    <div class="mt-2.5 pt-2 border-t border-black/[0.05] flex items-center justify-between text-[13.2px] text-muted">
       <span>Drag or click to adjust start &amp; end dates</span>
       <span class="font-mono text-ink font-semibold">
         {{ startDate || '—' }} → {{ endDate || '—' }}

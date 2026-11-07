@@ -23,6 +23,7 @@ const emit = defineEmits<{
       :disabled="!canWrite || busy"
       :title="canWrite ? '' : t('auth.noPerm')"
       :aria-label="t('brand.stepIdentityHint')"
+      :placeholder="t('brand.channelPlaceholder')"
       @change="emit('save', 'channel', $event)"
     />
   </section>

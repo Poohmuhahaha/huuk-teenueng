@@ -14,7 +14,7 @@ const variantClasses: Record<string, string> = {
 
 <template>
   <span
-    class="inline-flex items-center gap-[5px] border text-[11px] font-semibold tracking-[0.04em] uppercase px-2 py-0.5 whitespace-nowrap rounded-none"
+    class="inline-flex items-center gap-[5px] border text-[13.2px] font-semibold tracking-[0.04em] uppercase px-2 py-0.5 whitespace-nowrap rounded-none"
     :class="variantClasses[variant] || variantClasses.neutral"
   >
     <span v-if="dot" class="w-[5px] h-[5px] rounded-full bg-current" aria-hidden="true" />

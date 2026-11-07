@@ -67,9 +67,9 @@ async function add(): Promise<void> {
       <div><label class="block text-muted text-sm font-[650] m-0" :for="`${uid}-sub`">Sub-category</label><input :id="`${uid}-sub`" v-model="dSub" :disabled="!canWrite"
         :title="canWrite ? '' : t('auth.noPerm')" /></div>
     </div>
-    <p v-if="addError" class="text-danger text-[13.5px] font-semibold mt-2.5" role="alert">{{ addError }}</p>
+    <p v-if="addError" class="text-danger text-[16.2px] font-semibold mt-2.5" role="alert">{{ addError }}</p>
     <div class="flex gap-2">
-      <button type="submit" class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[12.5px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" :disabled="!canWrite || addTxn.isPending.value"
+      <button type="submit" class="w-auto flex-none font-sans uppercase tracking-[0.08em] rounded-full px-5.5 py-3 text-[15px] font-semibold border-[1.5px] border-ink bg-ink text-white cursor-pointer shadow-none hover:bg-accent-hover hover:border-accent-hover hover:text-white active:transform-none disabled:opacity-50 disabled:cursor-default" :disabled="!canWrite || addTxn.isPending.value"
         :title="canWrite ? '' : t('auth.noPerm')">
         {{ addTxn.isPending.value ? t('common.loading') : 'Add transaction' }}</button>
     </div>

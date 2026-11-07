@@ -8,18 +8,19 @@ use axum::{
     body::Body,
     extract::{Path, Request, State},
     http::{header, HeaderMap, HeaderValue, Method, StatusCode},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
     Json,
 };
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
+use url::Url;
 
 use crate::error::{ApiError, AppJson, AppQuery};
 use crate::model::*;
 use crate::store::{
-    hash_password, session_key, stamp, uid, verify_password, Account, Store, PASSWORD_MAX_CHARS,
-    PASSWORD_MIN_CHARS,
+    hash_password, random_hex, session_key, stamp, uid, verify_password, Account, Store,
+    DEFAULT_WORKSPACE_ID, PASSWORD_MAX_CHARS, PASSWORD_MIN_CHARS,
 };
 use crate::AppState;
 
@@ -563,15 +564,20 @@ pub async fn get_setup(State(s): State<AppState>, headers: HeaderMap) -> Json<Se
     let authorized = has_read_access(&store, &headers);
     // The navbar label is the active workspace's name, so the settings field
     // always shows the workspace the user is actually editing. Anonymous
-    // callers only get the config they need for the sign-in screen, so their
-    // workspace name stays the legacy default.
-    if authorized {
-        let requested = headers.get("x-workspace-id").and_then(|v| v.to_str().ok());
-        let account = current_account(&store, &headers);
-        if let Some(id) = store.resolve_workspace_id(requested, account.as_deref()) {
-            if let Some(ws) = store.workspace(&id) {
-                setup.workspace_name = ws.name.clone();
-            }
+    // callers only get the default/first workspace used by the sign-in screen.
+    let requested = if authorized {
+        headers.get("x-workspace-id").and_then(|v| v.to_str().ok())
+    } else {
+        None
+    };
+    let account = if authorized {
+        current_account(&store, &headers)
+    } else {
+        None
+    };
+    if let Some(id) = store.resolve_workspace_id(requested, account.as_deref()) {
+        if let Some(ws) = store.workspace(&id) {
+            setup.workspace_name = ws.name.clone();
         }
     }
     if !authorized {
@@ -837,6 +843,16 @@ pub async fn register(
         {
             return Err(ApiError::conflict("name already taken"));
         }
+        if store
+            .setup
+            .users
+            .iter()
+            .any(|u| u.name.eq_ignore_ascii_case(&name))
+        {
+            return Err(ApiError::conflict(
+                "name is reserved by the staff directory",
+            ));
+        }
     }
 
     // Hash off the async runtime, then re-check (another request may have won
@@ -857,6 +873,16 @@ pub async fn register(
     {
         return Err(ApiError::conflict("name already taken"));
     }
+    if store
+        .setup
+        .users
+        .iter()
+        .any(|u| u.name.eq_ignore_ascii_case(&name))
+    {
+        return Err(ApiError::conflict(
+            "name is reserved by the staff directory",
+        ));
+    }
     store.accounts.insert(
         email.clone(),
         Account {
@@ -867,21 +893,10 @@ pub async fn register(
             last_active: None,
         },
     );
-    if !store
-        .setup
-        .users
-        .iter()
-        .any(|u| u.name.eq_ignore_ascii_case(&name))
-    {
-        // Self-serve signup never grants elevated access: a new account is a
-        // read-only Viewer until an Owner assigns a role. Registering with the
-        // name of an existing directory entry (an invite) keeps that role —
-        // that path is handled above and no user is pushed here.
-        store.setup.users.push(User {
-            name: name.clone(),
-            role: "Viewer".into(),
-        });
-    }
+    store.setup.users.push(User {
+        name: name.clone(),
+        role: "Viewer".into(),
+    });
     let token = store.open_session(&email);
     tracing::info!(email = %email, "account registered");
     let body = json!({ "token": token, "user": user_json(&store, &email) });
@@ -893,16 +908,20 @@ pub async fn register(
 
 pub async fn login(
     State(s): State<AppState>,
+    headers: HeaderMap,
     AppJson(body): AppJson<LoginBody>,
 ) -> Result<Response, ApiError> {
     let email = body.email.trim().to_lowercase();
     if email.len() > 254 || !email.contains('@') {
         return Err(ApiError::unauthorized("invalid email or password"));
     }
+    // Lockout is keyed by account *and* client address so an attacker cannot
+    // lock a victim out of their own account from a different IP.
+    let attempt_key = format!("{}|{}", email, crate::client_ip(&headers));
 
     let (hash, known) = {
         let store = s.read().await;
-        if let Some(retry) = store.login_retry_after(&email) {
+        if let Some(retry) = store.login_retry_after(&attempt_key) {
             return Err(ApiError::too_many_requests(&format!(
                 "too many failed attempts — try again in {retry} seconds"
             )));
@@ -922,13 +941,13 @@ pub async fn login(
 
     if !known || !verified {
         let mut store = s.write().await;
-        store.record_login_failure(&email);
+        store.record_login_failure(&attempt_key);
         tracing::warn!(email = %email, "failed login");
         return Err(ApiError::unauthorized("invalid email or password"));
     }
 
     let mut store = s.write().await;
-    store.clear_login_failures(&email);
+    store.clear_login_failures(&attempt_key);
     if !store.accounts.contains_key(&email) {
         return Err(ApiError::unauthorized("invalid email or password"));
     }
@@ -939,6 +958,290 @@ pub async fn login(
         body,
         session_cookie(&token, SESSION_MAX_AGE_SECS),
     ))
+}
+
+// ---- Google OpenID Connect login ----
+
+const GOOGLE_LOGIN_STATE: &str = "google-login";
+
+#[derive(Debug, Deserialize)]
+pub struct GoogleCallbackQuery {
+    pub code: Option<String>,
+    pub state: Option<String>,
+    pub error: Option<String>,
+    #[allow(dead_code)]
+    pub error_description: Option<String>,
+}
+
+fn oauth_login_redirect(frontend_url: &str, error: Option<&str>) -> Redirect {
+    let base = frontend_url.trim_end_matches('/');
+    let fallback = if base.is_empty() {
+        "http://localhost:5173/login".to_string()
+    } else {
+        format!("{base}/login")
+    };
+    let mut url = Url::parse(&fallback)
+        .unwrap_or_else(|_| Url::parse("http://localhost:5173/login").expect("fallback URL"));
+    if let Some(error) = error {
+        url.query_pairs_mut().append_pair("error", error);
+    }
+    Redirect::temporary(url.as_str())
+}
+
+fn google_callback_url(public_url: &str) -> String {
+    format!(
+        "{}/api/auth/oauth/google/callback",
+        public_url.trim_end_matches('/')
+    )
+}
+
+fn unique_login_name(store: &Store, preferred: &str, email: &str) -> String {
+    let fallback = email.split('@').next().unwrap_or("User");
+    let base: String = if preferred.trim().is_empty() {
+        fallback
+    } else {
+        preferred.trim()
+    }
+    .chars()
+    .take(80)
+    .collect();
+
+    let mut candidate = base.clone();
+    let mut n = 2u32;
+    while store
+        .accounts
+        .values()
+        .any(|a| a.name.eq_ignore_ascii_case(&candidate))
+        || store
+            .setup
+            .users
+            .iter()
+            .any(|u| u.name.eq_ignore_ascii_case(&candidate))
+    {
+        candidate = format!("{base} {n}");
+        n += 1;
+        if n > 1000 {
+            candidate = format!("{base} {}", random_hex(3));
+            break;
+        }
+    }
+    candidate
+}
+
+/// `GET /api/auth/oauth/google/status` — whether the Google button should show.
+pub async fn google_login_status(State(s): State<AppState>) -> Json<Value> {
+    let store = s.read().await;
+    Json(json!({
+        "configured": store.oauth.credentials(&crate::oauth::GOOGLE_LOGIN).is_some()
+    }))
+}
+
+/// `GET /api/auth/oauth/google/start` — redirect the browser to Google.
+pub async fn google_login_start(State(s): State<AppState>) -> Redirect {
+    let mut store = s.write().await;
+    let Some((client_id, _)) = store
+        .oauth
+        .credentials(&crate::oauth::GOOGLE_LOGIN)
+        .map(|(id, secret)| (id.to_string(), secret.to_string()))
+    else {
+        return oauth_login_redirect(&store.oauth.frontend_url, Some("google_not_configured"));
+    };
+
+    store.prune_ephemeral();
+    let state = format!("st-{}", random_hex(16));
+    store.oauth_states.insert(
+        state.clone(),
+        crate::oauth::OAuthState::new(GOOGLE_LOGIN_STATE, ""),
+    );
+
+    let redirect_uri = google_callback_url(&store.oauth.public_url);
+    let mut url = Url::parse(crate::oauth::GOOGLE_LOGIN.authorize_url)
+        .expect("the Google authorize URL is valid");
+    {
+        let scope = crate::oauth::GOOGLE_LOGIN
+            .scopes
+            .join(crate::oauth::GOOGLE_LOGIN.scope_sep);
+        let mut q = url.query_pairs_mut();
+        q.append_pair("client_id", &client_id);
+        q.append_pair("redirect_uri", &redirect_uri);
+        q.append_pair("response_type", "code");
+        q.append_pair("scope", &scope);
+        q.append_pair("state", &state);
+        for (key, value) in crate::oauth::GOOGLE_LOGIN.extra_auth_params {
+            q.append_pair(key, value);
+        }
+    }
+    Redirect::temporary(url.as_str())
+}
+
+/// `GET /api/auth/oauth/google/callback` — exchange the code and open a session.
+pub async fn google_login_callback(
+    State(s): State<AppState>,
+    AppQuery(q): AppQuery<GoogleCallbackQuery>,
+) -> Result<Response, ApiError> {
+    // Validate and consume the single-use state before any network I/O.
+    let (oauth, allow_registration) = {
+        let mut store = s.write().await;
+        store.prune_ephemeral();
+        let state = q
+            .state
+            .clone()
+            .ok_or_else(|| ApiError::bad_request("missing state"))?;
+        let entry = store
+            .oauth_states
+            .get(&state)
+            .cloned()
+            .ok_or_else(|| ApiError::bad_request("invalid or expired state"))?;
+        if entry.platform != GOOGLE_LOGIN_STATE {
+            return Err(ApiError::bad_request("state does not match Google login"));
+        }
+        if Utc::now() - entry.created > chrono::Duration::minutes(crate::oauth::STATE_TTL_MIN) {
+            store.oauth_states.remove(&state);
+            return Err(ApiError::bad_request("state expired"));
+        }
+        store.oauth_states.remove(&state);
+        (store.oauth.clone(), store.allow_registration)
+    };
+
+    if q.error.is_some() {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("google_failed")).into_response(),
+        );
+    }
+
+    let Some((client_id, client_secret)) = oauth.credentials(&crate::oauth::GOOGLE_LOGIN) else {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("google_not_configured"))
+                .into_response(),
+        );
+    };
+
+    let code = q.code.unwrap_or_default();
+    if code.trim().is_empty() {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("google_failed")).into_response(),
+        );
+    }
+
+    let redirect_uri = google_callback_url(&oauth.public_url);
+    let token_json: Value = match oauth
+        .http()
+        .post(crate::oauth::GOOGLE_LOGIN.token_url)
+        .form(&[
+            ("code", code.as_str()),
+            ("client_id", client_id),
+            ("client_secret", client_secret),
+            ("redirect_uri", redirect_uri.as_str()),
+            ("grant_type", "authorization_code"),
+        ])
+        .send()
+        .await
+    {
+        Ok(res) if res.status().is_success() => res.json().await.unwrap_or(Value::Null),
+        Ok(res) => {
+            tracing::warn!(status = %res.status(), "Google token exchange failed");
+            Value::Null
+        }
+        Err(error) => {
+            tracing::warn!(%error, "Google token exchange request failed");
+            Value::Null
+        }
+    };
+    let access_token = token_json
+        .get("access_token")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if access_token.is_empty() {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("google_failed")).into_response(),
+        );
+    }
+
+    let user_json: Value = match oauth
+        .http()
+        .get("https://openidconnect.googleapis.com/v1/userinfo")
+        .bearer_auth(access_token)
+        .send()
+        .await
+    {
+        Ok(res) if res.status().is_success() => res.json().await.unwrap_or(Value::Null),
+        Ok(res) => {
+            tracing::warn!(status = %res.status(), "Google userinfo request failed");
+            Value::Null
+        }
+        Err(error) => {
+            tracing::warn!(%error, "Google userinfo request failed");
+            Value::Null
+        }
+    };
+
+    let email = user_json
+        .get("email")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_lowercase();
+    let verified = user_json
+        .get("email_verified")
+        .map(|value| {
+            value.as_bool().unwrap_or_else(|| {
+                value
+                    .as_str()
+                    .is_some_and(|s| s.eq_ignore_ascii_case("true"))
+            })
+        })
+        .unwrap_or(false);
+    if email.is_empty() || !email.contains('@') || !verified {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("google_email_unverified"))
+                .into_response(),
+        );
+    }
+
+    let preferred_name = user_json
+        .get("name")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+
+    let mut store = s.write().await;
+    let token = if store.accounts.contains_key(&email) {
+        store.open_session(&email)
+    } else {
+        if !allow_registration {
+            return Ok(
+                oauth_login_redirect(&oauth.frontend_url, Some("registration_disabled"))
+                    .into_response(),
+            );
+        }
+        let name = unique_login_name(&store, &preferred_name, &email);
+        store.accounts.insert(
+            email.clone(),
+            Account {
+                name: name.clone(),
+                email: email.clone(),
+                password_hash: String::new(),
+                plan: "free".into(),
+                last_active: None,
+            },
+        );
+        store.setup.users.push(User {
+            name,
+            role: "Viewer".into(),
+        });
+        store.open_session(&email)
+    };
+
+    let cookie = session_cookie(&token, SESSION_MAX_AGE_SECS);
+    let mut response =
+        Redirect::to(&format!("{}/", oauth.frontend_url.trim_end_matches('/'))).into_response();
+    response.headers_mut().insert(
+        header::SET_COOKIE,
+        HeaderValue::from_str(&cookie)
+            .map_err(|_| ApiError::internal("cannot set the session cookie"))?,
+    );
+    tracing::info!(email = %email, "Google login");
+    Ok(response)
 }
 
 /// Slides the session behind `POST /api/auth/refresh`: the presented token is
@@ -983,18 +1286,36 @@ pub struct PlanBody {
 }
 
 /// Selects the SaaS package for the signed-in account (free/pro/business).
+/// Choosing the free plan is part of self-serve signup, so any signed-in
+/// account may select it. Paid plans still require `users.manage` until a
+/// billing integration can verify payment.
 pub async fn set_plan(
     State(s): State<AppState>,
     headers: HeaderMap,
     AppJson(body): AppJson<PlanBody>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let plan = body.plan.trim().to_lowercase();
-    const PLANS: [&str; 7] = ["free", "starter", "growth", "agency", "pro", "business", "enterprise"];
+    const PLANS: [&str; 7] = [
+        "free",
+        "starter",
+        "growth",
+        "agency",
+        "pro",
+        "business",
+        "enterprise",
+    ];
     if !PLANS.contains(&plan.as_str()) {
         return Err(ApiError::bad_request("unknown plan"));
     }
     let mut store = s.write().await;
-    let email = require_session(&mut store, &headers)?;
+    let email = if plan == "free" {
+        require_session(&mut store, &headers)?
+    } else {
+        match require_perm(&mut store, &headers, "users.manage")? {
+            Some(email) => email,
+            None => require_session(&mut store, &headers)?,
+        }
+    };
     if let Some(account) = store.accounts.get_mut(&email) {
         account.plan = plan.clone();
     }
@@ -1054,8 +1375,8 @@ pub async fn list_accounts(
     Ok(Json(json!(rows)))
 }
 
-/// Deletes an account and revokes all of its sessions. The directory entry is
-/// untouched — directory roles and credentials are separate concerns.
+/// Deletes an account and revokes all of its sessions. The matching directory
+/// entry and any post locks are cleared so the name cannot be reclaimed.
 pub async fn delete_account(
     State(s): State<AppState>,
     headers: HeaderMap,
@@ -1091,13 +1412,18 @@ pub async fn delete_account(
     }
     store.accounts.remove(&email);
     store.sessions.retain(|_, session| session.email != email);
-    // Roles live on the directory entry — drop it too, so a revoked account
-    // does not linger as a phantom user (keep at least one directory entry).
-    if store.setup.users.len() > 1 {
-        store
-            .setup
-            .users
-            .retain(|u| !u.name.eq_ignore_ascii_case(&account.name));
+    store
+        .setup
+        .users
+        .retain(|u| !u.name.eq_ignore_ascii_case(&account.name));
+    for post in store.posts.iter_mut() {
+        if post
+            .locked_by
+            .as_deref()
+            .is_some_and(|holder| holder.eq_ignore_ascii_case(&account.name))
+        {
+            post.locked_by = None;
+        }
     }
     tracing::info!(email = %email, "account deleted");
     Ok(Json(json!({ "ok": true })))
@@ -1207,29 +1533,32 @@ pub async fn change_password(
 
 pub async fn list_posts(
     State(s): State<AppState>,
+    headers: HeaderMap,
     AppQuery(q): AppQuery<MonthQuery>,
-) -> Json<Vec<Post>> {
+) -> Result<Json<Vec<Post>>, ApiError> {
     if let Some(month) = q.month {
         if !(1..=12).contains(&month) {
             // Return an empty list rather than leaking a 400 for a read filter.
-            return Json(Vec::new());
+            return Ok(Json(Vec::new()));
         }
     }
     if let Some(year) = q.year {
         if !(1970..=9999).contains(&year) {
-            return Json(Vec::new());
+            return Ok(Json(Vec::new()));
         }
     }
     let store = s.read().await;
-    Json(
+    let ws_id = active_workspace_id(&store, &headers)?;
+    Ok(Json(
         store
             .posts
             .iter()
+            .filter(|p| Store::scoped_workspace(&store.post_workspace, &p.id) == ws_id.as_str())
             .filter(|p| q.month.is_none_or(|month| p.month == month))
             .filter(|p| q.year.is_none_or(|year| p.year == year))
             .cloned()
             .collect(),
-    )
+    ))
 }
 
 pub async fn add_post(
@@ -1239,6 +1568,7 @@ pub async fn add_post(
 ) -> Result<Json<Post>, ApiError> {
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "posts.write")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
     post.id = uid("p");
     post.locked_by = None;
     // Old clients predate the year field and send 0 — assume the workspace year.
@@ -1247,6 +1577,7 @@ pub async fn add_post(
     }
     validate_post(&post, &store.setup)?;
     store.posts.push(post.clone());
+    store.post_workspace.insert(post.id.clone(), ws_id);
     Ok(Json(post))
 }
 
@@ -1258,6 +1589,10 @@ pub async fn update_post(
 ) -> Result<Json<Post>, ApiError> {
     let mut store = s.write().await;
     let actor_email = require_perm(&mut store, &headers, "posts.write")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.post_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("post not found"));
+    }
     let actor_name = actor_email.as_ref().and_then(|e| account_name(&store, e));
     let setup = store.setup.clone();
     let post = store
@@ -1297,6 +1632,10 @@ pub async fn delete_post(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let mut store = s.write().await;
     let actor_email = require_perm(&mut store, &headers, "posts.write")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.post_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("post not found"));
+    }
     let actor_name = actor_email.as_ref().and_then(|e| account_name(&store, e));
     let index = store
         .posts
@@ -1309,6 +1648,7 @@ pub async fn delete_post(
         }
     }
     store.posts.remove(index);
+    store.post_workspace.remove(&id);
     tracing::info!(post = %id, "post deleted");
     Ok(Json(serde_json::json!({ "ok": true })))
 }
@@ -1321,6 +1661,10 @@ pub async fn lock_post(
 ) -> Result<Json<Post>, ApiError> {
     let mut store = s.write().await;
     let actor_email = require_perm(&mut store, &headers, "posts.lock")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.post_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("post not found"));
+    }
     // With auth on the holder is the signed-in account; in demo mode the
     // wireframe keeps the client-supplied name.
     let holder = match actor_email {
@@ -1355,6 +1699,10 @@ pub async fn unlock_post(
 ) -> Result<Json<Post>, ApiError> {
     let mut store = s.write().await;
     let actor_email = require_perm(&mut store, &headers, "posts.lock")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.post_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("post not found"));
+    }
     let holder = match actor_email {
         Some(email) => {
             account_name(&store, &email).ok_or_else(|| ApiError::unauthorized("invalid token"))?
@@ -1380,8 +1728,20 @@ pub async fn unlock_post(
 
 // ---- ideas ----
 
-pub async fn list_ideas(State(s): State<AppState>) -> Json<Vec<Idea>> {
-    Json(s.read().await.ideas.clone())
+pub async fn list_ideas(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<Idea>>, ApiError> {
+    let store = s.read().await;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    Ok(Json(
+        store
+            .ideas
+            .iter()
+            .filter(|i| Store::scoped_workspace(&store.idea_workspace, &i.id) == ws_id.as_str())
+            .cloned()
+            .collect(),
+    ))
 }
 
 pub async fn add_idea(
@@ -1391,6 +1751,7 @@ pub async fn add_idea(
 ) -> Result<Json<Idea>, ApiError> {
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "ideas.write")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
     idea.topic = idea.topic.trim().to_string();
     if idea.topic.is_empty() {
         return Err(ApiError::bad_request("topic is required"));
@@ -1401,6 +1762,7 @@ pub async fn add_idea(
     validate_len("link", &idea.link, 2000)?;
     idea.id = uid("i");
     store.ideas.push(idea.clone());
+    store.idea_workspace.insert(idea.id.clone(), ws_id);
     Ok(Json(idea))
 }
 
@@ -1411,6 +1773,10 @@ pub async fn toggle_idea(
 ) -> Result<Json<Idea>, ApiError> {
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "ideas.write")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.idea_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("idea not found"));
+    }
     let idea = store
         .ideas
         .iter_mut()
@@ -1432,6 +1798,10 @@ pub async fn promote_idea(
     validate_month(month)?;
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "ideas.write")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.idea_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("idea not found"));
+    }
     // Omitted year = the workspace year, so old clients keep working.
     let year = q.year.unwrap_or(store.setup.year as u32);
     validate_year(year)?;
@@ -1450,7 +1820,8 @@ pub async fn promote_idea(
     let goal = store.setup.goals.first().cloned().unwrap_or_default();
     let group = store
         .hashtags
-        .first()
+        .iter()
+        .find(|g| Store::scoped_workspace(&store.hashtag_workspace, &g.id) == ws_id.as_str())
         .map(|g| g.title.clone())
         .unwrap_or_default();
     let post = Post {
@@ -1480,13 +1851,26 @@ pub async fn promote_idea(
         i.done = true;
     }
     store.posts.push(post.clone());
+    store.post_workspace.insert(post.id.clone(), ws_id);
     Ok(Json(post))
 }
 
 // ---- hashtag groups ----
 
-pub async fn list_tags(State(s): State<AppState>) -> Json<Vec<HashtagGroup>> {
-    Json(s.read().await.hashtags.clone())
+pub async fn list_tags(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<HashtagGroup>>, ApiError> {
+    let store = s.read().await;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    Ok(Json(
+        store
+            .hashtags
+            .iter()
+            .filter(|g| Store::scoped_workspace(&store.hashtag_workspace, &g.id) == ws_id.as_str())
+            .cloned()
+            .collect(),
+    ))
 }
 
 pub async fn add_tag(
@@ -1497,6 +1881,10 @@ pub async fn add_tag(
 ) -> Result<Json<HashtagGroup>, ApiError> {
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "hashtags.write")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.hashtag_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("hashtag group not found"));
+    }
     let tag = body.tag.trim().trim_start_matches('#').to_string();
     validate_len("tag", &tag, MAX_LIST_ITEM)?;
     let group = store
@@ -1512,8 +1900,23 @@ pub async fn add_tag(
 
 // ---- metrics ----
 
-pub async fn list_metrics(State(s): State<AppState>) -> Json<Vec<Metric>> {
-    Json(s.read().await.metrics.clone())
+pub async fn list_metrics(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<Metric>>, ApiError> {
+    let store = s.read().await;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    Ok(Json(
+        store
+            .metrics
+            .iter()
+            .filter(|m| {
+                let key = Store::metric_key(&m.post_id, &m.platform);
+                Store::scoped_workspace(&store.metric_workspace, &key) == ws_id.as_str()
+            })
+            .cloned()
+            .collect(),
+    ))
 }
 
 /// Recomputes deterministic pseudo-metrics for every post scheduled in (`year`,
@@ -1530,6 +1933,7 @@ pub async fn import_metrics(
     validate_month(body.month)?;
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "metrics.import")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
     // Omitted/0 year = the workspace year, so old clients keep working.
     let year = if body.year == 0 {
         store.setup.year as u32
@@ -1545,6 +1949,7 @@ pub async fn import_metrics(
     let fresh: Vec<Metric> = store
         .posts
         .iter()
+        .filter(|p| Store::scoped_workspace(&store.post_workspace, &p.id) == ws_id.as_str())
         .filter(|p| p.month == body.month && p.year == year && p.platforms.contains(&platform))
         .map(|p| {
             // Same formula as the frontend mock, so both data sources agree.
@@ -1561,6 +1966,7 @@ pub async fn import_metrics(
         })
         .collect();
     for metric in &fresh {
+        let key = Store::metric_key(&metric.post_id, &metric.platform);
         if let Some(row) = store
             .metrics
             .iter_mut()
@@ -1570,14 +1976,27 @@ pub async fn import_metrics(
         } else {
             store.metrics.push(metric.clone());
         }
+        store.metric_workspace.insert(key, ws_id.clone());
     }
     Ok(Json(json!({ "imported": fresh.len(), "metrics": fresh })))
 }
 
 // ---- finance ----
 
-pub async fn list_txns(State(s): State<AppState>) -> Json<Vec<Txn>> {
-    Json(s.read().await.txns.clone())
+pub async fn list_txns(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<Txn>>, ApiError> {
+    let store = s.read().await;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    Ok(Json(
+        store
+            .txns
+            .iter()
+            .filter(|t| Store::scoped_workspace(&store.txn_workspace, &t.id) == ws_id.as_str())
+            .cloned()
+            .collect(),
+    ))
 }
 
 pub async fn add_txn(
@@ -1587,6 +2006,7 @@ pub async fn add_txn(
 ) -> Result<Json<Txn>, ApiError> {
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "finance.write")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
     if !txn.amount.is_finite() || txn.amount <= 0.0 || txn.amount > 1e12 {
         return Err(ApiError::bad_request("amount must be a positive number"));
     }
@@ -1601,6 +2021,7 @@ pub async fn add_txn(
     validate_len("sub", &txn.sub, MAX_TEXT)?;
     txn.id = uid("t");
     store.txns.push(txn.clone());
+    store.txn_workspace.insert(txn.id.clone(), ws_id);
     Ok(Json(txn))
 }
 
@@ -1611,7 +2032,20 @@ pub async fn get_brand(
     headers: HeaderMap,
 ) -> Result<Json<Brand>, ApiError> {
     let store = s.read().await;
-    let id = active_workspace_id(&store, &headers)?;
+    let authorized = has_read_access(&store, &headers);
+    let requested = if authorized {
+        headers.get("x-workspace-id").and_then(|v| v.to_str().ok())
+    } else {
+        None
+    };
+    let account = if authorized {
+        current_account(&store, &headers)
+    } else {
+        None
+    };
+    let id = store
+        .resolve_workspace_id(requested, account.as_deref())
+        .ok_or_else(|| ApiError::bad_request("no workspace exists — create one first"))?;
     Ok(Json(
         store
             .workspace(&id)
@@ -2089,7 +2523,7 @@ fn apply_campaign_patch(target: &mut Campaign, patch: CampaignPatch) {
     }
 }
 
-fn validate_campaign(store: &Store, campaign: &Campaign) -> Result<(), ApiError> {
+fn validate_campaign(store: &Store, campaign: &Campaign, ws_id: &str) -> Result<(), ApiError> {
     if campaign.name.trim().is_empty() {
         return Err(ApiError::bad_request("campaign name is required"));
     }
@@ -2133,7 +2567,11 @@ fn validate_campaign(store: &Store, campaign: &Campaign) -> Result<(), ApiError>
         ));
     }
     for id in &campaign.content_ids {
-        if !store.content.iter().any(|c| &c.id == id) {
+        if !store
+            .content
+            .iter()
+            .any(|c| &c.id == id && Store::scoped_workspace(&store.content_workspace, id) == ws_id)
+        {
             return Err(ApiError::bad_request(&format!(
                 "unknown content item: {id}"
             )));
@@ -2142,15 +2580,32 @@ fn validate_campaign(store: &Store, campaign: &Campaign) -> Result<(), ApiError>
     Ok(())
 }
 
-pub async fn list_campaigns(State(s): State<AppState>) -> Json<Vec<Campaign>> {
-    Json(s.read().await.campaigns.clone())
+pub async fn list_campaigns(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<Campaign>>, ApiError> {
+    let store = s.read().await;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    Ok(Json(
+        store
+            .campaigns
+            .iter()
+            .filter(|c| Store::scoped_workspace(&store.campaign_workspace, &c.id) == ws_id.as_str())
+            .cloned()
+            .collect(),
+    ))
 }
 
 pub async fn get_campaign(
     State(s): State<AppState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<Campaign>, ApiError> {
     let store = s.read().await;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.campaign_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("campaign not found"));
+    }
     store
         .campaigns
         .iter()
@@ -2167,6 +2622,7 @@ pub async fn create_campaign(
 ) -> Result<Json<Campaign>, ApiError> {
     let mut store = s.write().await;
     let caller = require_perm(&mut store, &headers, "campaigns.write")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
     // Signed-in creator wins; demo/anonymous falls back to the workspace owner.
     let owner = caller
         .as_deref()
@@ -2194,8 +2650,9 @@ pub async fn create_campaign(
         updated_at: now,
     };
     apply_campaign_patch(&mut campaign, patch);
-    validate_campaign(&store, &campaign)?;
+    validate_campaign(&store, &campaign, &ws_id)?;
     store.campaigns.push(campaign.clone());
+    store.campaign_workspace.insert(campaign.id.clone(), ws_id);
     tracing::info!(campaign = %campaign.id, "campaign created");
     Ok(Json(campaign))
 }
@@ -2208,6 +2665,10 @@ pub async fn update_campaign(
 ) -> Result<Json<Campaign>, ApiError> {
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "campaigns.write")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.campaign_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("campaign not found"));
+    }
     let index = store
         .campaigns
         .iter()
@@ -2215,7 +2676,7 @@ pub async fn update_campaign(
         .ok_or_else(|| ApiError::not_found("campaign not found"))?;
     let mut next = store.campaigns[index].clone();
     apply_campaign_patch(&mut next, patch);
-    validate_campaign(&store, &next)?;
+    validate_campaign(&store, &next, &ws_id)?;
     next.updated_at = stamp();
     store.campaigns[index] = next.clone();
     tracing::info!(campaign = %next.id, "campaign updated");
@@ -2229,11 +2690,16 @@ pub async fn delete_campaign(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "campaigns.delete")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.campaign_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("campaign not found"));
+    }
     let before = store.campaigns.len();
     store.campaigns.retain(|c| c.id != id);
     if store.campaigns.len() == before {
         return Err(ApiError::not_found("campaign not found"));
     }
+    store.campaign_workspace.remove(&id);
     tracing::info!(campaign = %id, "campaign deleted");
     Ok(Json(json!({ "ok": true })))
 }
@@ -2565,7 +3031,12 @@ fn profile_hosts(id: &str) -> &'static [&'static str] {
         "bluesky" => &["bsky.app"],
         "youtube" => &["youtube.com", "www.youtube.com", "youtu.be"],
         "x" | "twitter" => &["x.com", "twitter.com", "www.x.com", "www.twitter.com"],
-        "google_business" => &["business.google.com", "google.com", "www.google.com", "maps.google.com"],
+        "google_business" => &[
+            "business.google.com",
+            "google.com",
+            "www.google.com",
+            "maps.google.com",
+        ],
         "instagram" => &["instagram.com", "www.instagram.com"],
         "substack" => &["substack.com"],
         "mastodon" => &["mastodon.social"],
@@ -2618,10 +3089,16 @@ pub async fn connect_platform(
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "platforms.manage")?;
     let ws_id = active_workspace_id(&store, &headers)?;
-    let configured = crate::oauth::provider(&id).is_some_and(|p| store.oauth.configured(p));
-    if configured {
+    let provider =
+        crate::oauth::provider(&id).ok_or_else(|| ApiError::not_found("platform not found"))?;
+    if store.oauth.configured(provider) {
         return Err(ApiError::bad_request(
             "this platform uses the OAuth redirect flow — start it from the platform login page",
+        ));
+    }
+    if store.setup.auth_required && !store.demo_mode {
+        return Err(ApiError::bad_request(
+            "platform OAuth is not configured — set the provider credentials or run in demo mode",
         ));
     }
     let mut conn = crate::oauth::mark_connected(&mut store, &ws_id, &id)
@@ -3129,14 +3606,17 @@ fn content_view(mut content: Content) -> Content {
 
 pub async fn list_content(
     State(s): State<AppState>,
+    headers: HeaderMap,
     AppQuery(q): AppQuery<ContentQuery>,
-) -> Json<Vec<ContentSummary>> {
+) -> Result<Json<Vec<ContentSummary>>, ApiError> {
     let mut store = s.write().await;
+    let ws_id = active_workspace_id(&store, &headers)?;
     promote_due_scheduled(&mut store);
     let needle = q.q.unwrap_or_default().trim().to_lowercase();
     let mut rows: Vec<ContentSummary> = store
         .content
         .iter()
+        .filter(|c| Store::scoped_workspace(&store.content_workspace, &c.id) == ws_id.as_str())
         .filter(|c| q.status.as_deref().is_none_or(|status| c.status == status))
         .filter(|c| {
             needle.is_empty()
@@ -3147,14 +3627,19 @@ pub async fn list_content(
         .map(Content::summary)
         .collect();
     rows.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-    Json(rows)
+    Ok(Json(rows))
 }
 
 pub async fn get_content(
     State(s): State<AppState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<Content>, ApiError> {
     let mut store = s.write().await;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.content_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("content not found"));
+    }
     promote_due_scheduled(&mut store);
     store
         .content
@@ -3173,6 +3658,7 @@ pub async fn create_content(
 ) -> Result<Json<Content>, ApiError> {
     let mut store = s.write().await;
     let author = content_actor(&mut store, &headers, "content.write", &content.author)?;
+    let ws_id = active_workspace_id(&store, &headers)?;
     content.id = uid("c");
     content.author = author;
     content.version = 1;
@@ -3192,6 +3678,7 @@ pub async fn create_content(
     content.slug = unique_slug(&store.content, &content.slug, None);
     validate_content(&content)?;
     store.content.push(content.clone());
+    store.content_workspace.insert(content.id.clone(), ws_id);
     Ok(Json(content_view(content)))
 }
 
@@ -3203,6 +3690,10 @@ pub async fn update_content(
 ) -> Result<Json<Content>, ApiError> {
     let mut store = s.write().await;
     let author = content_actor(&mut store, &headers, "content.write", "")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.content_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("content not found"));
+    }
     let index = store
         .content
         .iter()
@@ -3242,6 +3733,10 @@ pub async fn publish_content(
 ) -> Result<Json<Content>, ApiError> {
     let mut store = s.write().await;
     let author = content_actor(&mut store, &headers, "content.publish", "")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.content_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("content not found"));
+    }
     let index = store
         .content
         .iter()
@@ -3270,6 +3765,10 @@ pub async fn unpublish_content(
 ) -> Result<Json<Content>, ApiError> {
     let mut store = s.write().await;
     let author = content_actor(&mut store, &headers, "content.publish", "")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.content_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("content not found"));
+    }
     let index = store
         .content
         .iter()
@@ -3300,6 +3799,10 @@ pub async fn schedule_content(
     }
     let mut store = s.write().await;
     let author = content_actor(&mut store, &headers, "content.publish", "")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.content_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("content not found"));
+    }
     let index = store
         .content
         .iter()
@@ -3323,11 +3826,16 @@ pub async fn delete_content(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let mut store = s.write().await;
     require_perm(&mut store, &headers, "content.delete")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.content_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("content not found"));
+    }
     let before = store.content.len();
     store.content.retain(|c| c.id != id);
     if store.content.len() == before {
         return Err(ApiError::not_found("content not found"));
     }
+    store.content_workspace.remove(&id);
     Ok(Json(json!({ "ok": true })))
 }
 
@@ -3338,6 +3846,10 @@ pub async fn duplicate_content(
 ) -> Result<Json<Content>, ApiError> {
     let mut store = s.write().await;
     let author = content_actor(&mut store, &headers, "content.write", "")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.content_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("content not found"));
+    }
     let original = store
         .content
         .iter()
@@ -3358,14 +3870,20 @@ pub async fn duplicate_content(
     copy.updated_at = stamp;
     copy.revisions = Vec::new();
     store.content.push(copy.clone());
+    store.content_workspace.insert(copy.id.clone(), ws_id);
     Ok(Json(content_view(copy)))
 }
 
 pub async fn list_content_revisions(
     State(s): State<AppState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<Vec<ContentRevision>>, ApiError> {
     let store = s.read().await;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.content_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("content not found"));
+    }
     let content = store
         .content
         .iter()
@@ -3378,9 +3896,14 @@ pub async fn list_content_revisions(
 
 pub async fn get_content_revision(
     State(s): State<AppState>,
+    headers: HeaderMap,
     Path((id, revision)): Path<(String, u32)>,
 ) -> Result<Json<ContentRevision>, ApiError> {
     let store = s.read().await;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.content_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("content not found"));
+    }
     let content = store
         .content
         .iter()
@@ -3403,6 +3926,10 @@ pub async fn restore_content_revision(
 ) -> Result<Json<Content>, ApiError> {
     let mut store = s.write().await;
     let author = content_actor(&mut store, &headers, "content.write", "")?;
+    let ws_id = active_workspace_id(&store, &headers)?;
+    if Store::scoped_workspace(&store.content_workspace, &id) != ws_id.as_str() {
+        return Err(ApiError::not_found("content not found"));
+    }
     let index = store
         .content
         .iter()
@@ -3443,13 +3970,20 @@ pub async fn restore_content_revision(
 
 // ---- public delivery (published content only) ----
 
+// The public reader has no tenant identifier yet. The index stays limited to
+// the default workspace so shared `/read` does not mix every tenant's feed;
+// published direct links are resolved globally because content slugs are
+// already unique across the store.
 pub async fn list_public_content(State(s): State<AppState>) -> Json<Vec<ContentSummary>> {
     let mut store = s.write().await;
     promote_due_scheduled(&mut store);
     let mut rows: Vec<ContentSummary> = store
         .content
         .iter()
-        .filter(|c| c.status == "published")
+        .filter(|c| {
+            c.status == "published"
+                && Store::scoped_workspace(&store.content_workspace, &c.id) == DEFAULT_WORKSPACE_ID
+        })
         .map(Content::summary)
         .collect();
     rows.sort_by(|a, b| b.published_at.cmp(&a.published_at));

@@ -118,7 +118,7 @@ async function quickAssignToGroup(groupId: string, tag: string): Promise<void> {
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs border-collapse">
             <thead>
-              <tr class="border-b border-line bg-wash/50 text-muted font-semibold uppercase tracking-wider text-[11px]">
+              <tr class="border-b border-line bg-wash/50 text-muted font-semibold uppercase tracking-wider text-[13.2px]">
                 <th class="py-3 px-4">Hashtag</th>
                 <th class="py-3 px-4">Usage</th>
                 <th class="py-3 px-4">Posts</th>
@@ -146,13 +146,13 @@ async function quickAssignToGroup(groupId: string, tag: string): Promise<void> {
                     @click="copySingle(stat.tag)"
                   >
                     <span>#{{ stat.tag }}</span>
-                    <span v-if="copyNotice === stat.tag" class="text-[10px]">✓</span>
+                    <span v-if="copyNotice === stat.tag" class="text-[12px]">✓</span>
                   </button>
                 </td>
 
                 <!-- Usage count -->
                 <td class="py-3.5 px-4 font-mono font-medium text-ink">
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-wash border border-faint text-[11px]">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-wash border border-faint text-[13.2px]">
                     {{ stat.count }} {{ stat.count === 1 ? 'post' : 'posts' }}
                   </span>
                 </td>
@@ -163,7 +163,7 @@ async function quickAssignToGroup(groupId: string, tag: string): Promise<void> {
                     <span class="text-ink font-medium">{{ p.title }}</span>
                     <span v-if="pi < Math.min(stat.posts.length, 2) - 1">, </span>
                   </span>
-                  <span v-if="stat.posts.length > 2" class="text-[10px] text-muted ml-1">
+                  <span v-if="stat.posts.length > 2" class="text-[12px] text-muted ml-1">
                     +{{ stat.posts.length - 2 }} more
                   </span>
                 </td>
@@ -172,7 +172,7 @@ async function quickAssignToGroup(groupId: string, tag: string): Promise<void> {
                 <td class="py-3.5 px-4">
                   <span
                     v-if="stat.group"
-                    class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-wash border border-line text-ink"
+                    class="px-2.5 py-0.5 rounded-full text-[13.2px] font-semibold bg-wash border border-line text-ink"
                   >
                     {{ stat.group }}
                   </span>
@@ -185,7 +185,7 @@ async function quickAssignToGroup(groupId: string, tag: string): Promise<void> {
                     <!-- Add to category dropdown/buttons -->
                     <select
                       v-if="canWrite"
-                      class="px-2 py-1 rounded-full text-[11px] border border-line bg-surface text-ink cursor-pointer hover:border-ink focus:outline-none"
+                      class="px-2 py-1 rounded-full text-[13.2px] border border-line bg-surface text-ink cursor-pointer hover:border-ink focus:outline-none"
                       aria-label="Add to group"
                       @change="(e) => {
                         const target = e.target as HTMLSelectElement
@@ -203,7 +203,7 @@ async function quickAssignToGroup(groupId: string, tag: string): Promise<void> {
 
                     <button
                       type="button"
-                      class="px-2.5 py-1 rounded-full border border-line bg-surface text-[11px] font-semibold hover:border-ink hover:bg-wash transition-all cursor-pointer"
+                      class="px-2.5 py-1 rounded-full border border-line bg-surface text-[13.2px] font-semibold hover:border-ink hover:bg-wash transition-all cursor-pointer"
                       @click="copySingle(stat.tag)"
                     >
                       {{ copyNotice === stat.tag ? 'Copied' : 'Copy' }}

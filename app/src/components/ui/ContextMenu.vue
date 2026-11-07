@@ -38,7 +38,7 @@ function pick(item: MenuItem): void {
         <div v-if="item.separatorBefore" class="h-px bg-line my-1" role="separator" />
         <button
           type="button"
-          class="block w-full bg-transparent border-0 text-ink font-sans text-[13px] p-2 px-2.5 text-left cursor-pointer rounded-none hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed"
+          class="block w-full bg-transparent border-0 text-ink font-sans text-[15.6px] p-2 px-2.5 text-left cursor-pointer rounded-none hover:bg-wash disabled:opacity-40 disabled:cursor-not-allowed"
           :class="{ 'font-bold text-danger': item.danger }"
           role="menuitem"
           :disabled="item.disabled"

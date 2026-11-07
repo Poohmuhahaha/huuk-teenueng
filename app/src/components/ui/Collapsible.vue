@@ -18,7 +18,7 @@ defineProps<{ title?: string }>()
         aria-hidden="true"
       >▸</span>
     </button>
-    <div v-show="open" class="pt-2 pl-5 text-[13px] text-muted">
+    <div v-show="open" class="pt-2 pl-5 text-[15.6px] text-muted">
       <slot />
     </div>
   </div>

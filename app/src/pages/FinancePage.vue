@@ -111,14 +111,14 @@ async function add(): Promise<void> {
         <div>
           <div class="flex items-center justify-between gap-2 mb-2">
             <div class="flex items-center gap-2">
-              <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Income by month</h2>
-              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
+              <h2 class="text-[15px] font-semibold text-ink-soft uppercase tracking-wider m-0">Income by month</h2>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[13.2px] font-semibold bg-black text-white">
                 {{ monthlyIn.length }} active mos
               </span>
             </div>
             <span class="text-xs font-semibold text-muted font-mono">2026</span>
           </div>
-          <p class="tabular text-[22px] sm:text-[24px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono mb-2">
+          <p class="tabular text-[26.4px] sm:text-[28.8px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono mb-2">
             ฿{{ totalMonthlyIn.toLocaleString('en-US') }}
           </p>
         </div>
@@ -129,14 +129,14 @@ async function add(): Promise<void> {
         <div>
           <div class="flex items-center justify-between gap-2 mb-2">
             <div class="flex items-center gap-2">
-              <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Expense by month</h2>
-              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
+              <h2 class="text-[15px] font-semibold text-ink-soft uppercase tracking-wider m-0">Expense by month</h2>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[13.2px] font-semibold bg-black text-white">
                 {{ monthlyOut.length }} active mos
               </span>
             </div>
             <span class="text-xs font-semibold text-muted font-mono">2026</span>
           </div>
-          <p class="tabular text-[22px] sm:text-[24px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono mb-2">
+          <p class="tabular text-[26.4px] sm:text-[28.8px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono mb-2">
             ฿{{ totalMonthlyOut.toLocaleString('en-US') }}
           </p>
         </div>
@@ -148,7 +148,7 @@ async function add(): Promise<void> {
       <div class="flex items-center justify-between gap-2 mb-2.5">
         <div class="flex items-center gap-2">
           <h2 class="text-xs font-bold uppercase tracking-widest text-muted m-0">Transactions</h2>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white font-mono">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[13.2px] font-semibold bg-black text-white font-mono">
             {{ txns?.length ?? 0 }} entries
           </span>
         </div>

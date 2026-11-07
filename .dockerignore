@@ -3,16 +3,21 @@
 # leaking local state/secrets into the build.
 .git
 .gitignore
+.env
+**/.env
 **/node_modules
 app/dist
 app/.env
 app/.env.local
 app/.env.*.local
 server/target
+server/tests
 data
 backups
+cms
 ops/deploy/.env.production
 ops/deploy/postgres
+deploy/.env.vm
 docs
 **/*.log
 *.prompt.md

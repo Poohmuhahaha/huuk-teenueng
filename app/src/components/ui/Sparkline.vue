@@ -143,8 +143,7 @@ const curve = computed(() => {
   <!-- Variant: Dense 1:1 Square Block Matrix with Staggered Entrance Animation -->
   <div
     v-if="variant === 'squares'"
-    :key="`sq-${animKey}`"
-    class="w-full flex items-end gap-[2.5px] sm:gap-[3px] select-none py-1 group/matrix"
+    class="spark-matrix w-full flex items-end gap-[2.5px] sm:gap-[3px] select-none py-1 group/matrix"
     aria-hidden="true"
   >
     <div
@@ -155,13 +154,9 @@ const curve = computed(() => {
       <div
         v-for="r in rows"
         :key="r"
-        class="w-full aspect-square rounded-[1.5px] sm:rounded-[2px] transition-all duration-200"
-        :class="r <= col.activeLevel ? 'bg-ink square-active' : 'bg-ink/[0.06] square-ghost'"
-        :style="{
-          opacity: r <= col.activeLevel ? getSquareOpacity(r, col.activeLevel) : undefined,
-          '--target-opacity': r <= col.activeLevel ? getSquareOpacity(r, col.activeLevel) : 1,
-          animationDelay: `${ci * 25 + (r - 1) * 35}ms`,
-        }"
+        class="w-full aspect-square rounded-[1.5px] sm:rounded-[2px] transition-colors duration-150"
+        :class="r <= col.activeLevel ? 'bg-ink' : 'bg-ink/[0.06]'"
+        :style="{ opacity: r <= col.activeLevel ? getSquareOpacity(r, col.activeLevel) : undefined }"
       />
     </div>
   </div>
@@ -208,36 +203,17 @@ const curve = computed(() => {
 </template>
 
 <style scoped>
-/* Square Matrix Entrance Animation */
-.square-active {
-  animation: squarePopIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+/* One lightweight entrance for the whole matrix. Animating every square
+   separately (hundreds of simultaneous keyframes across the KPI cards) made
+   the dashboard stutter while the deck was sliding into view. */
+.spark-matrix {
+  animation: spark-matrix-in 0.4s ease-out both;
+  contain: layout paint;
 }
 
-.square-ghost {
-  animation: ghostFadeIn 0.35s ease-out both;
-}
-
-@keyframes squarePopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.3) translateY(4px);
-  }
-  60% {
-    transform: scale(1.15) translateY(-0.5px);
-  }
-  100% {
-    opacity: var(--target-opacity, 1);
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes ghostFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+@keyframes spark-matrix-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Line Mode Animations */
@@ -283,8 +259,7 @@ const curve = computed(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .square-active,
-  .square-ghost,
+  .spark-matrix,
   .sparkline-reveal,
   .sparkline-area,
   .sparkline-dot {

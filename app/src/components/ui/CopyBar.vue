@@ -29,7 +29,7 @@ onBeforeUnmount(() => window.clearTimeout(timer))
     :class="compact ? 'flex items-center gap-3 p-2.5 px-3' : 'p-4 flex flex-col gap-3'"
   >
     <div :class="compact ? 'flex-1 min-w-0 flex items-baseline gap-2.5' : 'flex flex-col gap-1'">
-      <strong class="text-ink" :class="compact ? 'shrink-0 text-[13px]' : 'text-sm font-semibold'">Copy-paste assembled</strong>
+      <strong class="text-ink" :class="compact ? 'shrink-0 text-[15.6px]' : 'text-sm font-semibold'">Copy-paste assembled</strong>
       <p
         class="text-muted"
         :class="compact ? 'm-0 text-xs overflow-hidden text-ellipsis whitespace-nowrap' : 'm-0 text-xs whitespace-pre-wrap'"

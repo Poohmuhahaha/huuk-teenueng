@@ -8,7 +8,7 @@ defineProps<{ label?: string; disabled?: boolean; size?: 'sm' | 'md' }>()
     type="button"
     class="w-auto inline-flex items-center gap-1.5 border font-sans font-semibold cursor-pointer rounded-none transition-all duration-100 disabled:opacity-40 disabled:cursor-not-allowed hover:border-ink hover:text-ink"
     :class="[
-      size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-[13px]',
+      size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-[15.6px]',
       model ? 'bg-ink text-surface border-ink' : 'bg-transparent border-line text-muted'
     ]"
     :aria-pressed="model"

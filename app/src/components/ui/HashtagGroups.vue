@@ -95,7 +95,7 @@ async function submit(groupId: string): Promise<void> {
           @click="copySingleTag(g.id, t)"
         >
           <span>#{{ t }}</span>
-          <span v-if="copiedKey === `${g.id}-${t}`" class="text-[10px]">✓</span>
+          <span v-if="copiedKey === `${g.id}-${t}`" class="text-[12px]">✓</span>
         </button>
 
         <span v-if="!g.tags.length" class="text-xs text-muted/60 italic py-1">

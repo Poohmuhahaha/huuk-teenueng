@@ -10,13 +10,16 @@ pub mod handlers;
 pub mod live;
 pub mod model;
 pub mod oauth;
+pub mod realtime;
 pub mod secrets;
 pub mod store;
 pub mod workspaces;
 
+use std::collections::HashMap;
+use std::net::IpAddr;
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use axum::{
     extract::{DefaultBodyLimit, Request, State},
@@ -46,10 +49,112 @@ pub const REQUEST_TIMEOUT_SECS: u64 = 30;
 const API_CSP: &str = "default-src 'none'; frame-ancestors 'none'";
 
 /// Content Security Policy for the served SPA (its own bundle, images over
-/// https, API calls to itself or a configured origin).
+/// https, API calls to itself).
 const APP_CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
-img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' http: https:; \
+img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; \
 frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+
+/// Rate-limit window shared by every bucket. Limits are per client IP and route
+/// class; buckets reset on a fixed window so memory stays bounded.
+const RATE_LIMIT_WINDOW: Duration = Duration::from_secs(60);
+const RATE_LIMIT_MAX_BUCKETS: usize = 50_000;
+const AUTH_RATE_LIMIT: u32 = 20;
+const OAUTH_RATE_LIMIT: u32 = 30;
+const UPLOAD_RATE_LIMIT: u32 = 10;
+const GENERAL_RATE_LIMIT: u32 = 300;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum RateClass {
+    Auth,
+    OAuth,
+    Upload,
+    General,
+}
+
+impl RateClass {
+    fn limit(self) -> u32 {
+        match self {
+            Self::Auth => AUTH_RATE_LIMIT,
+            Self::OAuth => OAUTH_RATE_LIMIT,
+            Self::Upload => UPLOAD_RATE_LIMIT,
+            Self::General => GENERAL_RATE_LIMIT,
+        }
+    }
+}
+
+struct RateBucket {
+    started: Instant,
+    count: u32,
+}
+
+struct RateLimitStore {
+    buckets: HashMap<(String, RateClass), RateBucket>,
+    last_sweep: Instant,
+}
+
+/// Small fixed-window limiter shared by a router (clones share the same map).
+#[derive(Clone)]
+struct RateLimiter {
+    inner: Arc<Mutex<RateLimitStore>>,
+}
+
+impl RateLimiter {
+    fn new() -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(RateLimitStore {
+                buckets: HashMap::new(),
+                last_sweep: Instant::now(),
+            })),
+        }
+    }
+
+    /// Returns `Err(retry_after_secs)` when the client exceeded its budget.
+    fn check(&self, ip: &str, class: RateClass) -> Result<(), u64> {
+        let now = Instant::now();
+        let mut inner = self
+            .inner
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+
+        // Sweep expired buckets periodically instead of on every request.
+        if now.duration_since(inner.last_sweep) >= RATE_LIMIT_WINDOW {
+            inner
+                .buckets
+                .retain(|_, bucket| now.duration_since(bucket.started) < RATE_LIMIT_WINDOW);
+            inner.last_sweep = now;
+        }
+
+        let key = (ip.to_string(), class);
+        if let Some(bucket) = inner.buckets.get_mut(&key) {
+            let elapsed = now.duration_since(bucket.started);
+            if elapsed >= RATE_LIMIT_WINDOW {
+                *bucket = RateBucket {
+                    started: now,
+                    count: 1,
+                };
+            } else if bucket.count >= class.limit() {
+                let retry = RATE_LIMIT_WINDOW.saturating_sub(elapsed);
+                return Err(retry.as_secs().max(1));
+            } else {
+                bucket.count += 1;
+            }
+            return Ok(());
+        }
+
+        // Bound the map even if a caller can spoof many distinct addresses.
+        if inner.buckets.len() >= RATE_LIMIT_MAX_BUCKETS {
+            return Err(RATE_LIMIT_WINDOW.as_secs());
+        }
+        inner.buckets.insert(
+            key,
+            RateBucket {
+                started: now,
+                count: 1,
+            },
+        );
+        Ok(())
+    }
+}
 
 pub fn new_state() -> AppState {
     Arc::new(RwLock::new(store::Store::seed()))
@@ -72,10 +177,12 @@ pub fn app(state: AppState) -> Router {
 /// SPA from `static_dir` or returns the JSON 404 envelope.
 pub fn app_with_static(state: AppState, static_dir: Option<PathBuf>) -> Router {
     let fallback_dir = static_dir.clone();
+    let rate_limiter = RateLimiter::new();
     let mut router = Router::new()
         .route("/healthz", get(handlers::healthz))
         .route("/api/health", get(handlers::health))
         .route("/api/ready", get(handlers::ready))
+        .route("/api/events", get(realtime::events))
         .route(
             "/api/setup",
             get(handlers::get_setup).patch(handlers::patch_setup),
@@ -87,6 +194,18 @@ pub fn app_with_static(state: AppState, static_dir: Option<PathBuf>) -> Router {
         .route("/api/setup/roles/{name}", delete(handlers::remove_role))
         .route("/api/auth/register", post(handlers::register))
         .route("/api/auth/login", post(handlers::login))
+        .route(
+            "/api/auth/oauth/google/status",
+            get(handlers::google_login_status),
+        )
+        .route(
+            "/api/auth/oauth/google/start",
+            get(handlers::google_login_start),
+        )
+        .route(
+            "/api/auth/oauth/google/callback",
+            get(handlers::google_login_callback),
+        )
         .route("/api/auth/refresh", post(handlers::refresh))
         .route("/api/auth/me", get(handlers::me))
         .route("/api/auth/logout", post(handlers::logout))
@@ -271,6 +390,11 @@ pub fn app_with_static(state: AppState, static_dir: Option<PathBuf>) -> Router {
             read_state,
             require_read_auth,
         ))
+        .layer(middleware::from_fn_with_state(
+            rate_limiter,
+            rate_limit_middleware,
+        ))
+        .layer(middleware::from_fn(realtime::bump_middleware))
         .layer(middleware::from_fn(security_headers))
         .layer(middleware::from_fn(timeout_middleware))
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
@@ -296,25 +420,24 @@ fn docs_enabled() -> bool {
 }
 
 /// Origins allowed to call the API. `CORS_ORIGINS` (comma-separated) wins;
-/// otherwise demo mode mirrors the request origin and production only trusts
-/// the configured frontend origin (plus the local Vite dev server). Credential
-/// support is on so the HttpOnly session cookie flows to cross-origin dev and
-/// desktop frontends; browsers reject `*` with credentials, hence mirroring.
+/// without it only known local dev origins (plus `FRONTEND_URL`) are allowed.
+/// Credential support is on for the HttpOnly session cookie, so arbitrary
+/// origins are never mirrored — a browser must match the explicit list.
 fn cors_layer() -> CorsLayer {
     let configured = std::env::var("CORS_ORIGINS")
         .ok()
         .map(|raw| {
             raw.split(',')
                 .map(str::trim)
-                .filter(|o| !o.is_empty())
-                .filter_map(|o| o.parse::<HeaderValue>().ok())
+                .filter(|origin| !origin.is_empty() && *origin != "*")
+                .filter_map(|origin| origin.parse::<HeaderValue>().ok())
                 .collect::<Vec<_>>()
         })
         .filter(|origins| !origins.is_empty());
 
     let base = CorsLayer::new()
-        // `*` cannot be combined with credentials; mirroring echoes whatever
-        // the (explicitly vetted) origin asked for.
+        // `*` cannot be combined with credentials; only explicitly listed
+        // origins get the echo-back headers.
         .allow_methods(AllowMethods::mirror_request())
         .allow_headers(AllowHeaders::mirror_request())
         .allow_credentials(true);
@@ -322,13 +445,9 @@ fn cors_layer() -> CorsLayer {
     if let Some(origins) = configured {
         return base.allow_origin(AllowOrigin::list(origins));
     }
-    if std::env::var("DEMO_MODE")
-        .map(|v| matches!(v.trim(), "1" | "true"))
-        .unwrap_or(false)
-    {
-        return base.allow_origin(AllowOrigin::mirror_request());
-    }
 
+    // Fail closed: no env list means dev-only origins, never an arbitrary
+    // reflection of the request's `Origin` header.
     let mut origins = vec![
         HeaderValue::from_static("http://localhost:5173"),
         HeaderValue::from_static("http://127.0.0.1:5173"),
@@ -339,6 +458,91 @@ fn cors_layer() -> CorsLayer {
         }
     }
     base.allow_origin(AllowOrigin::list(origins))
+}
+
+/// Extracts the first valid address from `X-Forwarded-For` / `X-Real-IP`
+/// (Caddy overwrites both), falling back to a shared local bucket. Parsing as
+/// an IP keeps caller-controlled header bytes from bloating the key map.
+fn forwarded_ip(value: &str) -> Option<String> {
+    value
+        .split(',')
+        .next()
+        .map(str::trim)
+        .map(|candidate| candidate.trim_matches('"'))
+        .filter(|candidate| !candidate.is_empty())
+        .and_then(|candidate| candidate.parse::<IpAddr>().ok())
+        .map(|ip| ip.to_string())
+}
+
+pub(crate) fn client_ip(headers: &axum::http::HeaderMap) -> String {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|value| value.to_str().ok())
+        .and_then(forwarded_ip)
+        .or_else(|| {
+            headers
+                .get("x-real-ip")
+                .and_then(|value| value.to_str().ok())
+                .and_then(forwarded_ip)
+        })
+        .unwrap_or_else(|| "local".to_string())
+}
+
+fn rate_limit_disabled() -> bool {
+    std::env::var("RATE_LIMIT_DISABLED")
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
+fn rate_class(method: &Method, path: &str) -> Option<RateClass> {
+    if !path.starts_with("/api/") {
+        return None;
+    }
+    if matches!(
+        path,
+        "/api/auth/login" | "/api/auth/register" | "/api/auth/change-password"
+    ) {
+        return Some(RateClass::Auth);
+    }
+    if (path.starts_with("/api/oauth/") || path.starts_with("/api/auth/oauth/"))
+        && (path.ends_with("/start") || path.ends_with("/callback"))
+    {
+        return Some(RateClass::OAuth);
+    }
+    if method == Method::POST && matches!(path, "/api/brand/fonts" | "/api/brand/images") {
+        return Some(RateClass::Upload);
+    }
+    Some(RateClass::General)
+}
+
+async fn rate_limit_middleware(
+    State(limiter): State<RateLimiter>,
+    req: Request,
+    next: Next,
+) -> Response {
+    if rate_limit_disabled() {
+        return next.run(req).await;
+    }
+    let Some(class) = rate_class(req.method(), req.uri().path()) else {
+        return next.run(req).await;
+    };
+    let ip = client_ip(req.headers());
+    match limiter.check(&ip, class) {
+        Ok(()) => next.run(req).await,
+        Err(retry_after) => {
+            let mut response =
+                ApiError::too_many_requests("too many requests; slow down").into_response();
+            if let Ok(value) = HeaderValue::from_str(&retry_after.to_string()) {
+                response.headers_mut().insert("retry-after", value);
+            }
+            response
+        }
+    }
 }
 
 /// `/api` GETs that stay reachable without a session while auth is required:
@@ -353,6 +557,7 @@ fn is_public_read(path: &str) -> bool {
         || path == "/api/setup"
         || path.starts_with("/api/public/")
         || path.starts_with("/api/oauth/")
+        || path.starts_with("/api/auth/oauth/google/")
         || path == "/api/brand"
         || path == "/api/brand/fonts"
         || (path.starts_with("/api/brand/fonts/") && path.ends_with("/file"))
@@ -424,6 +629,10 @@ async fn security_headers(req: Request, next: Next) -> Response {
 
 /// Returns a JSON 504 when a handler exceeds [`REQUEST_TIMEOUT_SECS`].
 async fn timeout_middleware(req: Request, next: Next) -> Response {
+    // SSE is intentionally long-lived; the normal request deadline would cut it.
+    if req.uri().path() == "/api/events" {
+        return next.run(req).await;
+    }
     match tokio::time::timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS), next.run(req)).await {
         Ok(response) => response,
         Err(_) => {

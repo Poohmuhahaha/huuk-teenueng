@@ -8,14 +8,94 @@
     <meta name="theme-color" content="#0a0a0a" />
     <title>Huuk by teenueng — Content Studio</title>
     <style>
-      /* Boot splash: first paint before the JS bundle boots (Vue clears #app on mount). */
-      html, body { margin: 0; padding: 0; background: #f6f6f6; }
-      .boot { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; }
-      .boot-word { font-family: Georgia, 'Times New Roman', serif; font-size: 28px; letter-spacing: 0.14em; text-transform: uppercase; color: #0a0a0a; }
+      /* First paint gets a quiet brand splash instead of a blank white page.
+         Vue replaces this subtree as soon as the app mounts. */
+      html, body { margin: 0; padding: 0; background: #ffffff; }
+      .boot-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: #ffffff;
+        color: #0a0a0a;
+        font: 650 13px/1.4 Inter, "Noto Sans Thai", "Segoe UI", system-ui, sans-serif;
+      }
+      .boot-splash-mark {
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        border-radius: 16px;
+        background: #0a0a0a;
+        color: #ffffff;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        animation: boot-breathe 2.4s ease-in-out infinite;
+      }
+      .boot-splash-brand { display: grid; justify-items: center; gap: 2px; }
+      .boot-splash-brand small {
+        color: #888;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .boot-splash-bar {
+        width: 170px;
+        height: 3px;
+        overflow: hidden;
+        border-radius: 9999px;
+        background: #eeeeee;
+      }
+      .boot-splash-bar i {
+        display: block;
+        width: 38%;
+        height: 100%;
+        border-radius: inherit;
+        background: #0a0a0a;
+        animation: boot-sweep 1.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+      }
+      @keyframes boot-breathe {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      @keyframes boot-sweep {
+        0% { transform: translateX(-120%); }
+        100% { transform: translateX(360%); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-splash-mark, .boot-splash-bar i { animation: none; }
+        .boot-splash-bar i { width: 100%; opacity: 0.25; }
+      }
+      .boot-reload {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        color: #888;
+        font: 600 10px/1.4 Inter, "Noto Sans Thai", "Segoe UI", system-ui, sans-serif;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        opacity: 0;
+        pointer-events: none;
+        animation: boot-reload-in 1ms 8s forwards;
+      }
+      @keyframes boot-reload-in { to { opacity: .75; pointer-events: auto; } }
     </style>
   </head>
   <body>
-    <div id="app"><div class="boot" aria-hidden="true"><span class="boot-word">Huuk</span></div></div>
+    <div id="app">
+      <div class="boot-splash" role="status" aria-live="polite">
+        <div class="boot-splash-mark" aria-hidden="true">H</div>
+        <div class="boot-splash-brand">Huuk <small>by teenueng</small></div>
+        <div class="boot-splash-bar" aria-hidden="true"><i></i></div>
+      </div>
+      <a class="boot-reload" href="">Reload</a>
+    </div>
     <script type="module" src="/src/app/main.ts"></script>
   </body>
 </html>

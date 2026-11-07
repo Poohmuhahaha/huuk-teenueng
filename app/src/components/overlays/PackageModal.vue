@@ -176,7 +176,7 @@ async function selectPackage(planId: string): Promise<void> {
               @click="billingCycle = 'yearly'"
             >
               <span>รายปี (Yearly)</span>
-              <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/15 text-emerald-600 font-bold">
+              <span class="px-1.5 py-0.2 rounded-full text-[12px] bg-emerald-500/15 text-emerald-600 font-bold">
                 ประหยัด 20%
               </span>
             </button>
@@ -207,7 +207,7 @@ async function selectPackage(planId: string): Promise<void> {
             <!-- Badge -->
             <div v-if="pkg.badge" class="absolute -top-3 left-1/2 -translate-x-1/2">
               <span
-                class="px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-xs whitespace-nowrap"
+                class="px-2.5 py-0.5 rounded-full text-[13.2px] font-bold shadow-xs whitespace-nowrap"
                 :class="pkg.popular ? 'bg-ink text-surface' : 'bg-wash text-ink border border-line'"
               >
                 {{ pkg.badge }}
@@ -216,7 +216,7 @@ async function selectPackage(planId: string): Promise<void> {
 
             <!-- Current Plan Tag -->
             <div v-if="currentPlanId === pkg.id" class="mb-2">
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 font-bold text-[11px]">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 font-bold text-[13.2px]">
                 ● แพ็กเกจปัจจุบันของคุณ
               </span>
             </div>

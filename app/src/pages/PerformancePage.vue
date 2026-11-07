@@ -8,7 +8,6 @@ import MonthToggle from '@/components/ui/MonthToggle.vue'
 import TableFrame from '@/components/tables/TableFrame.vue'
 import DockBar from '@/components/ui/DockBar.vue'
 import PlatformLogo from '@/components/ui/PlatformLogo.vue'
-import { useWidePane } from '@/composables/useWidePane'
 import { activeMonth, activeYear } from '@/core/navdate'
 
 const { data: metrics, isPending: metricsPending } = useMetrics()
@@ -19,8 +18,6 @@ const isPending = computed(() => postsPending.value && metricsPending.value)
 const imp = useImportMetrics()
 const { can } = usePermission()
 const canImport = computed(() => can('metrics.import'))
-const root = ref<HTMLElement | null>(null)
-useWidePane(root, 'perf-scroll')
 const platform = ref('')
 // The deck works on one month: this is the shared value every card follows.
 const month = activeMonth
@@ -84,7 +81,7 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
 </script>
 
 <template>
-  <div class="perf-page" ref="root">
+  <div class="perf-page">
     <div class="perf-grid">
       <DockBar label="Performance controls">
         <div class="flex items-center justify-between w-full gap-3">
@@ -144,14 +141,14 @@ const totalGrowthViews = computed(() => growth.value.reduce((s, it) => s + it.va
           <div>
             <div class="flex items-center justify-between gap-2 mb-2">
               <div class="flex items-center gap-2">
-                <h2 class="text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider m-0">Views by month</h2>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-black text-white">
+                <h2 class="text-[15px] font-semibold text-ink-soft uppercase tracking-wider m-0">Views by month</h2>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[13.2px] font-semibold bg-black text-white">
                   {{ growth.length }} active mos
                 </span>
               </div>
               <span class="text-xs font-semibold text-muted font-mono">2026</span>
             </div>
-            <p class="tabular text-[22px] sm:text-[24px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono mb-2">
+            <p class="tabular text-[26.4px] sm:text-[28.8px] font-bold leading-tight tracking-[-0.03em] text-ink font-mono mb-2">
               {{ totalGrowthViews.toLocaleString('en-US') }} views
             </p>
           </div>

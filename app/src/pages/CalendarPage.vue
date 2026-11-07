@@ -299,7 +299,7 @@ function goAdd(date?: string): void {
               class="text-xs font-semibold select-none"
               :class="[
                 cell.isToday
-                  ? 'w-5 h-5 rounded-full bg-ink text-white flex items-center justify-center font-bold text-[10px] shadow-2xs'
+                  ? 'w-5 h-5 rounded-full bg-ink text-white flex items-center justify-center font-bold text-[12px] shadow-2xs'
                   : cell.isCurrentMonth ? 'text-ink pl-0.5' : 'text-muted/40 pl-0.5'
               ]"
             >
@@ -321,7 +321,7 @@ function goAdd(date?: string): void {
               <span v-if="p.time" class="cal-time">{{ p.time }}</span>
               <span class="cal-title">{{ p.topic || 'Untitled' }}</span>
             </button>
-            <div v-if="cell.posts.length > 3" class="text-[10px] text-muted font-medium pl-1 truncate flex-none">
+            <div v-if="cell.posts.length > 3" class="text-[12px] text-muted font-medium pl-1 truncate flex-none">
               +{{ cell.posts.length - 3 }} more
             </div>
           </div>

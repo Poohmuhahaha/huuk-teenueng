@@ -12,7 +12,7 @@
 use argon2::Argon2;
 use base64::Engine;
 use chacha20poly1305::{
-    aead::{Aead, KeyInit},
+    aead::{Aead, KeyInit, Payload},
     ChaCha20Poly1305, Key, Nonce,
 };
 use rand::RngCore;
@@ -42,13 +42,22 @@ pub fn new_salt() -> [u8; SALT_LEN] {
     salt
 }
 
-/// Seals `plaintext` as base64(nonce ‖ ciphertext ‖ tag).
-pub fn seal(key: &[u8; 32], plaintext: &str) -> Option<String> {
+/// Seals `plaintext` as base64(nonce ‖ ciphertext ‖ tag), binding the
+/// ciphertext to `aad` (the token's workspace/platform slot). A payload sealed
+/// for one slot cannot be decrypted under another.
+pub fn seal(key: &[u8; 32], aad: impl AsRef<[u8]>, plaintext: &str) -> Option<String> {
     let cipher = ChaCha20Poly1305::new(Key::from_slice(key));
     let mut nonce = [0u8; NONCE_LEN];
     rand::rngs::OsRng.fill_bytes(&mut nonce);
+    let aad = aad.as_ref();
     let ciphertext = cipher
-        .encrypt(Nonce::from_slice(&nonce), plaintext.as_bytes())
+        .encrypt(
+            Nonce::from_slice(&nonce),
+            Payload {
+                msg: plaintext.as_bytes(),
+                aad,
+            },
+        )
         .ok()?;
     let mut out = Vec::with_capacity(NONCE_LEN + ciphertext.len());
     out.extend_from_slice(&nonce);
@@ -56,8 +65,10 @@ pub fn seal(key: &[u8; 32], plaintext: &str) -> Option<String> {
     Some(base64::engine::general_purpose::STANDARD.encode(out))
 }
 
-/// Opens a payload produced by [`seal`]. `None` = wrong key or tampered data.
-pub fn open(key: &[u8; 32], payload: &str) -> Option<String> {
+/// Opens a payload produced by [`seal`] for the same `aad`. `None` = wrong
+/// key, wrong slot, or tampered data. Payloads sealed before AAD binding
+/// (snapshots from older releases) also fail here and require a reconnect.
+pub fn open(key: &[u8; 32], aad: impl AsRef<[u8]>, payload: &str) -> Option<String> {
     let raw = base64::engine::general_purpose::STANDARD
         .decode(payload)
         .ok()?;
@@ -66,7 +77,16 @@ pub fn open(key: &[u8; 32], payload: &str) -> Option<String> {
     }
     let (nonce, ciphertext) = raw.split_at(NONCE_LEN);
     let cipher = ChaCha20Poly1305::new(Key::from_slice(key));
-    let plaintext = cipher.decrypt(Nonce::from_slice(nonce), ciphertext).ok()?;
+    let aad = aad.as_ref();
+    let plaintext = cipher
+        .decrypt(
+            Nonce::from_slice(nonce),
+            Payload {
+                msg: ciphertext,
+                aad,
+            },
+        )
+        .ok()?;
     String::from_utf8(plaintext).ok()
 }
 
@@ -93,12 +113,38 @@ mod tests {
     fn seal_and_open_round_trip() {
         let salt = new_salt();
         let key = derive_key("a-long-enough-admin-secret", &salt).unwrap();
-        let sealed = seal(&key, "EAAB-page-token").unwrap();
+        let sealed = seal(&key, "ws1:meta", "EAAB-page-token").unwrap();
         assert!(
             !sealed.contains("EAAB"),
             "ciphertext must not leak plaintext"
         );
-        assert_eq!(open(&key, &sealed).as_deref(), Some("EAAB-page-token"));
+        assert_eq!(
+            open(&key, "ws1:meta", &sealed).as_deref(),
+            Some("EAAB-page-token")
+        );
+    }
+
+    #[test]
+    fn aad_binds_ciphertext_to_its_token_slot() {
+        let salt = new_salt();
+        let key = derive_key("a-long-enough-admin-secret", &salt).unwrap();
+        let sealed = seal(&key, "ws1:meta", "EAAB-page-token").unwrap();
+        assert_eq!(
+            open(&key, "ws1:meta", &sealed).as_deref(),
+            Some("EAAB-page-token")
+        );
+        assert!(
+            open(&key, "ws2:meta", &sealed).is_none(),
+            "ciphertext moved to another workspace slot must not open"
+        );
+        assert!(
+            open(&key, "ws1:youtube", &sealed).is_none(),
+            "ciphertext moved to another platform slot must not open"
+        );
+        assert!(
+            open(&key, "", &sealed).is_none(),
+            "a payload without its AAD must not open"
+        );
     }
 
     #[test]
@@ -106,16 +152,16 @@ mod tests {
         let salt = new_salt();
         let key = derive_key("a-long-enough-admin-secret", &salt).unwrap();
         let other = derive_key("another-long-enough-secret", &salt).unwrap();
-        let sealed = seal(&key, "token").unwrap();
-        assert!(open(&other, &sealed).is_none());
-        assert!(open(&key, "not-base64!!").is_none());
+        let sealed = seal(&key, "ws1:meta", "token").unwrap();
+        assert!(open(&other, "ws1:meta", &sealed).is_none());
+        assert!(open(&key, "ws1:meta", "not-base64!!").is_none());
         let mut raw = base64::engine::general_purpose::STANDARD
             .decode(&sealed)
             .unwrap();
         let last = raw.len() - 1;
         raw[last] ^= 0xff;
         let tampered = base64::engine::general_purpose::STANDARD.encode(raw);
-        assert!(open(&key, &tampered).is_none());
+        assert!(open(&key, "ws1:meta", &tampered).is_none());
     }
 
     #[test]
