@@ -141,6 +141,9 @@ pub struct Store {
     pub fonts_dir: Option<PathBuf>,
     /// Uploaded brand images (logos, moodboard), beside the snapshot.
     pub images_dir: Option<PathBuf>,
+    /// Optional R2 bucket for uploads. When present it replaces the local
+    /// `fonts_dir`/`images_dir` paths for reads and writes.
+    pub r2: Option<crate::storage::R2Store>,
     /// Optional PostgreSQL connection pool for durable persistence and `/healthz`.
     pub db: Option<sqlx::PgPool>,
 }
@@ -2904,6 +2907,7 @@ impl Store {
             admin_token: None,
             fonts_dir: None,
             images_dir: None,
+            r2: None,
             db: None,
         };
         store.backfill_workspace_maps(DEFAULT_WORKSPACE_ID);

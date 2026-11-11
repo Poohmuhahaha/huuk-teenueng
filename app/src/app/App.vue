@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import ErrorBoundary from '@/components/ui/ErrorBoundary.vue'
 import ScreensDeck from '@/components/layout/ScreensDeck.vue'
@@ -12,6 +12,7 @@ import { applyBrandTheme, persistBrandTheme } from '@/core/theme'
 import { t } from '@/core/i18n'
 
 const route = useRoute()
+const router = useRouter()
 const { authRequired, isLoggedIn } = usePermission()
 const { data: setup, isPending: setupPending, refetch: refetchSetup } = useSetup()
 const restored = ref(false)
@@ -76,6 +77,14 @@ function reloadPage(): void {
 
 const ready = computed(() => restored.value && !setupPending.value)
 const showLogin = computed(() => ready.value && authRequired.value && !isLoggedIn.value)
+watch(
+  () => showLogin.value && !route.meta.public && route.path !== '/login',
+  (shouldRedirect) => {
+    if (!shouldRedirect) return
+    void router.replace({ path: '/login', query: { redirect: route.fullPath } })
+  },
+  { immediate: true },
+)
 const workspaceGatePending = computed(
   () =>
     ready.value &&

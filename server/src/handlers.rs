@@ -2242,13 +2242,22 @@ pub async fn upload_brand_image(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     use base64::Engine as _;
 
-    let dir = {
+    let (r2, dir, workspace_id, db) = {
         let mut store = s.write().await;
         require_perm(&mut store, &headers, "brand.write")?;
-        store.images_dir.clone().ok_or_else(|| {
-            ApiError::bad_request("image storage is disabled (DATA_FILE is empty)")
-        })?
+        let workspace_id = active_workspace_id(&store, &headers)?;
+        (
+            store.r2.clone(),
+            store.images_dir.clone(),
+            workspace_id,
+            store.db.clone(),
+        )
     };
+    if r2.is_none() && dir.is_none() {
+        return Err(ApiError::bad_request(
+            "image storage is disabled (DATA_FILE is empty and R2 is not configured)",
+        ));
+    }
 
     let name = body.name.trim();
     let bytes = base64::engine::general_purpose::STANDARD
@@ -2260,7 +2269,7 @@ pub async fn upload_brand_image(
     if bytes.len() > BRAND_IMAGE_MAX_BYTES {
         return Err(ApiError::bad_request("image exceeds 4 MB"));
     }
-    let Some((ext, _mime)) = image_kind(name, &bytes) else {
+    let Some((ext, mime)) = image_kind(name, &bytes) else {
         return Err(ApiError::bad_request(
             "unsupported image (use .png, .jpg, .webp or .gif)",
         ));
@@ -2270,22 +2279,47 @@ pub async fn upload_brand_image(
         .ok_or_else(|| ApiError::bad_request("could not read the image dimensions"))?;
     check_image_bounds(&kind, width, height)?;
 
-    tokio::fs::create_dir_all(&dir)
-        .await
-        .map_err(|_| ApiError::internal("cannot create image storage"))?;
     let stem = name.rsplit_once('.').map(|(stem, _)| stem).unwrap_or(name);
     let mut file = format!("{}.{}", image_slug(stem), ext);
     let mut n = 2;
-    while tokio::fs::try_exists(dir.join(&file))
-        .await
-        .unwrap_or(false)
-    {
-        file = format!("{}-{n}.{ext}", image_slug(stem));
-        n += 1;
+    if let Some(r2) = r2 {
+        while r2.head(&crate::storage::image_key(&file)).await? {
+            file = format!("{}-{n}.{ext}", image_slug(stem));
+            n += 1;
+        }
+        let key = crate::storage::image_key(&file);
+        r2.put(&key, bytes.clone(), mime).await?;
+        if let Some(db) = db {
+            if let Err(error) = crate::repo::record_media_asset(
+                &db,
+                &workspace_id,
+                &file,
+                "image",
+                &key,
+                mime,
+                bytes.len() as i64,
+            )
+            .await
+            {
+                tracing::warn!(%error, image = %file, "cannot record image media asset");
+            }
+        }
+    } else {
+        let dir = dir.expect("checked above");
+        tokio::fs::create_dir_all(&dir)
+            .await
+            .map_err(|_| ApiError::internal("cannot create image storage"))?;
+        while tokio::fs::try_exists(dir.join(&file))
+            .await
+            .unwrap_or(false)
+        {
+            file = format!("{}-{n}.{ext}", image_slug(stem));
+            n += 1;
+        }
+        tokio::fs::write(dir.join(&file), &bytes)
+            .await
+            .map_err(|_| ApiError::internal("cannot store image"))?;
     }
-    tokio::fs::write(dir.join(&file), &bytes)
-        .await
-        .map_err(|_| ApiError::internal("cannot store image"))?;
     tracing::info!(image = %file, bytes = bytes.len(), width, height, kind = %kind, "brand image uploaded");
     Ok(Json(serde_json::json!({
         "url": format!("/api/brand/images/{file}"),
@@ -2300,27 +2334,41 @@ pub async fn delete_brand_image(
     headers: HeaderMap,
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let dir = {
+    let (r2, dir, db) = {
         let mut store = s.write().await;
         require_perm(&mut store, &headers, "brand.write")?;
-        store
-            .images_dir
-            .clone()
-            .ok_or_else(|| ApiError::not_found("image not found"))?
+        (store.r2.clone(), store.images_dir.clone(), store.db.clone())
     };
     if name.contains('/') || name.contains('\\') || name.contains("..") {
         return Err(ApiError::bad_request("invalid image name"));
     }
-    let path = dir.join(&name);
-    let bytes = tokio::fs::read(&path)
-        .await
-        .map_err(|_| ApiError::not_found("image not found"))?;
-    if image_kind(&name, &bytes).is_none() {
-        return Err(ApiError::not_found("image not found"));
+    if let Some(r2) = r2 {
+        let key = crate::storage::image_key(&name);
+        let Some(bytes) = r2.get(&key).await? else {
+            return Err(ApiError::not_found("image not found"));
+        };
+        if image_kind(&name, &bytes).is_none() {
+            return Err(ApiError::not_found("image not found"));
+        }
+        r2.delete(&key).await?;
+        if let Some(db) = db {
+            if let Err(error) = crate::repo::delete_media_asset(&db, &key).await {
+                tracing::warn!(%error, image = %name, "cannot delete image media asset");
+            }
+        }
+    } else {
+        let dir = dir.ok_or_else(|| ApiError::not_found("image not found"))?;
+        let path = dir.join(&name);
+        let bytes = tokio::fs::read(&path)
+            .await
+            .map_err(|_| ApiError::not_found("image not found"))?;
+        if image_kind(&name, &bytes).is_none() {
+            return Err(ApiError::not_found("image not found"));
+        }
+        tokio::fs::remove_file(&path)
+            .await
+            .map_err(|_| ApiError::internal("cannot delete image"))?;
     }
-    tokio::fs::remove_file(&path)
-        .await
-        .map_err(|_| ApiError::internal("cannot delete image"))?;
     tracing::info!(image = %name, "brand image deleted");
     Ok(Json(serde_json::json!({ "ok": true })))
 }
@@ -2330,19 +2378,23 @@ pub async fn brand_image_file(
     State(s): State<AppState>,
     Path(name): Path<String>,
 ) -> Result<Response, ApiError> {
-    let dir = {
+    let (r2, dir) = {
         let store = s.read().await;
-        store
-            .images_dir
-            .clone()
-            .ok_or_else(|| ApiError::not_found("image not found"))?
+        (store.r2.clone(), store.images_dir.clone())
     };
     if name.contains('/') || name.contains('\\') || name.contains("..") {
         return Err(ApiError::not_found("image not found"));
     }
-    let bytes = tokio::fs::read(dir.join(&name))
-        .await
-        .map_err(|_| ApiError::not_found("image not found"))?;
+    let bytes = if let Some(r2) = r2 {
+        r2.get(&crate::storage::image_key(&name))
+            .await?
+            .ok_or_else(|| ApiError::not_found("image not found"))?
+    } else {
+        let dir = dir.ok_or_else(|| ApiError::not_found("image not found"))?;
+        tokio::fs::read(dir.join(&name))
+            .await
+            .map_err(|_| ApiError::not_found("image not found"))?
+    };
     let Some((_ext, mime)) = image_kind(&name, &bytes) else {
         return Err(ApiError::not_found("image not found"));
     };
@@ -2780,6 +2832,9 @@ struct FontMeta {
     name: String,
     family: String,
     uploaded_at: i64,
+    /// Byte size, recorded on upload so R2 listings do not need a HEAD per file.
+    #[serde(default)]
+    size: u64,
 }
 
 fn manifest_path(dir: &std::path::Path) -> std::path::PathBuf {
@@ -2838,12 +2893,54 @@ fn read_font_assets(dir: &std::path::Path) -> Vec<FontAsset> {
     fonts
 }
 
+async fn r2_font_manifest(r2: &crate::storage::R2Store) -> Result<Vec<FontMeta>, ApiError> {
+    let Some(bytes) = r2.get(crate::storage::FONT_MANIFEST_KEY).await? else {
+        return Ok(Vec::new());
+    };
+    Ok(serde_json::from_slice(&bytes).unwrap_or_default())
+}
+
+async fn r2_save_font_manifest(
+    r2: &crate::storage::R2Store,
+    manifest: &[FontMeta],
+) -> Result<(), ApiError> {
+    let bytes = serde_json::to_vec_pretty(manifest)
+        .map_err(|_| ApiError::internal("cannot serialize font manifest"))?;
+    r2.put(crate::storage::FONT_MANIFEST_KEY, bytes, "application/json")
+        .await
+}
+
+async fn r2_font_assets(r2: &crate::storage::R2Store) -> Result<Vec<FontAsset>, ApiError> {
+    let mut fonts: Vec<FontAsset> = r2_font_manifest(r2)
+        .await?
+        .into_iter()
+        .map(|meta| FontAsset {
+            url: format!("/api/brand/fonts/{}/file", meta.name),
+            family: meta.family,
+            size: meta.size,
+            uploaded_at: meta.uploaded_at,
+            name: meta.name,
+        })
+        .collect();
+    fonts.sort_by_key(|f| f.family.to_lowercase());
+    Ok(fonts)
+}
+
 /// Public list of uploaded fonts (the theme needs it without auth).
 pub async fn list_fonts(State(s): State<AppState>) -> Json<Vec<FontAsset>> {
-    let dir = {
+    let (r2, dir) = {
         let store = s.read().await;
-        store.fonts_dir.clone()
+        (store.r2.clone(), store.fonts_dir.clone())
     };
+    if let Some(r2) = r2 {
+        return match r2_font_assets(&r2).await {
+            Ok(assets) => Json(assets),
+            Err(error) => {
+                tracing::error!(?error, "cannot list R2 fonts");
+                Json(Vec::new())
+            }
+        };
+    }
     let Some(dir) = dir else {
         return Json(Vec::new());
     };
@@ -2860,14 +2957,22 @@ pub async fn upload_font(
 ) -> Result<Json<Vec<FontAsset>>, ApiError> {
     use base64::Engine as _;
 
-    let dir = {
+    let (r2, dir, workspace_id, db) = {
         let mut store = s.write().await;
         require_perm(&mut store, &headers, "brand.write")?;
-        store
-            .fonts_dir
-            .clone()
-            .ok_or_else(|| ApiError::bad_request("font storage is disabled (DATA_FILE is empty)"))?
+        let workspace_id = active_workspace_id(&store, &headers)?;
+        (
+            store.r2.clone(),
+            store.fonts_dir.clone(),
+            workspace_id,
+            store.db.clone(),
+        )
     };
+    if r2.is_none() && dir.is_none() {
+        return Err(ApiError::bad_request(
+            "font storage is disabled (DATA_FILE is empty and R2 is not configured)",
+        ));
+    }
 
     let name = body.name.trim();
     let bytes = base64::engine::general_purpose::STANDARD
@@ -2879,7 +2984,7 @@ pub async fn upload_font(
     if bytes.len() > FONT_MAX_BYTES {
         return Err(ApiError::bad_request("font file exceeds 2 MB"));
     }
-    let Some((ext, _mime)) = font_kind(name, &bytes) else {
+    let Some((ext, mime)) = font_kind(name, &bytes) else {
         return Err(ApiError::bad_request(
             "unsupported font file (use .woff2, .woff, .ttf or .otf)",
         ));
@@ -2891,6 +2996,48 @@ pub async fn upload_font(
         .unwrap_or(name)
         .to_string();
     let ext = ext.to_string();
+    let size = bytes.len() as u64;
+
+    if let Some(r2) = r2 {
+        let _guard = r2.lock_fonts().await;
+        let base = format!("{}.{}", font_slug(&stem), ext);
+        let mut file = base.clone();
+        let mut n = 2;
+        while r2.head(&crate::storage::font_key(&file)).await? {
+            file = format!("{}-{n}.{ext}", font_slug(&stem));
+            n += 1;
+        }
+        let key = crate::storage::font_key(&file);
+        r2.put(&key, bytes, mime).await?;
+        if let Some(db) = db {
+            if let Err(error) = crate::repo::record_media_asset(
+                &db,
+                &workspace_id,
+                &file,
+                "font",
+                &key,
+                mime,
+                size as i64,
+            )
+            .await
+            {
+                tracing::warn!(%error, font = %file, "cannot record font media asset");
+            }
+        }
+        let mut manifest = r2_font_manifest(&r2).await?;
+        manifest.retain(|m| m.name != file);
+        manifest.push(FontMeta {
+            family: font_family(&stem),
+            uploaded_at: Utc::now().timestamp(),
+            name: file.clone(),
+            size,
+        });
+        r2_save_font_manifest(&r2, &manifest).await?;
+        tracing::info!(font = %file, bytes = size, "brand font uploaded to R2");
+        return Ok(Json(r2_font_assets(&r2).await?));
+    }
+
+    let dir = dir.expect("checked above");
     let assets = tokio::task::spawn_blocking(move || -> Result<Vec<FontAsset>, ApiError> {
         std::fs::create_dir_all(&dir)
             .map_err(|_| ApiError::internal("cannot create font storage"))?;
@@ -2909,9 +3056,10 @@ pub async fn upload_font(
             family: font_family(&stem),
             uploaded_at: Utc::now().timestamp(),
             name: file.clone(),
+            size,
         });
         save_manifest(&dir, &manifest)?;
-        tracing::info!(font = %file, bytes = bytes.len(), "brand font uploaded");
+        tracing::info!(font = %file, bytes = size, "brand font uploaded");
         Ok(read_font_assets(&dir))
     })
     .await
@@ -2924,17 +3072,37 @@ pub async fn delete_font(
     headers: HeaderMap,
     Path(name): Path<String>,
 ) -> Result<Json<Vec<FontAsset>>, ApiError> {
-    let dir = {
+    let (r2, dir, db) = {
         let mut store = s.write().await;
         require_perm(&mut store, &headers, "brand.write")?;
-        store
-            .fonts_dir
-            .clone()
-            .ok_or_else(|| ApiError::not_found("font not found"))?
+        (store.r2.clone(), store.fonts_dir.clone(), store.db.clone())
     };
     if name.contains('/') || name.contains('\\') || name.contains("..") {
         return Err(ApiError::bad_request("invalid font name"));
     }
+    if let Some(r2) = r2 {
+        let _guard = r2.lock_fonts().await;
+        let key = crate::storage::font_key(&name);
+        let Some(bytes) = r2.get(&key).await? else {
+            return Err(ApiError::not_found("font not found"));
+        };
+        if font_kind(&name, &bytes).is_none() {
+            return Err(ApiError::not_found("font not found"));
+        }
+        r2.delete(&key).await?;
+        if let Some(db) = db {
+            if let Err(error) = crate::repo::delete_media_asset(&db, &key).await {
+                tracing::warn!(%error, font = %name, "cannot delete font media asset");
+            }
+        }
+        let mut manifest = r2_font_manifest(&r2).await?;
+        manifest.retain(|m| m.name != name);
+        r2_save_font_manifest(&r2, &manifest).await?;
+        tracing::info!(font = %name, "brand font deleted from R2");
+        return Ok(Json(r2_font_assets(&r2).await?));
+    }
+
+    let dir = dir.ok_or_else(|| ApiError::not_found("font not found"))?;
     let assets = tokio::task::spawn_blocking(move || -> Result<Vec<FontAsset>, ApiError> {
         let path = dir.join(&name);
         let bytes = std::fs::read(&path).map_err(|_| ApiError::not_found("font not found"))?;
@@ -2958,19 +3126,23 @@ pub async fn font_file(
     State(s): State<AppState>,
     Path(name): Path<String>,
 ) -> Result<Response, ApiError> {
-    let dir = {
+    let (r2, dir) = {
         let store = s.read().await;
-        store
-            .fonts_dir
-            .clone()
-            .ok_or_else(|| ApiError::not_found("font not found"))?
+        (store.r2.clone(), store.fonts_dir.clone())
     };
     if name.contains('/') || name.contains('\\') || name.contains("..") {
         return Err(ApiError::not_found("font not found"));
     }
-    let bytes = tokio::fs::read(dir.join(&name))
-        .await
-        .map_err(|_| ApiError::not_found("font not found"))?;
+    let bytes = if let Some(r2) = r2 {
+        r2.get(&crate::storage::font_key(&name))
+            .await?
+            .ok_or_else(|| ApiError::not_found("font not found"))?
+    } else {
+        let dir = dir.ok_or_else(|| ApiError::not_found("font not found"))?;
+        tokio::fs::read(dir.join(&name))
+            .await
+            .map_err(|_| ApiError::not_found("font not found"))?
+    };
     let Some((_ext, mime)) = font_kind(&name, &bytes) else {
         return Err(ApiError::not_found("font not found"));
     };

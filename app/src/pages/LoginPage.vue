@@ -104,6 +104,14 @@ onMounted(() => {
   form.value?.querySelector('input')?.focus()
 })
 
+function redirectTarget(): string {
+  const value = route.query.redirect
+  const raw = typeof value === 'string' ? value : ''
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/'
+  if (raw === '/login' || raw.startsWith('/login?')) return '/'
+  return raw
+}
+
 async function submit(): Promise<void> {
   if (busy.value) return
   error.value = ''
@@ -116,7 +124,7 @@ async function submit(): Promise<void> {
       // storage unavailable — login still proceeds
     }
     await login(email.value.trim(), password.value)
-    void router.push('/')
+    void router.replace(redirectTarget())
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
     mobileSheetOpen.value = true

@@ -5,6 +5,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use content_planner_server::db;
+use content_planner_server::repo;
+use content_planner_server::storage::R2Store;
 use content_planner_server::store::{demo_env, write_atomic, Store};
 use content_planner_server::{app, AppState};
 use tokio::sync::RwLock;
@@ -80,11 +82,29 @@ async fn main() {
 
     let demo = demo_env();
     let db_loaded = match &db_pool {
-        Some(pool) => match db::load_store_from_db(pool).await {
-            Ok(store) => store,
+        Some(pool) => match repo::load_store(pool).await {
+            Ok(Some(store)) => {
+                println!("Store    : PostgreSQL normalized tables");
+                Some(store)
+            }
+            Ok(None) => match db::load_store_from_db(pool).await {
+                Ok(store) => store,
+                Err(error) => {
+                    eprintln!("cannot load store from database: {error}");
+                    std::process::exit(4);
+                }
+            },
             Err(error) => {
-                eprintln!("cannot load store from database: {error}");
-                std::process::exit(4);
+                eprintln!(
+                    "warning: normalized store load failed ({error}); falling back to snapshot"
+                );
+                match db::load_store_from_db(pool).await {
+                    Ok(store) => store,
+                    Err(error) => {
+                        eprintln!("cannot load store from database: {error}");
+                        std::process::exit(4);
+                    }
+                }
             }
         },
         None => None,
@@ -106,6 +126,7 @@ async fn main() {
         (None, _) => Store::fresh(),
     };
     store.db = db_pool.clone();
+    store.r2 = R2Store::from_env();
     store.apply_env();
     warn_about_risky_configuration(&store);
 
@@ -288,6 +309,10 @@ async fn persist_loop(state: AppState, path: Option<PathBuf>, db_pool: Option<sq
         if let Some(pool) = &db_pool {
             if let Err(error) = db::save_snapshot_bytes_to_db(pool, &bytes).await {
                 tracing::error!(%error, "database snapshot write failed");
+                ok = false;
+            }
+            if let Err(error) = repo::sync_snapshot(pool, &bytes).await {
+                tracing::error!(%error, "normalized database write failed");
                 ok = false;
             }
         }

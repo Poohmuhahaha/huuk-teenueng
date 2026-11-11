@@ -11,7 +11,9 @@ pub mod live;
 pub mod model;
 pub mod oauth;
 pub mod realtime;
+pub mod repo;
 pub mod secrets;
+pub mod storage;
 pub mod store;
 pub mod workspaces;
 

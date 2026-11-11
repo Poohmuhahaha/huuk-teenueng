@@ -145,4 +145,8 @@ jobs:
           git fetch --prune origin
           git reset --hard origin/main
           docker compose --env-file deploy/.env.vm \
-            -f deploy/docker-compose.vm.yml --profile tunnel up -d --build
+            -f deploy/docker-compose.vm.yml build app
+          docker compose --env-file deploy/.env.vm \
+            -f deploy/docker-compose.vm.yml run --rm app --run-migrations-only
+          docker compose --env-file deploy/.env.vm \
+            -f deploy/docker-compose.vm.yml --profile tunnel up -d
