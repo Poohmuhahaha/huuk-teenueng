@@ -1,5 +1,6 @@
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
+use content_planner_server::store::{Account, MAX_ACCOUNTS};
 use content_planner_server::{app, new_state};
 use http_body_util::BodyExt;
 use tower::ServiceExt;
@@ -3390,6 +3391,47 @@ async fn registration_can_be_disabled() {
     )
     .await;
     assert_eq!(res.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn registration_stops_at_account_limit() {
+    let state = new_state();
+    {
+        let mut store = state.write().await;
+        while store.accounts.len() < MAX_ACCOUNTS {
+            let i = store.accounts.len();
+            let email = format!("filler{i}@test.local");
+            store.accounts.insert(
+                email.clone(),
+                Account {
+                    name: format!("Filler {i}"),
+                    email,
+                    password_hash: String::new(),
+                    plan: "free".into(),
+                    last_active: None,
+                },
+            );
+        }
+    }
+    let app = app(state);
+
+    let setup = body_json(get(app.clone(), "/api/setup").await).await;
+    assert_eq!(setup["allowRegistration"], false);
+
+    let res = send(
+        app,
+        "POST",
+        "/api/auth/register",
+        serde_json::json!({
+            "name": "Over Limit", "email": "over@test.local", "password": "longenough123"
+        }),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    assert!(body_json(res).await["error"]
+        .as_str()
+        .unwrap()
+        .contains("account limit"));
 }
 
 #[tokio::test]

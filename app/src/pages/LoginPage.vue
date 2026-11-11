@@ -81,6 +81,7 @@ const OAUTH_ERRORS: Record<string, string> = {
   google_not_configured: 'auth.googleNotConfigured',
   google_email_unverified: 'auth.googleEmailUnverified',
   registration_disabled: 'auth.registrationDisabled',
+  registration_full: 'auth.registrationFull',
   google_failed: 'auth.googleFailed',
 }
 const oauthError = computed(() => {

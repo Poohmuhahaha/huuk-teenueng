@@ -20,7 +20,7 @@ use crate::error::{ApiError, AppJson, AppQuery};
 use crate::model::*;
 use crate::store::{
     hash_password, random_hex, session_key, stamp, uid, verify_password, Account, Store,
-    DEFAULT_WORKSPACE_ID, PASSWORD_MAX_CHARS, PASSWORD_MIN_CHARS,
+    DEFAULT_WORKSPACE_ID, MAX_ACCOUNTS, PASSWORD_MAX_CHARS, PASSWORD_MIN_CHARS,
 };
 use crate::AppState;
 
@@ -586,6 +586,7 @@ pub async fn get_setup(State(s): State<AppState>, headers: HeaderMap) -> Json<Se
         setup.users.clear();
         setup.roles.clear();
     }
+    setup.allow_registration = store.allow_registration && store.accounts.len() < MAX_ACCOUNTS;
     Json(setup)
 }
 
@@ -833,6 +834,9 @@ pub async fn register(
         if !store.allow_registration {
             return Err(ApiError::forbidden("registration is disabled"));
         }
+        if store.accounts.len() >= MAX_ACCOUNTS {
+            return Err(ApiError::forbidden("account limit reached (max 20)"));
+        }
         if store.accounts.contains_key(&email) {
             return Err(ApiError::conflict("email already registered"));
         }
@@ -865,6 +869,9 @@ pub async fn register(
     let mut store = s.write().await;
     if store.accounts.contains_key(&email) {
         return Err(ApiError::conflict("email already registered"));
+    }
+    if store.accounts.len() >= MAX_ACCOUNTS {
+        return Err(ApiError::forbidden("account limit reached (max 20)"));
     }
     if store
         .accounts
@@ -1211,6 +1218,12 @@ pub async fn google_login_callback(
         if !allow_registration {
             return Ok(
                 oauth_login_redirect(&oauth.frontend_url, Some("registration_disabled"))
+                    .into_response(),
+            );
+        }
+        if store.accounts.len() >= MAX_ACCOUNTS {
+            return Ok(
+                oauth_login_redirect(&oauth.frontend_url, Some("registration_full"))
                     .into_response(),
             );
         }
@@ -4223,6 +4236,9 @@ pub async fn create_account(
     {
         let mut store = s.write().await;
         require_perm(&mut store, &headers, "users.manage")?;
+        if store.accounts.len() >= MAX_ACCOUNTS {
+            return Err(ApiError::forbidden("account limit reached (max 20)"));
+        }
         if !store.setup.roles.iter().any(|r| r.name == role) {
             return Err(ApiError::bad_request(&format!("unknown role '{role}'")));
         }
@@ -4260,6 +4276,9 @@ pub async fn create_account(
     let mut store = s.write().await;
     if store.accounts.contains_key(&email) {
         return Err(ApiError::conflict("email already registered"));
+    }
+    if store.accounts.len() >= MAX_ACCOUNTS {
+        return Err(ApiError::forbidden("account limit reached (max 20)"));
     }
     store.accounts.insert(
         email.clone(),

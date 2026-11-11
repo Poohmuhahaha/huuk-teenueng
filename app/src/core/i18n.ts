@@ -339,6 +339,7 @@ const en: Record<string, string> = {
   'auth.googleNotConfigured': 'Google sign-in is not configured yet.',
   'auth.googleEmailUnverified': 'Your Google email is not verified.',
   'auth.registrationDisabled': 'Registration is currently disabled.',
+  'auth.registrationFull': 'Registration is full (20 accounts max).',
   'auth.change': 'Change password',
   'auth.oldPassword': 'Current password',
   'auth.newPassword': 'New password',

@@ -43,6 +43,9 @@ const SNAPSHOT_VERSION: u32 = 2;
 /// Id of the workspace created for snapshots that predate workspaces.
 pub const DEFAULT_WORKSPACE_ID: &str = "ws-default";
 
+/// Hard cap on sign-in accounts for this deployment.
+pub const MAX_ACCOUNTS: usize = 20;
+
 /// Internal sign-in credentials. Never serialized into an API response — the
 /// wire-facing user is always `model::User { name, role }`. The snapshot file
 /// does contain password hashes; keep it owner-readable only.
