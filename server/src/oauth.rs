@@ -8,6 +8,9 @@
 //!   browser to the provider's hosted login, and the callback exchanges the code for a token,
 //!   resolves the account, and stores it on the connection.
 //!
+//! App sign-in also supports Google OpenID Connect (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`)
+//! and GitHub OAuth (`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`).
+//!
 //! Security notes:
 //! - `state` is 128 bits of CSPRNG randomness, single-use, expires after
 //!   [`STATE_TTL_MIN`] minutes (CSRF protection).
@@ -128,6 +131,18 @@ pub const GOOGLE_LOGIN: Provider = Provider {
     extra_auth_params: &[("access_type", "online"), ("prompt", "select_account")],
 };
 
+/// GitHub OAuth login (separate from any repository integration).
+pub const GITHUB_LOGIN: Provider = Provider {
+    id: "github-login",
+    name: "GitHub",
+    cred_key: "github",
+    authorize_url: "https://github.com/login/oauth/authorize",
+    token_url: "https://github.com/login/oauth/access_token",
+    scopes: &["read:user", "user:email"],
+    scope_sep: " ",
+    extra_auth_params: &[],
+};
+
 /// OAuth client credentials + URLs (from the environment; empty ⇒ mock mode).
 #[derive(Clone)]
 pub struct OauthSettings {
@@ -171,6 +186,7 @@ impl OauthSettings {
         for (key, id_var, secret_var) in [
             ("meta", "META_APP_ID", "META_APP_SECRET"),
             ("google", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
+            ("github", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"),
             ("tiktok", "TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"),
         ] {
             client_ids.insert(key.to_string(), env(id_var));

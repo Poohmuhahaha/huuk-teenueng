@@ -266,6 +266,7 @@ fn warn_about_risky_configuration(store: &Store) {
     for (provider, id_var, secret_var) in [
         ("Meta", "META_APP_ID", "META_APP_SECRET"),
         ("Google", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
+        ("GitHub", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"),
         ("TikTok", "TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"),
     ] {
         let present = |key: &str| {

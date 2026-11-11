@@ -2929,6 +2929,100 @@ async fn oauth_redirect_mode_builds_authorize_url_when_configured() {
     );
 }
 
+#[tokio::test]
+async fn google_login_status_and_start_when_configured() {
+    let state = new_state();
+    {
+        let mut store = state.write().await;
+        store
+            .oauth
+            .set_credentials("google", "google-client-id", "google-secret");
+    }
+    let app = app(state);
+
+    let status = body_json(get(app.clone(), "/api/auth/oauth/google/status").await).await;
+    assert_eq!(status["configured"], true);
+
+    let start = get(app, "/api/auth/oauth/google/start").await;
+    assert_eq!(start.status(), StatusCode::TEMPORARY_REDIRECT);
+    let location = start
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert!(
+        location.starts_with("https://accounts.google.com/o/oauth2/v2/auth?"),
+        "{location}"
+    );
+    assert!(
+        location.contains("client_id=google-client-id"),
+        "{location}"
+    );
+    assert!(
+        location.contains(
+            "redirect_uri=http%3A%2F%2Flocalhost%3A8787%2Fapi%2Fauth%2Foauth%2Fgoogle%2Fcallback"
+        ),
+        "{location}"
+    );
+    assert!(
+        location.contains("scope=openid+email+profile"),
+        "{location}"
+    );
+    assert!(location.contains("access_type=online"), "{location}");
+    assert!(location.contains("prompt=select_account"), "{location}");
+    assert!(
+        !location.contains("google-secret"),
+        "client secret must never leave the server: {location}"
+    );
+}
+
+#[tokio::test]
+async fn github_login_status_and_start_when_configured() {
+    let state = new_state();
+    {
+        let mut store = state.write().await;
+        store
+            .oauth
+            .set_credentials("github", "gh-client-id", "gh-secret");
+    }
+    let app = app(state);
+
+    let status = body_json(get(app.clone(), "/api/auth/oauth/github/status").await).await;
+    assert_eq!(status["configured"], true);
+
+    let start = get(app, "/api/auth/oauth/github/start").await;
+    assert_eq!(start.status(), StatusCode::TEMPORARY_REDIRECT);
+    let location = start
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert!(
+        location.starts_with("https://github.com/login/oauth/authorize?"),
+        "{location}"
+    );
+    assert!(location.contains("client_id=gh-client-id"), "{location}");
+    assert!(
+        location.contains("scope=read%3Auser+user%3Aemail"),
+        "{location}"
+    );
+    assert!(
+        location.contains(
+            "redirect_uri=http%3A%2F%2Flocalhost%3A8787%2Fapi%2Fauth%2Foauth%2Fgithub%2Fcallback"
+        ),
+        "{location}"
+    );
+    assert!(location.contains("state=st-"), "{location}");
+    assert!(
+        !location.contains("gh-secret"),
+        "client secret must never leave the server: {location}"
+    );
+}
+
 fn seed_pick(
     store: &mut content_planner_server::store::Store,
     pick: &str,

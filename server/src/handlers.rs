@@ -967,12 +967,13 @@ pub async fn login(
     ))
 }
 
-// ---- Google OpenID Connect login ----
+// ---- Social login (Google OpenID Connect, GitHub OAuth) ----
 
 const GOOGLE_LOGIN_STATE: &str = "google-login";
+const GITHUB_LOGIN_STATE: &str = "github-login";
 
 #[derive(Debug, Deserialize)]
-pub struct GoogleCallbackQuery {
+pub struct OAuthCallbackQuery {
     pub code: Option<String>,
     pub state: Option<String>,
     pub error: Option<String>,
@@ -995,9 +996,9 @@ fn oauth_login_redirect(frontend_url: &str, error: Option<&str>) -> Redirect {
     Redirect::temporary(url.as_str())
 }
 
-fn google_callback_url(public_url: &str) -> String {
+fn oauth_callback_url(public_url: &str, provider: &str) -> String {
     format!(
-        "{}/api/auth/oauth/google/callback",
+        "{}/api/auth/oauth/{provider}/callback",
         public_url.trim_end_matches('/')
     )
 }
@@ -1035,6 +1036,125 @@ fn unique_login_name(store: &Store, preferred: &str, email: &str) -> String {
     candidate
 }
 
+async fn start_social_login(
+    s: &AppState,
+    provider: &'static crate::oauth::Provider,
+    state_label: &'static str,
+    callback_id: &'static str,
+    not_configured: &'static str,
+) -> Redirect {
+    let mut store = s.write().await;
+    let Some((client_id, _)) = store
+        .oauth
+        .credentials(provider)
+        .map(|(id, secret)| (id.to_string(), secret.to_string()))
+    else {
+        return oauth_login_redirect(&store.oauth.frontend_url, Some(not_configured));
+    };
+
+    store.prune_ephemeral();
+    let state = format!("st-{}", random_hex(16));
+    store.oauth_states.insert(
+        state.clone(),
+        crate::oauth::OAuthState::new(state_label, ""),
+    );
+
+    let redirect_uri = oauth_callback_url(&store.oauth.public_url, callback_id);
+    let mut url = Url::parse(provider.authorize_url).expect("the OAuth authorize URL is valid");
+    {
+        let scope = provider.scopes.join(provider.scope_sep);
+        let mut q = url.query_pairs_mut();
+        q.append_pair("client_id", &client_id);
+        q.append_pair("redirect_uri", &redirect_uri);
+        q.append_pair("response_type", "code");
+        q.append_pair("scope", &scope);
+        q.append_pair("state", &state);
+        for (key, value) in provider.extra_auth_params {
+            q.append_pair(key, value);
+        }
+    }
+    Redirect::temporary(url.as_str())
+}
+
+async fn consume_social_state(
+    s: &AppState,
+    state: Option<String>,
+    expected: &str,
+    provider_name: &str,
+) -> Result<(crate::oauth::OauthSettings, bool), ApiError> {
+    let mut store = s.write().await;
+    store.prune_ephemeral();
+    let state = state.ok_or_else(|| ApiError::bad_request("missing state"))?;
+    let entry = store
+        .oauth_states
+        .get(&state)
+        .cloned()
+        .ok_or_else(|| ApiError::bad_request("invalid or expired state"))?;
+    if entry.platform != expected {
+        return Err(ApiError::bad_request(&format!(
+            "state does not match {provider_name} login"
+        )));
+    }
+    if Utc::now() - entry.created > chrono::Duration::minutes(crate::oauth::STATE_TTL_MIN) {
+        store.oauth_states.remove(&state);
+        return Err(ApiError::bad_request("state expired"));
+    }
+    store.oauth_states.remove(&state);
+    Ok((store.oauth.clone(), store.allow_registration))
+}
+
+async fn finish_social_login(
+    s: &AppState,
+    frontend_url: &str,
+    allow_registration: bool,
+    email: &str,
+    preferred_name: &str,
+    provider: &str,
+) -> Result<Response, ApiError> {
+    let mut store = s.write().await;
+    let token = if store.accounts.contains_key(email) {
+        store.open_session(email)
+    } else {
+        if !allow_registration {
+            return Ok(
+                oauth_login_redirect(frontend_url, Some("registration_disabled")).into_response(),
+            );
+        }
+        if store.accounts.len() >= MAX_ACCOUNTS {
+            return Ok(
+                oauth_login_redirect(frontend_url, Some("registration_full")).into_response(),
+            );
+        }
+        let name = unique_login_name(&store, preferred_name, email);
+        store.accounts.insert(
+            email.to_string(),
+            Account {
+                name: name.clone(),
+                email: email.to_string(),
+                password_hash: String::new(),
+                plan: "free".into(),
+                last_active: None,
+            },
+        );
+        store.setup.users.push(User {
+            name,
+            role: "Viewer".into(),
+        });
+        store.open_session(email)
+    };
+
+    let cookie = session_cookie(&token, SESSION_MAX_AGE_SECS);
+    let mut response =
+        Redirect::to(&format!("{}/", frontend_url.trim_end_matches('/'))).into_response();
+    response.headers_mut().insert(
+        header::SET_COOKIE,
+        HeaderValue::from_str(&cookie)
+            .map_err(|_| ApiError::internal("cannot set the session cookie"))?,
+    );
+    tracing::info!(email = %email, provider, "OAuth login");
+    Ok(response)
+}
+
 /// `GET /api/auth/oauth/google/status` — whether the Google button should show.
 pub async fn google_login_status(State(s): State<AppState>) -> Json<Value> {
     let store = s.read().await;
@@ -1045,72 +1165,49 @@ pub async fn google_login_status(State(s): State<AppState>) -> Json<Value> {
 
 /// `GET /api/auth/oauth/google/start` — redirect the browser to Google.
 pub async fn google_login_start(State(s): State<AppState>) -> Redirect {
-    let mut store = s.write().await;
-    let Some((client_id, _)) = store
-        .oauth
-        .credentials(&crate::oauth::GOOGLE_LOGIN)
-        .map(|(id, secret)| (id.to_string(), secret.to_string()))
-    else {
-        return oauth_login_redirect(&store.oauth.frontend_url, Some("google_not_configured"));
-    };
+    start_social_login(
+        &s,
+        &crate::oauth::GOOGLE_LOGIN,
+        GOOGLE_LOGIN_STATE,
+        "google",
+        "google_not_configured",
+    )
+    .await
+}
 
-    store.prune_ephemeral();
-    let state = format!("st-{}", random_hex(16));
-    store.oauth_states.insert(
-        state.clone(),
-        crate::oauth::OAuthState::new(GOOGLE_LOGIN_STATE, ""),
-    );
+/// `GET /api/auth/oauth/github/status` — whether the GitHub button should show.
+pub async fn github_login_status(State(s): State<AppState>) -> Json<Value> {
+    let store = s.read().await;
+    Json(json!({
+        "configured": store.oauth.credentials(&crate::oauth::GITHUB_LOGIN).is_some()
+    }))
+}
 
-    let redirect_uri = google_callback_url(&store.oauth.public_url);
-    let mut url = Url::parse(crate::oauth::GOOGLE_LOGIN.authorize_url)
-        .expect("the Google authorize URL is valid");
-    {
-        let scope = crate::oauth::GOOGLE_LOGIN
-            .scopes
-            .join(crate::oauth::GOOGLE_LOGIN.scope_sep);
-        let mut q = url.query_pairs_mut();
-        q.append_pair("client_id", &client_id);
-        q.append_pair("redirect_uri", &redirect_uri);
-        q.append_pair("response_type", "code");
-        q.append_pair("scope", &scope);
-        q.append_pair("state", &state);
-        for (key, value) in crate::oauth::GOOGLE_LOGIN.extra_auth_params {
-            q.append_pair(key, value);
-        }
-    }
-    Redirect::temporary(url.as_str())
+/// `GET /api/auth/oauth/github/start` — redirect the browser to GitHub.
+pub async fn github_login_start(State(s): State<AppState>) -> Redirect {
+    start_social_login(
+        &s,
+        &crate::oauth::GITHUB_LOGIN,
+        GITHUB_LOGIN_STATE,
+        "github",
+        "github_not_configured",
+    )
+    .await
 }
 
 /// `GET /api/auth/oauth/google/callback` — exchange the code and open a session.
 pub async fn google_login_callback(
     State(s): State<AppState>,
-    AppQuery(q): AppQuery<GoogleCallbackQuery>,
+    AppQuery(q): AppQuery<OAuthCallbackQuery>,
 ) -> Result<Response, ApiError> {
+    let OAuthCallbackQuery {
+        code, state, error, ..
+    } = q;
     // Validate and consume the single-use state before any network I/O.
-    let (oauth, allow_registration) = {
-        let mut store = s.write().await;
-        store.prune_ephemeral();
-        let state = q
-            .state
-            .clone()
-            .ok_or_else(|| ApiError::bad_request("missing state"))?;
-        let entry = store
-            .oauth_states
-            .get(&state)
-            .cloned()
-            .ok_or_else(|| ApiError::bad_request("invalid or expired state"))?;
-        if entry.platform != GOOGLE_LOGIN_STATE {
-            return Err(ApiError::bad_request("state does not match Google login"));
-        }
-        if Utc::now() - entry.created > chrono::Duration::minutes(crate::oauth::STATE_TTL_MIN) {
-            store.oauth_states.remove(&state);
-            return Err(ApiError::bad_request("state expired"));
-        }
-        store.oauth_states.remove(&state);
-        (store.oauth.clone(), store.allow_registration)
-    };
+    let (oauth, allow_registration) =
+        consume_social_state(&s, state, GOOGLE_LOGIN_STATE, "Google").await?;
 
-    if q.error.is_some() {
+    if error.is_some() {
         return Ok(
             oauth_login_redirect(&oauth.frontend_url, Some("google_failed")).into_response(),
         );
@@ -1123,14 +1220,14 @@ pub async fn google_login_callback(
         );
     };
 
-    let code = q.code.unwrap_or_default();
+    let code = code.unwrap_or_default();
     if code.trim().is_empty() {
         return Ok(
             oauth_login_redirect(&oauth.frontend_url, Some("google_failed")).into_response(),
         );
     }
 
-    let redirect_uri = google_callback_url(&oauth.public_url);
+    let redirect_uri = oauth_callback_url(&oauth.public_url, "google");
     let token_json: Value = match oauth
         .http()
         .post(crate::oauth::GOOGLE_LOGIN.token_url)
@@ -1211,50 +1308,167 @@ pub async fn google_login_callback(
         .unwrap_or_default()
         .to_string();
 
-    let mut store = s.write().await;
-    let token = if store.accounts.contains_key(&email) {
-        store.open_session(&email)
-    } else {
-        if !allow_registration {
-            return Ok(
-                oauth_login_redirect(&oauth.frontend_url, Some("registration_disabled"))
-                    .into_response(),
-            );
-        }
-        if store.accounts.len() >= MAX_ACCOUNTS {
-            return Ok(
-                oauth_login_redirect(&oauth.frontend_url, Some("registration_full"))
-                    .into_response(),
-            );
-        }
-        let name = unique_login_name(&store, &preferred_name, &email);
-        store.accounts.insert(
-            email.clone(),
-            Account {
-                name: name.clone(),
-                email: email.clone(),
-                password_hash: String::new(),
-                plan: "free".into(),
-                last_active: None,
-            },
+    finish_social_login(
+        &s,
+        &oauth.frontend_url,
+        allow_registration,
+        &email,
+        &preferred_name,
+        "Google",
+    )
+    .await
+}
+
+/// `GET /api/auth/oauth/github/callback` — exchange the code and open a session.
+pub async fn github_login_callback(
+    State(s): State<AppState>,
+    AppQuery(q): AppQuery<OAuthCallbackQuery>,
+) -> Result<Response, ApiError> {
+    let OAuthCallbackQuery {
+        code, state, error, ..
+    } = q;
+    // Validate and consume the single-use state before any network I/O.
+    let (oauth, allow_registration) =
+        consume_social_state(&s, state, GITHUB_LOGIN_STATE, "GitHub").await?;
+
+    if error.is_some() {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("github_failed")).into_response(),
         );
-        store.setup.users.push(User {
-            name,
-            role: "Viewer".into(),
-        });
-        store.open_session(&email)
+    }
+
+    let Some((client_id, client_secret)) = oauth.credentials(&crate::oauth::GITHUB_LOGIN) else {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("github_not_configured"))
+                .into_response(),
+        );
     };
 
-    let cookie = session_cookie(&token, SESSION_MAX_AGE_SECS);
-    let mut response =
-        Redirect::to(&format!("{}/", oauth.frontend_url.trim_end_matches('/'))).into_response();
-    response.headers_mut().insert(
-        header::SET_COOKIE,
-        HeaderValue::from_str(&cookie)
-            .map_err(|_| ApiError::internal("cannot set the session cookie"))?,
-    );
-    tracing::info!(email = %email, "Google login");
-    Ok(response)
+    let code = code.unwrap_or_default();
+    if code.trim().is_empty() {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("github_failed")).into_response(),
+        );
+    }
+
+    let redirect_uri = oauth_callback_url(&oauth.public_url, "github");
+    let token_json: Value = match oauth
+        .http()
+        .post(crate::oauth::GITHUB_LOGIN.token_url)
+        .header(header::ACCEPT, "application/json")
+        .form(&[
+            ("code", code.as_str()),
+            ("client_id", client_id),
+            ("client_secret", client_secret),
+            ("redirect_uri", redirect_uri.as_str()),
+        ])
+        .send()
+        .await
+    {
+        Ok(res) if res.status().is_success() => res.json().await.unwrap_or(Value::Null),
+        Ok(res) => {
+            tracing::warn!(status = %res.status(), "GitHub token exchange failed");
+            Value::Null
+        }
+        Err(error) => {
+            tracing::warn!(%error, "GitHub token exchange request failed");
+            Value::Null
+        }
+    };
+    let access_token = token_json
+        .get("access_token")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if access_token.is_empty() {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("github_failed")).into_response(),
+        );
+    }
+
+    let user_json: Value = match oauth
+        .http()
+        .get("https://api.github.com/user")
+        .header(header::ACCEPT, "application/vnd.github+json")
+        .header(header::USER_AGENT, "huuk-login")
+        .bearer_auth(access_token)
+        .send()
+        .await
+    {
+        Ok(res) if res.status().is_success() => res.json().await.unwrap_or(Value::Null),
+        Ok(res) => {
+            tracing::warn!(status = %res.status(), "GitHub user request failed");
+            Value::Null
+        }
+        Err(error) => {
+            tracing::warn!(%error, "GitHub user request failed");
+            Value::Null
+        }
+    };
+
+    let emails_json: Value = match oauth
+        .http()
+        .get("https://api.github.com/user/emails")
+        .header(header::ACCEPT, "application/vnd.github+json")
+        .header(header::USER_AGENT, "huuk-login")
+        .bearer_auth(access_token)
+        .send()
+        .await
+    {
+        Ok(res) if res.status().is_success() => res.json().await.unwrap_or(Value::Null),
+        Ok(res) => {
+            tracing::warn!(status = %res.status(), "GitHub emails request failed");
+            Value::Null
+        }
+        Err(error) => {
+            tracing::warn!(%error, "GitHub emails request failed");
+            Value::Null
+        }
+    };
+
+    let Some(emails) = emails_json.as_array() else {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("github_failed")).into_response(),
+        );
+    };
+    let email = emails
+        .iter()
+        .find(|entry| {
+            entry.get("primary").and_then(Value::as_bool) == Some(true)
+                && entry.get("verified").and_then(Value::as_bool) == Some(true)
+        })
+        .or_else(|| {
+            emails
+                .iter()
+                .find(|entry| entry.get("verified").and_then(Value::as_bool) == Some(true))
+        })
+        .and_then(|entry| entry.get("email").and_then(Value::as_str))
+        .unwrap_or_default()
+        .trim()
+        .to_lowercase();
+    if email.is_empty() || !email.contains('@') {
+        return Ok(
+            oauth_login_redirect(&oauth.frontend_url, Some("github_email_unverified"))
+                .into_response(),
+        );
+    }
+
+    let preferred_name = user_json
+        .get("name")
+        .and_then(Value::as_str)
+        .filter(|name| !name.trim().is_empty())
+        .or_else(|| user_json.get("login").and_then(Value::as_str))
+        .unwrap_or_default()
+        .to_string();
+
+    finish_social_login(
+        &s,
+        &oauth.frontend_url,
+        allow_registration,
+        &email,
+        &preferred_name,
+        "GitHub",
+    )
+    .await
 }
 
 /// Slides the session behind `POST /api/auth/refresh`: the presented token is

@@ -5,8 +5,8 @@ import { useRouter } from 'vue-router'
 import { register } from '@/core/auth'
 import { useSetup } from '@/core/queries'
 import { t } from '@/core/i18n'
-import { BASE } from '@/api/client'
 import InfoTip from '@/components/ui/InfoTip.vue'
+import OAuthButtons from '@/components/auth/OAuthButtons.vue'
 
 const router = useRouter()
 const { data: setup } = useSetup()
@@ -71,14 +71,8 @@ function startDrag(e: PointerEvent): void {
 }
 
 const canRegister = computed(() => setup.value?.allowRegistration ?? false)
-const googleReady = ref(false)
-const googleHref = computed(() => `${BASE}/api/auth/oauth/google/start`)
 
 onMounted(() => {
-  fetch(`${BASE}/api/auth/oauth/google/status`)
-    .then((res) => (res.ok ? res.json() : null))
-    .then((data) => { googleReady.value = Boolean(data?.configured) })
-    .catch(() => { googleReady.value = false })
   form.value?.querySelector('input')?.focus()
 })
 
@@ -167,14 +161,7 @@ async function submit(): Promise<void> {
             {{ busy ? t('common.loading') : t('auth.register') }}
           </button>
         </form>
-        <div v-if="googleReady" class="mt-4">
-          <div class="flex items-center gap-3 text-muted text-2xs uppercase tracking-wider my-4">
-            <span class="h-px flex-1 bg-line" />
-            <span>{{ t('auth.or') }}</span>
-            <span class="h-px flex-1 bg-line" />
-          </div>
-          <a class="btn w-full justify-center text-sm py-2.5" :href="googleHref">{{ t('auth.continueWithGoogle') }}</a>
-        </div>
+        <OAuthButtons />
         <p class="lp-foot">
           <button type="button" class="lp-link" @click="router.push('/login')">
             {{ t('auth.haveAccount') }}

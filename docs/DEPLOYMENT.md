@@ -172,10 +172,11 @@ compose Caddy profile only applies to Docker Compose.
 | `WEB_PORT` | Host port for the web container without TLS (default 8080) |
 | `SITE_ADDRESS` | Domain for the Caddy profile; empty = HTTP only |
 | `RUST_LOG` | Log level, e.g. `info` |
-| `META_APP_ID/SECRET`, `GOOGLE_CLIENT_ID/SECRET`, `TIKTOK_CLIENT_KEY/SECRET` | Optional real OAuth providers |
+| `META_APP_ID/SECRET`, `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_CLIENT_ID/SECRET`, `TIKTOK_CLIENT_KEY/SECRET` | Optional real OAuth providers (Google/GitHub are app sign-in; Meta/TikTok are data connections) |
 
 Provider callbacks must point at `PUBLIC_URL`:
 `https://huuk.teenueng.com/api/oauth/{facebook|instagram|youtube|tiktok}/callback`.
+App sign-in callbacks use `/api/auth/oauth/{google|github}/callback`.
 
 ## Onboarding a client
 

@@ -208,6 +208,18 @@ pub fn app_with_static(state: AppState, static_dir: Option<PathBuf>) -> Router {
             "/api/auth/oauth/google/callback",
             get(handlers::google_login_callback),
         )
+        .route(
+            "/api/auth/oauth/github/status",
+            get(handlers::github_login_status),
+        )
+        .route(
+            "/api/auth/oauth/github/start",
+            get(handlers::github_login_start),
+        )
+        .route(
+            "/api/auth/oauth/github/callback",
+            get(handlers::github_login_callback),
+        )
         .route("/api/auth/refresh", post(handlers::refresh))
         .route("/api/auth/me", get(handlers::me))
         .route("/api/auth/logout", post(handlers::logout))
@@ -559,7 +571,7 @@ fn is_public_read(path: &str) -> bool {
         || path == "/api/setup"
         || path.starts_with("/api/public/")
         || path.starts_with("/api/oauth/")
-        || path.starts_with("/api/auth/oauth/google/")
+        || path.starts_with("/api/auth/oauth/")
         || path == "/api/brand"
         || path == "/api/brand/fonts"
         || (path.starts_with("/api/brand/fonts/") && path.ends_with("/file"))

@@ -246,7 +246,7 @@ Smoke test from your computer:
 ops/scripts/smoke.sh https://beta.<your-domain> <admin-email> '<password>' --write
 ```
 
-## 8. Self-serve registration and Google sign-in
+## 8. Self-serve registration and social sign-in
 
 ### Registration
 Set `ALLOW_REGISTRATION=true` in `deploy/.env.vm` and restart the app:
@@ -283,6 +283,31 @@ configured. A stable domain is required — a temporary Quick Tunnel URL changes
 and would break the registered redirect URI.
 
 New Google accounts also get `Viewer`; add their email from **Branding →
+Members** to let them into the workspace.
+
+### GitHub sign-in
+The app supports GitHub OAuth login. Create a separate GitHub OAuth App
+(this is not the same as a GitHub App or repository integration):
+
+1. GitHub → Settings → Developer settings → OAuth Apps → **New OAuth App**.
+2. Set **Homepage URL** to `https://<your-domain>` and **Authorization
+   callback URL** to:
+   `https://<your-domain>/api/auth/oauth/github/callback`
+3. Put the credentials in `deploy/.env.vm`:
+   ```dotenv
+   GITHUB_CLIENT_ID=...
+   GITHUB_CLIENT_SECRET=...
+   ```
+4. Restart:
+   ```bash
+   sudo docker compose --env-file deploy/.env.vm \
+     -f deploy/docker-compose.vm.yml up -d --force-recreate app
+   ```
+
+The "Continue with GitHub" button only appears when the credentials are
+configured. GitHub accounts without a verified email cannot sign in.
+
+New GitHub accounts also get `Viewer`; add their email from **Branding →
 Members** to let them into the workspace.
 
 ## 8b. PostgreSQL container and DB access
