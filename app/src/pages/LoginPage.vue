@@ -4,6 +4,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { login } from '@/core/auth'
+import { takeLoginRedirect } from '@/core/login-redirect'
 import { useSetup } from '@/core/queries'
 import { t } from '@/core/i18n'
 import { BASE } from '@/api/client'
@@ -104,14 +105,6 @@ onMounted(() => {
   form.value?.querySelector('input')?.focus()
 })
 
-function redirectTarget(): string {
-  const value = route.query.redirect
-  const raw = typeof value === 'string' ? value : ''
-  if (!raw.startsWith('/') || raw.startsWith('//')) return '/'
-  if (raw === '/login' || raw.startsWith('/login?')) return '/'
-  return raw
-}
-
 async function submit(): Promise<void> {
   if (busy.value) return
   error.value = ''
@@ -124,7 +117,7 @@ async function submit(): Promise<void> {
       // storage unavailable — login still proceeds
     }
     await login(email.value.trim(), password.value)
-    void router.replace(redirectTarget())
+    void router.replace(takeLoginRedirect())
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
     mobileSheetOpen.value = true

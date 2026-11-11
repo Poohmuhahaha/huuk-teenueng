@@ -7,6 +7,7 @@ import ScreensDeck from '@/components/layout/ScreensDeck.vue'
 import LoginPage from '@/pages/LoginPage.vue'
 import WorkspaceSetupPage from '@/pages/WorkspaceSetupPage.vue'
 import { restore } from '@/core/auth'
+import { rememberLoginRedirect } from '@/core/login-redirect'
 import { useBrand, useBrandFonts, usePermission, useSetup, useWorkspaces } from '@/core/queries'
 import { applyBrandTheme, persistBrandTheme } from '@/core/theme'
 import { t } from '@/core/i18n'
@@ -81,7 +82,8 @@ watch(
   () => showLogin.value && !route.meta.public && route.path !== '/login',
   (shouldRedirect) => {
     if (!shouldRedirect) return
-    void router.replace({ path: '/login', query: { redirect: route.fullPath } })
+    rememberLoginRedirect(route.path)
+    void router.replace('/login')
   },
   { immediate: true },
 )
